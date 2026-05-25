@@ -1,0 +1,65 @@
+require("dotenv").config();
+
+const fs = require("fs");
+const path = require("path");
+const mysql = require("mysql2/promise");
+
+const migrationsPath = path.join(__dirname, "migrations");
+const stateFilePath = path.join(
+  __dirname,
+  "migration_state.json"
+);
+
+const runMigrations = async () => {
+  try {
+    const connection = await mysql.createConnection({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: String(process.env.DB_PASSWORD),
+    });
+
+    await connection.query(
+      `CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`
+    );
+
+    await connection.query(`USE ${process.env.DB_NAME}`);
+
+    const migrationFiles = fs
+      .readdirSync(migrationsPath)
+      .filter((file) => file.endsWith(".sql"))
+      .sort();
+
+    const executedMigrations = JSON.parse(
+      fs.readFileSync(stateFilePath, "utf8")
+    );
+
+    for (const file of migrationFiles) {
+      if (executedMigrations.includes(file)) {
+        continue;
+      }
+
+      console.log(`Running migration: ${file}`);
+
+      const filePath = path.join(migrationsPath, file);
+
+      const sql = fs.readFileSync(filePath, "utf8");
+
+      await connection.query(sql);
+
+      executedMigrations.push(file);
+    }
+
+    fs.writeFileSync(
+      stateFilePath,
+      JSON.stringify(executedMigrations, null, 2)
+    );
+
+    console.log("All migrations completed successfully.");
+
+    await connection.end();
+  } catch (error) {
+    console.error("Migration failed:", error);
+  }
+};
+
+runMigrations();

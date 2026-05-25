@@ -13,10 +13,12 @@ git clone <repo-url>
 cd CallMedex
 ```
 
-Install all dependencies:
+Install all dependencies and setup the repo:
 
 ```bash
 npm run setup
+npm run docker:start
+npm run db:migrate
 ```
 
 ---

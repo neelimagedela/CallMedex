@@ -3,6 +3,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
+const pool = require("./config/db");
+
 const authRoutes = require("./modules/auth/routes/auth.routes");
 
 const app = express();
@@ -10,13 +12,22 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get("/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "CallMedex server is running",
-  });
-});
+app.get("/health", async (req, res) => {
+  try {
+    await pool.query("SELECT 1");
 
+    res.status(200).json({
+      success: true,
+      message: "CallMedex server is running",
+      database: "connected",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Database connection failed",
+    });
+  }
+});
 // Auth Routes
 app.use("/auth", authRoutes);
 
