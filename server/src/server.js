@@ -3,6 +3,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
+const authRoutes = require("./modules/auth/routes/auth.routes");
+
 const app = express();
 
 app.use(cors());
@@ -14,6 +16,9 @@ app.get("/health", (req, res) => {
     message: "CallMedex server is running",
   });
 });
+
+// Auth Routes
+app.use("/auth", authRoutes);
 
 const PORT = process.env.PORT || 5000;
 
