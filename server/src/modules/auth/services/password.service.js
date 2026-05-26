@@ -1,14 +1,14 @@
-const hashPassword = async (password) => {
-  // TODO:
-  // Hash password using bcrypt
+const bcrypt = require("bcryptjs");
+
+const hashPassword = async(password) => {
+    return bcrypt.hash(password, 12);
 };
 
-const comparePassword = async (password, hash) => {
-  // TODO:
-  // Compare password and hash
+const comparePassword = async(password, hash) => {
+    return bcrypt.compare(password, hash);
 };
 
 module.exports = {
-  hashPassword,
-  comparePassword,
+    hashPassword,
+    comparePassword
 };

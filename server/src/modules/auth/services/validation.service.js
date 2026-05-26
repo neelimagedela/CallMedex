@@ -1,30 +1,65 @@
-const validateRegistrationInput = async (userData) => {
-  // TODO:
-  // Validate:
-  // - name
-  // - email
-  // - phone
-  // - password
-  // - role
-};
+const { z } = require("zod");
 
-const validateLoginInput = async (credentials) => {
-  // TODO:
-  // Validate:
-  // - email/phone
-  // - password
-};
+const registerSchema = z.object({
+    name : z.string().min(3).max(100),
 
-const sanitizeInput = async (data) => {
-  // TODO:
-  // Sanitize:
-  // - email
-  // - phone
-  // - strings
+    phone : z.string()
+        .min(10)
+        .max(20),
+
+    email : z.email(),
+
+    password : z.string()
+        .min(8)
+        .max(100),
+
+    role : z.enum([
+        "patient",
+        "phlebo",
+        "doctor",
+        "admin",
+        "diagnostic",
+        "consultency"
+    ])
+});
+
+const verifyOtpSchema = z.object({
+    userId : z.number(),
+
+    otp : z.string()
+        .length(6),
+
+    type : z.enum([
+        "email",
+        "phone"
+    ])
+});
+
+const loginSchema = z.object({
+    email : z.email(),
+
+    password : z.string()
+        .min(8)
+});
+
+const sanitizeInput = (data) => {
+
+    return {
+        ...data,
+
+        name : data.name?.trim(),
+
+        email : data.email
+            ?.trim()
+            .toLowerCase(),
+
+        phone : data.phone?.trim()
+    };
 };
 
 module.exports = {
-  validateRegistrationInput,
-  validateLoginInput,
-  sanitizeInput,
+    registerSchema,
+    verifyOtpSchema,
+    loginSchema,
+    sanitizeInput
 };

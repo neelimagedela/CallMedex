@@ -1,14 +1,9 @@
-const createSession = async (sessionData) => {
-  // TODO:
-  // Create active session
-};
-
-const invalidateSession = async (sessionId) => {
-  // TODO:
-  // Invalidate active session
-};
+const {
+    createSession,
+    revokeSession
+} = require("../models/session.model");
 
 module.exports = {
-  createSession,
-  invalidateSession,
+    createSession,
+    revokeSession
 };

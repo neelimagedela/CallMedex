@@ -1,26 +1,46 @@
-const generateAccessToken = async (user) => {
-  // TODO:
-  // Generate JWT access token
+const jwt = require("jsonwebtoken");
+
+const generateAccessToken = (payload) => {
+
+    return jwt.sign(
+        payload,
+        process.env.JWT_ACCESS_SECRET,
+        {
+            expiresIn : process.env.ACCESS_TOKEN_EXPIRES_IN
+        }
+    );
 };
 
-const generateRefreshToken = async (user) => {
-  // TODO:
-  // Generate refresh token
+const generateRefreshToken = (payload) => {
+
+    return jwt.sign(
+        payload,
+        process.env.JWT_REFRESH_SECRET,
+        {
+            expiresIn : process.env.REFRESH_TOKEN_EXPIRES_IN
+        }
+    );
 };
 
-const verifyAccessToken = async (token) => {
-  // TODO:
-  // Verify JWT token
+const verifyAccessToken = (token) => {
+
+    return jwt.verify(
+        token,
+        process.env.JWT_ACCESS_SECRET
+    );
 };
 
-const verifyRefreshToken = async (token) => {
-  // TODO:
-  // Verify refresh token
+const verifyRefreshToken = (token) => {
+
+    return jwt.verify(
+        token,
+        process.env.JWT_REFRESH_SECRET
+    );
 };
 
 module.exports = {
-  generateAccessToken,
-  generateRefreshToken,
-  verifyAccessToken,
-  verifyRefreshToken,
+    generateAccessToken,
+    generateRefreshToken,
+    verifyAccessToken,
+    verifyRefreshToken
 };

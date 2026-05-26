@@ -2,15 +2,22 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 
 const pool = require("./config/db");
 
 const authRoutes = require("./modules/auth/routes/auth.routes");
+const errorMiddleware = require("./shared/middleware/error.middleware");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin:true,
+    credentials:true
+}));
+
 app.use(express.json());
+app.use(cookieParser());
 
 app.get("/health", async (req, res) => {
   try {
@@ -24,12 +31,14 @@ app.get("/health", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: "Database connection failed",
+      message: "disconnected",
     });
   }
 });
-// Auth Routes
+
 app.use("/auth", authRoutes);
+
+app.use(errorMiddleware);
 
 const PORT = process.env.PORT || 5000;
 

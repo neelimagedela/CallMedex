@@ -1,34 +1,118 @@
+const asyncHandler = require(
+    "../../../shared/utils/asyncHandler"
+);
+
 const {
-  registerUser,
-  loginUser,
-  logoutUser,
+    successResponse
+} = require(
+    "../../../shared/utils/response"
+);
+
+const {
+    registerUser,
+    sendOtp,
+    verifyOtp,
+    loginUser,
+    logoutUser
 } = require("../services/auth.service");
 
-const registerController = async (req, res) => {
-  // TODO:
-  // 1. Extract request body
-  // 2. Call register service
-  // 3. Return response
-};
+const registerController = asyncHandler(
+    async(req, res) => {
 
-const loginController = async (req, res) => {
-  // TODO:
-  // 1. Extract credentials
-  // 2. Call login service
-  // 3. Set secure cookies
-  // 4. Return auth response
-};
+        const result = await registerUser(
+            req.body
+        );
 
-const logoutController = async (req, res) => {
-  // TODO:
-  // 1. Read session/auth data
-  // 2. Call logout service
-  // 3. Clear auth cookies
-  // 4. Return response
-};
+        return successResponse({
+            res,
+            status : 201,
+            message : result.message,
+            data : result.data
+        });
+    }
+);
+
+const sendOtpController = asyncHandler(
+    async(req, res) => {
+
+        const result = await sendOtp(
+            req.body
+        );
+
+        return successResponse({
+            res,
+            message : result.message
+        });
+    }
+);
+
+const verifyOtpController = asyncHandler(
+    async(req, res) => {
+
+        const result = await verifyOtp(
+            req.body
+        );
+
+        return successResponse({
+            res,
+            message : result.message
+        });
+    }
+);
+
+const loginController = asyncHandler(
+    async(req, res) => {
+
+        const result = await loginUser(
+            req.body,
+            req
+        );
+
+        if(result.data?.refreshToken) {
+
+            res.cookie(
+                "refreshToken",
+                result.data.refreshToken,
+                {
+                    httpOnly : true,
+                    secure :
+                        process.env.NODE_ENV
+                        === "production",
+                    sameSite : "strict",
+                    maxAge :
+                        7 * 24 * 60 * 60 * 1000
+                }
+            );
+        }
+
+        return successResponse({
+            res,
+            message : result.message,
+            data : result.data
+        });
+    }
+);
+
+const logoutController = asyncHandler(
+    async(req, res) => {
+
+        const result = await logoutUser(
+            req.user.sessionId
+        );
+
+        res.clearCookie("refreshToken");
+
+        return successResponse({
+            res,
+            message : result.message
+        });
+    }
+);
 
 module.exports = {
-  registerController,
-  loginController,
-  logoutController,
+    registerController,
+    sendOtpController,
+    verifyOtpController,
+    loginController,
+    logoutController
 };

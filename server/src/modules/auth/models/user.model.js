@@ -1,71 +1,141 @@
-const pool = require("../../../config/db");
+const db = require("../../../config/db");
 
-const createUser = async (userData) => {
-  const {
-    name,
-    phone,
+const createUser = async(userData) => {
+
+    const [result] = await db.execute(
+        `
+        INSERT INTO users
+        (
+            name,
+            phone,
+            email,
+            password_hash,
+            role
+        )
+        VALUES (?, ?, ?, ?, ?)
+        `,
+        [
+            userData.name,
+            userData.phone,
+            userData.email,
+            userData.password_hash,
+            userData.role
+        ]
+    );
+
+    return {
+        id : result.insertId,
+        ...userData
+    };
+};
+
+const findUserByEmail = async(email) => {
+
+    const [rows] = await db.execute(
+        `
+        SELECT *
+        FROM users
+        WHERE email = ?
+        LIMIT 1
+        `,
+        [email]
+    );
+
+    return rows[0];
+};
+
+const findUserByPhone = async(phone) => {
+
+    const [rows] = await db.execute(
+        `
+        SELECT *
+        FROM users
+        WHERE phone = ?
+        LIMIT 1
+        `,
+        [phone]
+    );
+
+    return rows[0];
+};
+
+const findUserByEmailOrPhone = async(
     email,
-    role,
-  } = userData;
+    phone
+) => {
 
-  const query = `
-    INSERT INTO users (
-      name,
-      phone,
-      email,
-      role
-    )
-    VALUES (?, ?, ?, ?)
-  `;
+    const [rows] = await db.execute(
+        `
+        SELECT *
+        FROM users
+        WHERE email = ?
+        OR phone = ?
+        LIMIT 1
+        `,
+        [email, phone]
+    );
 
-  const values = [
-    name,
-    phone,
-    email,
-    role,
-  ];
-
-  const [result] = await pool.query(query, values);
-
-  return result;
+    return rows[0];
 };
 
-const findUserByEmail = async (email) => {
-  const query = `
-    SELECT * FROM users
-    WHERE email = ?
-  `;
+const findUserById = async(userId) => {
 
-  const [rows] = await pool.query(query, [email]);
+    const [rows] = await db.execute(
+        `
+        SELECT *
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+        `,
+        [userId]
+    );
 
-  return rows[0];
+    return rows[0];
 };
 
-const findUserByPhone = async (phone) => {
-  const query = `
-    SELECT * FROM users
-    WHERE phone = ?
-  `;
+const updateEmailVerification = async(userId) => {
 
-  const [rows] = await pool.query(query, [phone]);
-
-  return rows[0];
+    await db.execute(
+        `
+        UPDATE users
+        SET is_email_verified = TRUE
+        WHERE id = ?
+        `,
+        [userId]
+    );
 };
 
-const findUserById = async (id) => {
-  const query = `
-    SELECT * FROM users
-    WHERE id = ?
-  `;
+const updatePhoneVerification = async(userId) => {
 
-  const [rows] = await pool.query(query, [id]);
+    await db.execute(
+        `
+        UPDATE users
+        SET is_phone_verified = TRUE
+        WHERE id = ?
+        `,
+        [userId]
+    );
+};
 
-  return rows[0];
+const updateRegistrationStatus = async(userId, status) => {
+
+    await db.execute(
+        `
+        UPDATE users
+        SET registration_status = ?
+        WHERE id = ?
+        `,
+        [status, userId]
+    );
 };
 
 module.exports = {
-  createUser,
-  findUserByEmail,
-  findUserByPhone,
-  findUserById,
+    createUser,
+    findUserByEmail,
+    findUserByPhone,
+    findUserByEmailOrPhone,
+    findUserById,
+    updateEmailVerification,
+    updatePhoneVerification,
+    updateRegistrationStatus
 };
