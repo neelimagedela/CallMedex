@@ -58,46 +58,46 @@ const registerUser = async(userData) => {
 
     if(existingUser) {
 
-    const sameEmail =
-        existingUser.email
-        === sanitizedData.email;
+      const sameEmail =
+          existingUser.email
+          === sanitizedData.email;
 
-    const samePhone =
-        existingUser.phone
-        === sanitizedData.phone;
+      const samePhone =
+          existingUser.phone
+          === sanitizedData.phone;
 
-    const incompleteRegistration =
-        existingUser.registration_status
-        !== "PROFILE_COMPLETED";
+      const incompleteRegistration =
+          existingUser.registration_status
+          !== "PROFILE_COMPLETED";
 
-    if(
-        sameEmail &&
-        samePhone &&
-        incompleteRegistration
-    ) {
+      if(
+          sameEmail &&
+          samePhone &&
+          incompleteRegistration
+      ) {
 
-        return {
-            success : true,
-            message : "Resume registration",
-            data : {
-                userId : existingUser.id,
-                registrationStatus :
-                    existingUser.registration_status,
-                isEmailVerified :
-                    existingUser.is_email_verified,
-                isPhoneVerified :
-                    existingUser.is_phone_verified,
-                nextStep :
-                    existingUser.registration_status
-            }
-        };
+          return {
+              success : true,
+              message : "Resume registration",
+              data : {
+                  userId : existingUser.id,
+                  registrationStatus :
+                      existingUser.registration_status,
+                  isEmailVerified :
+                      existingUser.is_email_verified,
+                  isPhoneVerified :
+                      existingUser.is_phone_verified,
+                  nextStep :
+                      existingUser.registration_status
+              }
+          };
+        }
+
+        throw new AppError(
+            "User already exists",
+            409
+        );
     }
-
-    throw new AppError(
-        "User already exists",
-        409
-    );
-}
 
     const passwordHash = await hashPassword(
         sanitizedData.password
