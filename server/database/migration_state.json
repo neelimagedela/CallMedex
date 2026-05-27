@@ -1,1 +1,5 @@
-[]
+[
+  "001_create_users.sql",
+  "002_create_verification_otps.sql",
+  "003_create_sessions.sql"
+]
