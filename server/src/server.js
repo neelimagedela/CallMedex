@@ -9,6 +9,9 @@ const rateLimit = require("express-rate-limit");
 const db = require("./config/db");
 
 const authRoutes = require("./modules/auth/routes/auth.routes");
+const profileRoutes = require("./modules/profile/routes/profile.routes");
+const appointmentRoutes = require("./modules/appointment/routes/appointment.routes");
+const path = require("path");
 
 const errorMiddleware = require("./shared/middleware/error.middleware");
 
@@ -41,7 +44,7 @@ app.use("/auth", authLimiter);
 
 app.get("/health", async (req, res) => {
   try {
-    await pool.query("SELECT 1");
+    await db.query("SELECT 1");
 
     res.status(200).json({
       success: true,
@@ -57,6 +60,9 @@ app.get("/health", async (req, res) => {
 });
 
 app.use("/auth", authRoutes);
+app.use("/profile", profileRoutes);
+app.use("/appointment", appointmentRoutes);
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.use(errorMiddleware);
 

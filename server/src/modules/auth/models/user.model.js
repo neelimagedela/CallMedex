@@ -10,16 +10,32 @@ const createUser = async(userData) => {
             phone,
             email,
             password_hash,
-            role
+            role,
+            gender,
+            dob,
+            address,
+            city,
+            district,
+            state,
+            pincode,
+            country
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             userData.name,
             userData.phone,
             userData.email,
             userData.password_hash,
-            userData.role
+            userData.role,
+            userData.gender || null,
+            userData.dob || null,
+            userData.address || null,
+            userData.city || null,
+            userData.district || null,
+            userData.state || null,
+            userData.pincode || null,
+            userData.country || null
         ]
     );
 

@@ -1,0 +1,123 @@
+CREATE TABLE IF NOT EXISTS patient_profiles (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNIQUE NOT NULL,
+    blood_group VARCHAR(20) NULL,
+    height VARCHAR(20) NULL,
+    weight VARCHAR(20) NULL,
+    medical_history JSON NULL,
+    other_condition VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS doctor_profiles (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNIQUE NOT NULL,
+    medical_license_number VARCHAR(100) NULL,
+    specialization VARCHAR(100) NULL,
+    qualification VARCHAR(100) NULL,
+    years_of_experience VARCHAR(50) NULL,
+    hospital_clinic_name VARCHAR(255) NULL,
+    consultation_fee DECIMAL(10,2) NULL,
+    available_timings VARCHAR(255) NULL,
+    consultation_mode VARCHAR(100) NULL,
+    available_online BOOLEAN DEFAULT FALSE,
+    languages_known JSON NULL,
+    medical_certificate VARCHAR(255) NULL,
+    medical_license VARCHAR(255) NULL,
+    id_proof VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS phlebo_profiles (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNIQUE NOT NULL,
+    phlebo_type VARCHAR(100) NULL,
+    qualification VARCHAR(100) NULL,
+    specialization VARCHAR(100) NULL,
+    years_of_experience VARCHAR(50) NULL,
+    certification_number VARCHAR(100) NULL,
+    available_days JSON NULL,
+    available_time VARCHAR(255) NULL,
+    home_collection BOOLEAN DEFAULT FALSE,
+    emergency_availability BOOLEAN DEFAULT FALSE,
+    government_id_type VARCHAR(100) NULL,
+    aadhaar_front VARCHAR(255) NULL,
+    phlebotomy_certificate VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS pharmacy_profiles (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNIQUE NOT NULL,
+    pharmacy_name VARCHAR(255) NULL,
+    pharmacy_type VARCHAR(100) NULL,
+    owner_name VARCHAR(255) NULL,
+    pharmacist_in_charge VARCHAR(255) NULL,
+    years_of_operation VARCHAR(50) NULL,
+    operating_hours VARCHAR(255) NULL,
+    registration_number VARCHAR(100) NULL,
+    drug_license_number VARCHAR(100) NULL,
+    gst_number VARCHAR(100) NULL,
+    home_delivery BOOLEAN DEFAULT FALSE,
+    emergency_service BOOLEAN DEFAULT FALSE,
+    online_consultation BOOLEAN DEFAULT FALSE,
+    availability_24x7 BOOLEAN DEFAULT FALSE,
+    drug_license_document VARCHAR(255) NULL,
+    gst_certificate VARCHAR(255) NULL,
+    pharmacist_certificate VARCHAR(255) NULL,
+    pharmacy_images VARCHAR(255) NULL,
+    owner_id_proof VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS organization_profiles (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNIQUE NOT NULL,
+    institution_name VARCHAR(255) NULL,
+    institution_type VARCHAR(100) NULL,
+    registration_number VARCHAR(100) NULL,
+    license_number VARCHAR(100) NULL,
+    establishment_year VARCHAR(50) NULL,
+    ownership_type VARCHAR(100) NULL,
+    alt_phone VARCHAR(50) NULL,
+    emergency_phone VARCHAR(50) NULL,
+    head_of_institution VARCHAR(255) NULL,
+    total_departments INT NULL,
+    total_staff INT NULL,
+    total_branches INT NULL,
+    operating_hours VARCHAR(255) NULL,
+    status VARCHAR(50) DEFAULT 'Active',
+    registration_certificate VARCHAR(255) NULL,
+    government_license VARCHAR(255) NULL,
+    authorized_person_id_proof VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS admin_profiles (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNIQUE NOT NULL,
+    access_level VARCHAR(100) NULL,
+    office_location VARCHAR(255) NULL,
+    joining_date DATE NULL,
+    official_email VARCHAR(255) NULL,
+    alternate_phone VARCHAR(50) NULL,
+    security_question VARCHAR(255) NULL,
+    security_answer VARCHAR(255) NULL,
+    two_fa_enabled BOOLEAN DEFAULT FALSE,
+    permissions JSON NULL,
+    aadhaar_upload VARCHAR(255) NULL,
+    government_id_proof VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

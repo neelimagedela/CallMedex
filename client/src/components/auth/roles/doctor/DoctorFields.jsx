@@ -1,4 +1,4 @@
-import { useReducer } from "react";
+import { useReducer, useEffect } from "react";
 
 import {
   initialState,
@@ -11,12 +11,18 @@ import DoctorConsultationSection from "./DoctorConsultationSection";
 
 import DoctorDocumentsSection from "./DoctorDocumentsSection";
 
-export default function DoctorFields() {
+export default function DoctorFields({ onChange }) {
 
   const [doctorForm, dispatch] = useReducer(
     doctorReducer,
     initialState
   );
+
+  useEffect(() => {
+    if (onChange) {
+      onChange(doctorForm);
+    }
+  }, [doctorForm, onChange]);
 
   return (
 

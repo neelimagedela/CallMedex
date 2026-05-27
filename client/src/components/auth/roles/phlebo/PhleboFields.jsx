@@ -1,82 +1,88 @@
-import React, { useReducer } from "react";
+import React, { useReducer, useEffect } from "react";
 
 import {
   initialState,
   phleboReducer,
-} from "./phleboReducer";
+} from "./PhleboReducer";
 
 import PhleboProfessionalSection from "./PhleboProfessionalSection";
 import PhleboDocumentsSection from "./PhleboDocumentsSection";
 import PhleboAvailabilitySection from "./PhleboAvailabilitySection";
 
-const PhleboFields = () => {
+const PhleboFields = ({ onChange }) => {
 
   const [phleboForm, dispatch] = useReducer(
     phleboReducer,
     initialState
   );
 
+  useEffect(() => {
+    if (onChange) {
+      onChange(phleboForm);
+    }
+  }, [phleboForm, onChange]);
+
   return (
 
     <div className="role-form-container">
 
-     {/* Phlebo Type Selection */}
+      {/* Phlebo Type Selection */}
 
-<div className="section-card">
+      <div className="section-card">
 
-  <h2 className="section-title">
-    Phlebo Type
-  </h2>
+        <h2 className="section-title">
+          Phlebo Type
+        </h2>
 
-  <p className="section-subtitle">
-    Select your working category
-  </p>
+        <p className="section-subtitle">
+          Select your working category
+        </p>
 
-  <div className="pill-group">
+        <div className="pill-group">
 
-    <label className="pill-option">
+          <label className="pill-option">
 
-      <input
-        type="radio"
-        name="phleboType"
-        value="partTime"
-        checked={phleboForm.phleboType === "partTime"}
-        onChange={(e) =>
-          dispatch({
-            type: "UPDATE_FIELD",
-            name: "phleboType",
-            value: e.target.value,
-          })
-        }
-      />
+            <input
+              type="radio"
+              name="phleboType"
+              value="partTime"
+              checked={phleboForm.phleboType === "partTime"}
+              onChange={(e) =>
+                dispatch({
+                  type: "UPDATE_FIELD",
+                  name: "phleboType",
+                  value: e.target.value,
+                })
+              }
+            />
 
-      Part Time
+            Part Time
 
-    </label>
+          </label>
 
-    <label className="pill-option">
+          <label className="pill-option">
 
-      <input
-        type="radio"
-        name="phleboType"
-        value="fullTime"
-        checked={phleboForm.phleboType === "fullTime"}
-        onChange={(e) =>
-          dispatch({
-            type: "UPDATE_FIELD",
-            name: "phleboType",
-            value: e.target.value,
-          })
-        }
-      />
+            <input
+              type="radio"
+              name="phleboType"
+              value="fullTime"
+              checked={phleboForm.phleboType === "fullTime"}
+              onChange={(e) =>
+                dispatch({
+                  type: "UPDATE_FIELD",
+                  name: "phleboType",
+                  value: e.target.value,
+                })
+              }
+            />
 
-      Full Time
+            Full Time
 
-    </label>
+          </label>
 
-  </div>
+        </div>
 
-</div> 
+      </div>
 
       {/* Common Sections */}
 

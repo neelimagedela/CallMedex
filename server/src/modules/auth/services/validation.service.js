@@ -19,8 +19,19 @@ const registerSchema = z.object({
         "doctor",
         "admin",
         "diagnostic",
-        "consultancy"
-    ])
+        "consultancy",
+        "pharmacy",
+        "organization"
+    ]),
+
+    gender : z.string().max(20).optional().nullable(),
+    dob : z.string().optional().nullable(),
+    address : z.string().max(255).optional().nullable(),
+    city : z.string().max(100).optional().nullable(),
+    district : z.string().max(100).optional().nullable(),
+    state : z.string().max(100).optional().nullable(),
+    pincode : z.string().max(20).optional().nullable(),
+    country : z.string().max(100).optional().nullable()
 });
 
 const verifyOtpSchema = z.object({

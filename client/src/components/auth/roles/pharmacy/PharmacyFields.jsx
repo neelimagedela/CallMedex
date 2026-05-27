@@ -1,4 +1,4 @@
-import React, { useReducer } from "react";
+import React, { useReducer, useEffect } from "react";
 
 import {
   pharmacyReducer,
@@ -10,11 +10,17 @@ import PharmacyLicenseSection from "./PharmacyLicenseSection";
 import PharmacyServicesSection from "./PharmacyServicesSection";
 import PharmacyDocumentsSection from "./PharmacyDocumentsSection";
 
-const PharmacyFields = () => {
+const PharmacyFields = ({ onChange }) => {
   const [pharmacyForm, dispatch] = useReducer(
     pharmacyReducer,
     initialState
   );
+
+  useEffect(() => {
+    if (onChange) {
+      onChange(pharmacyForm);
+    }
+  }, [pharmacyForm, onChange]);
 
   return (
     <>

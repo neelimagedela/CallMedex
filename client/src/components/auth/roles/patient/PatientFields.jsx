@@ -1,4 +1,4 @@
-import { useReducer } from "react";
+import { useReducer, useEffect } from "react";
 
 import {
   initialState,
@@ -9,12 +9,18 @@ import PatientHealthSection from "./PatientHealthSection";
 
 import PatientPhysicalSection from "./PatientPhysicalSection";
 
-export default function PatientFields() {
+export default function PatientFields({ onChange }) {
 
   const [patientForm, dispatch] = useReducer(
     patientReducer,
     initialState
   );
+
+  useEffect(() => {
+    if (onChange) {
+      onChange(patientForm);
+    }
+  }, [patientForm, onChange]);
 
   return (
 

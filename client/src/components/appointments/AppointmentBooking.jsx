@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { api } from "../../shared/api";
 
 // ── constants ──────────────────────────────────────────────────────────────
 const PRE_DEFAULT = [
@@ -326,7 +327,7 @@ export default function AppointmentBooking({ title, scans }) {
     setPrescription(file);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const e = validate(patient, branch, selectedScans, date, slot, prescription);
     setErrors(e);
     if (Object.keys(e).length > 0) {
@@ -336,8 +337,45 @@ export default function AppointmentBooking({ title, scans }) {
       secRefs[secIdx]?.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    setSubmitted(true);
-    setTimeout(() => postRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    
+    try {
+      let base64Prescription = null;
+      if (prescription) {
+        base64Prescription = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(prescription);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = (error) => reject(error);
+        });
+      }
+
+      const payload = {
+        patientName: patient.name,
+        patientAge: Number(patient.age),
+        patientSex: patient.sex,
+        patientMobile: patient.mobile,
+        patientEmail: patient.email,
+        patientAddress: patient.address,
+        branch,
+        scans: selectedScans,
+        appointmentDate: date,
+        timeSlot: slot,
+        prescription: base64Prescription,
+        totalAmount: total
+      };
+
+      const response = await api.post("/appointment/book", payload);
+      
+      if (response.data.success) {
+        setSubmitted(true);
+        setTimeout(() => postRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+      } else {
+        alert(response.data.message || "Booking failed");
+      }
+    } catch (err) {
+      console.error("Booking error:", err);
+      alert(err.response?.data?.message || "Failed to book appointment. Try again.");
+    }
   };
 
   const preTests = getPreTest(selectedScans);

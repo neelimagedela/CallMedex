@@ -1,4 +1,4 @@
-import { useReducer } from "react";
+import { useReducer, useEffect } from "react";
 
 import {
   initialState,
@@ -10,12 +10,18 @@ import OrganizationContactSection from "./OrganizationContactSection";
 import OrganizationAdministrationSection from "./OrganizationAdministrationSection";
 import OrganizationDocumentsSection from "./OrganizationDocumentsSection";
 
-export default function OrganizationFields() {
+export default function OrganizationFields({ onChange }) {
 
   const [organizationForm, dispatch] = useReducer(
     organizationReducer,
     initialState
   );
+
+  useEffect(() => {
+    if (onChange) {
+      onChange(organizationForm);
+    }
+  }, [organizationForm, onChange]);
 
   return (
     <>

@@ -1,4 +1,4 @@
-import { useReducer } from "react";
+import { useReducer, useEffect } from "react";
 
 import AdminProfessionalSection from "./AdminProfessionalSection";
 import AdminSecuritySection from "./AdminSecuritySection";
@@ -10,12 +10,18 @@ import {
   initialState,
 } from "./adminReducer";
 
-export default function AdminFields() {
+export default function AdminFields({ onChange }) {
 
   const [state, dispatch] = useReducer(
     adminReducer,
     initialState
   );
+
+  useEffect(() => {
+    if (onChange) {
+      onChange(state);
+    }
+  }, [state, onChange]);
 
   return (
     <>
