@@ -15,12 +15,18 @@ CREATE TABLE IF NOT EXISTS users (
         'doctor',
         'admin',
         'diagnostic',
-        'consultency'
+        'consultancy'
     ) NOT NULL,
 
     is_email_verified BOOLEAN DEFAULT FALSE,
 
     is_phone_verified BOOLEAN DEFAULT FALSE,
+    public_user_id VARCHAR(50) UNIQUE NULL,
+    registration_status ENUM(
+        'PENDING_VERIFICATION',
+        'VERIFIED',
+        'PROFILE_COMPLETED'
+        ) DEFAULT 'PENDING_VERIFICATION',
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 

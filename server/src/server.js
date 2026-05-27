@@ -2,22 +2,42 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
+const rateLimit = require("express-rate-limit");
 
-const pool = require("./config/db");
+const db = require("./config/db");
 
 const authRoutes = require("./modules/auth/routes/auth.routes");
+
 const errorMiddleware = require("./shared/middleware/error.middleware");
 
 const app = express();
 
+app.use(helmet());
+
 app.use(cors({
-    origin:true,
-    credentials:true
+    origin : true,
+    credentials : true
 }));
 
-app.use(express.json());
+app.use(express.json({ limit : "10mb" }));
+
 app.use(cookieParser());
+
+const authLimiter = rateLimit({
+    windowMs : 15 * 60 * 1000,
+    max : 25,
+    standardHeaders : true,
+    legacyHeaders : false,
+    message : {
+        success : false,
+        message : "Too many requests"
+    }
+});
+
+app.use("/auth", authLimiter);
+
 
 app.get("/health", async (req, res) => {
   try {

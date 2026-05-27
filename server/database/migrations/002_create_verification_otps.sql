@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS verification_otps (
     user_id BIGINT NOT NULL,
 
     otp_hash VARCHAR(255) NOT NULL,
-
+    is_used BOOLEAN DEFAULT FALSE,
     type ENUM('email', 'phone') NOT NULL,
 
     expires_at TIMESTAMP NOT NULL,

@@ -45,20 +45,16 @@ const sendOtpController = asyncHandler(
         });
     }
 );
+const verifyOtpController = async (req, res, next) => {
+  try {
+    const result = await verifyOtp(req.body);
 
-const verifyOtpController = asyncHandler(
-    async(req, res) => {
-
-        const result = await verifyOtp(
-            req.body
-        );
-
-        return successResponse({
-            res,
-            message : result.message
-        });
-    }
-);
+    return res.status(200).json(result);
+  }
+  catch(error) {
+    next(error);
+  }
+};
 
 const loginController = asyncHandler(
     async(req, res) => {
