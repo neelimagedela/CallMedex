@@ -128,6 +128,19 @@ const updateRegistrationStatus = async(userId, status) => {
         [status, userId]
     );
 };
+const completeEmailVerification = async(userId, publicUserId) => {
+    await db.execute(
+        `
+        UPDATE users
+        SET 
+            is_email_verified = TRUE,
+            registration_status = 'VERIFIED',
+            public_user_id = ?
+        WHERE id = ?
+        `,
+        [publicUserId, userId]
+    );
+};
 
 module.exports = {
     createUser,
@@ -137,5 +150,6 @@ module.exports = {
     findUserById,
     updateEmailVerification,
     updatePhoneVerification,
-    updateRegistrationStatus
+    updateRegistrationStatus,
+    completeEmailVerification
 };

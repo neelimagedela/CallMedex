@@ -1,24 +1,21 @@
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
+const { sendOtpEmail } = require("./email.service");
 
 const generateOtp = () => {
-
-    return crypto
-        .randomInt(100000, 999999)
-        .toString();
+    return crypto.randomInt(100000, 999999).toString();
 };
 
-const sendEmailOtp = async(email, otp) => {
-
-    console.log(
-        `Email OTP for ${email}: ${otp}`
-    );
+const sendEmailOtp = async(email, otp, name = "User") => {
+    await sendOtpEmail({
+        to: email,
+        otp,
+        name
+    });
 };
 
 const sendPhoneOtp = async(phone, otp) => {
-
-    console.log(
-        `Phone OTP for ${phone}: ${otp}`
-    );
+    console.log(`Phone OTP for ${phone}: ${otp}`);
 };
 
 const hashOtp = async(otp) => {

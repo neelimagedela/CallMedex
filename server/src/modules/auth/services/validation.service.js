@@ -19,7 +19,7 @@ const registerSchema = z.object({
         "doctor",
         "admin",
         "diagnostic",
-        "consultency"
+        "consultancy"
     ])
 });
 

@@ -1,32 +1,23 @@
 const db = require("../../../config/db");
 
-const createOtp = async(data) => {
+const createOtp = async (data) => {
+  const expiresAt = new Date(
+    Date.now() + Number(process.env.OTP_EXPIRES_MINUTES || 5) * 60 * 1000
+  );
 
-    await db.execute(
-        `
-        INSERT INTO verification_otps
-        (
-            user_id,
-            otp_hash,
-            type,
-            expires_at
-        )
-        VALUES
-        (
-            ?, ?, ?,
-            DATE_ADD(
-                NOW(),
-                INTERVAL ? MINUTE
-            )
-        )
-        `,
-        [
-            data.userId,
-            data.otpHash,
-            data.type,
-            process.env.OTP_EXPIRES_MINUTES
-        ]
-    );
+  await db.execute(
+    `
+    INSERT INTO verification_otps
+    (
+      user_id,
+      otp_hash,
+      type,
+      expires_at
+    )
+    VALUES (?, ?, ?, ?)
+    `,
+    [data.userId, data.otpHash, data.type, expiresAt]
+  );
 };
 
 const findLatestOtp = async(data) => {
@@ -60,9 +51,20 @@ const deleteOtp = async(otpId) => {
         [otpId]
     );
 };
+const markOtpUsed = async (otpId) => {
+  await db.execute(
+    `
+    UPDATE verification_otps
+    SET is_used = TRUE
+    WHERE id = ?
+    `,
+    [otpId]
+  );
+};
 
 module.exports = {
     createOtp,
     findLatestOtp,
-    deleteOtp
+    deleteOtp,
+    markOtpUsed
 };
