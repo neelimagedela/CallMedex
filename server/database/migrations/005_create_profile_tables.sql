@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS patient_profiles (
     height VARCHAR(20) NULL,
     weight VARCHAR(20) NULL,
     medical_history JSON NULL,
+    has_other_condition BOOLEAN DEFAULT FALSE,
     other_condition VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

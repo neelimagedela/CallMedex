@@ -35,7 +35,7 @@ const registerSchema = z.object({
 });
 
 const verifyOtpSchema = z.object({
-    userId : z.number(),
+    userId : z.coerce.number().int().positive(),
 
     otp : z.string()
         .length(6),
