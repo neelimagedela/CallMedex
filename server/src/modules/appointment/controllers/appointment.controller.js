@@ -7,7 +7,7 @@ const { createAppointment, getAppointmentsByUserId } = require("../models/appoin
 const AppError = require("../../../shared/utils/AppError");
 
 const bookAppointmentController = asyncHandler(async (req, res) => {
-  const userId = req.user?.id || null;
+  const userId  = req.user.id;
   const {
     patientName,
     patientAge,
@@ -22,7 +22,9 @@ const bookAppointmentController = asyncHandler(async (req, res) => {
     prescription, // base64 string
     totalAmount
   } = req.body;
-
+   if (req.user.role !== "patient") {
+  throw new AppError("Only patients can book scan appointments", 403);
+}
   if (!patientName || !patientAge || !patientSex || !patientMobile || !patientEmail || !patientAddress || !branch || !scans || !appointmentDate || !timeSlot) {
     throw new AppError("All required booking fields must be provided", 400);
   }

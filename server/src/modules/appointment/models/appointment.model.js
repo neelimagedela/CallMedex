@@ -54,6 +54,7 @@ const getAppointmentsByUserId = async (userId) => {
     `SELECT * FROM appointments WHERE user_id = ? ORDER BY appointment_date DESC, created_at DESC`,
     [userId]
   );
+
   return rows;
 };
 
@@ -62,6 +63,7 @@ const getAppointmentById = async (id) => {
     `SELECT * FROM appointments WHERE id = ? LIMIT 1`,
     [id]
   );
+
   return rows[0];
 };
 

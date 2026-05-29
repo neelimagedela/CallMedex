@@ -328,55 +328,130 @@ export default function AppointmentBooking({ title, scans }) {
   };
 
   const handleSubmit = async () => {
-    const e = validate(patient, branch, selectedScans, date, slot, prescription);
-    setErrors(e);
-    if (Object.keys(e).length > 0) {
-      const first = ["name","age","sex","mobile","email","branch","address","scans","date","slot","prescription"].find(k => e[k]);
-      const secIdx = ["name","age","sex","mobile","email","branch","address"].includes(first) ? 0
-        : first === "scans" ? 1 : ["date","slot"].includes(first) ? 2 : 3;
-      secRefs[secIdx]?.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  // 1. Check whether patient is logged in
+  const token = localStorage.getItem("accessToken");
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+
+  if (!token || !user) {
+    alert("Please login as patient before booking a scan.");
+    return;
+  }
+
+  if (user.role !== "patient") {
+    alert("Only patient accounts can book scan appointments.");
+    return;
+  }
+
+  // 2. Validate form fields
+  const e = validate(patient, branch, selectedScans, date, slot, prescription);
+  setErrors(e);
+
+  if (Object.keys(e).length > 0) {
+    const first = [
+      "name",
+      "age",
+      "sex",
+      "mobile",
+      "email",
+      "branch",
+      "address",
+      "scans",
+      "date",
+      "slot",
+      "prescription",
+    ].find((k) => e[k]);
+
+    const secIdx = [
+      "name",
+      "age",
+      "sex",
+      "mobile",
+      "email",
+      "branch",
+      "address",
+    ].includes(first)
+      ? 0
+      : first === "scans"
+      ? 1
+      : ["date", "slot"].includes(first)
+      ? 2
+      : 3;
+
+    secRefs[secIdx]?.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    return;
+  }
+
+  try {
+    // 3. Convert prescription file to base64
+    let base64Prescription = null;
+
+    if (prescription) {
+      base64Prescription = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(prescription);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+      });
+    }
+
+    // 4. Prepare booking data
+    // Do NOT send userId from frontend
+    const payload = {
+      patientName: patient.name.trim(),
+      patientAge: Number(patient.age),
+      patientSex: patient.sex,
+      patientMobile: patient.mobile.trim(),
+      patientEmail: patient.email.trim().toLowerCase(),
+      patientAddress: patient.address.trim(),
+      branch,
+      scans: selectedScans.map((scan) => ({
+        id: scan.id,
+        name: scan.name,
+        subtitle: scan.subtitle,
+        price: Number(scan.price),
+        oldPrice: Number(scan.oldPrice || 0),
+      })),
+      appointmentDate: date,
+      timeSlot: slot,
+      prescription: base64Prescription,
+      totalAmount: Number(total),
+    };
+
+    // 5. Send booking request to backend
+    const response = await api.post("/appointment/book", payload);
+
+    // 6. Show success message
+    if (response.data.success) {
+      setSubmitted(true);
+
+      alert("Scan appointment booked successfully.");
+
+      setTimeout(() => {
+        postRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    } else {
+      alert(response.data.message || "Booking failed.");
+    }
+  } catch (err) {
+    console.error("Booking error:", err);
+
+    if (err.response?.status === 401) {
+      alert("Session expired. Please login again.");
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("user");
       return;
     }
-    
-    try {
-      let base64Prescription = null;
-      if (prescription) {
-        base64Prescription = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(prescription);
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = (error) => reject(error);
-        });
-      }
 
-      const payload = {
-        patientName: patient.name,
-        patientAge: Number(patient.age),
-        patientSex: patient.sex,
-        patientMobile: patient.mobile,
-        patientEmail: patient.email,
-        patientAddress: patient.address,
-        branch,
-        scans: selectedScans,
-        appointmentDate: date,
-        timeSlot: slot,
-        prescription: base64Prescription,
-        totalAmount: total
-      };
-
-      const response = await api.post("/appointment/book", payload);
-      
-      if (response.data.success) {
-        setSubmitted(true);
-        setTimeout(() => postRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-      } else {
-        alert(response.data.message || "Booking failed");
-      }
-    } catch (err) {
-      console.error("Booking error:", err);
-      alert(err.response?.data?.message || "Failed to book appointment. Try again.");
-    }
-  };
+    alert(err.response?.data?.message || "Failed to book appointment. Try again.");
+  }
+};
 
   const preTests = getPreTest(selectedScans);
 
