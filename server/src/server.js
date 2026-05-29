@@ -12,7 +12,7 @@ const authRoutes = require("./modules/auth/routes/auth.routes");
 const profileRoutes = require("./modules/profile/routes/profile.routes");
 const appointmentRoutes = require("./modules/appointment/routes/appointment.routes");
 const path = require("path");
-
+const homeServiceRoutes = require("./modules/homeService/routes/homeService.routes");
 const errorMiddleware = require("./shared/middleware/error.middleware");
 
 const app = express();
@@ -63,7 +63,7 @@ app.use("/auth", authRoutes);
 app.use("/profile", profileRoutes);
 app.use("/appointment", appointmentRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-
+app.use("/home-service", homeServiceRoutes);
 app.use(errorMiddleware);
 
 const PORT = process.env.PORT || 5000;

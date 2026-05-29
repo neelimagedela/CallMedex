@@ -4,5 +4,9 @@
   "003_create_sessions.sql",
   "004_update_users_table.sql",
   "005_create_profile_tables.sql",
-  "006_create_appointments_table.sql"
+  "006_create_appointments_table.sql",
+  "007_create_home_service_categories.sql",
+  "008_create_home_service_tests.sql",
+  "009_seed_home_service_tests.sql",
+  "010_create_home_service_bookings.sql"
 ]
