@@ -11,19 +11,57 @@ export default function Navbar({ scrolled, setPage, setStep }) {
     <nav className={`nav-outer${scrolled ? " scrolled" : ""}`}>
       <div className="nav-inner">
         {/* LOGO */}
-        <a className="nav-logo" href={SITE.baseUrl} onClick={(e) => { e.preventDefault(); setPage("home"); }}>
-          <img src={logo} alt="CallMedex Logo" />
-          <span className="nav-logo-text">call<span>medex</span></span>
-        </a>
+        <a
+  className="nav-logo"
+  href={SITE.baseUrl}
+  onClick={(e) => {
+    e.preventDefault();
+    setPage("home");
+  }}
+>
+  <img src={logo} alt="CallMedex Logo" />
+</a>
 
         {/* MENU */}
         <div className="nav-menu">
           {NAV.map((item, i) =>
             item.solo ? (
-              <div className="nav-item" key={i}>
-                <a className="nav-link" href={item.href} target="_blank" rel="noreferrer">{item.label}</a>
-              </div>
-            ) : (
+  <div className="nav-item" key={i}>
+    {item.scroll ? (
+      <button
+        className="nav-link"
+        onClick={() => {
+          const section = document.getElementById(item.scroll);
+
+          if (section) {
+            const offset = 120;
+
+            const y =
+              section.getBoundingClientRect().top +
+              window.pageYOffset -
+              offset;
+
+            window.scrollTo({
+              top: y,
+              behavior: "smooth",
+            });
+          }
+        }}
+      >
+        {item.label}
+      </button>
+    ) : (
+      <a
+        className="nav-link"
+        href={item.href}
+        target="_blank"
+        rel="noreferrer"
+      >
+        {item.label}
+      </a>
+    )}
+  </div>
+): (
               <div className="nav-item" key={i}>
                 <button className="nav-link">{item.label}<ChevDown /></button>
                 <div className="nav-drop">

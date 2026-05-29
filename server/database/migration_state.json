@@ -3,6 +3,6 @@
   "002_create_verification_otps.sql",
   "003_create_sessions.sql",
   "004_update_users_table.sql",
-  "006_create_appointments_table.sql",
-  "005_create_profile_tables.sql"
+  "005_create_profile_tables.sql",
+  "006_create_appointments_table.sql"
 ]

@@ -31,12 +31,38 @@ body{font-family:var(--font);background:var(--c5);color:var(--c1);-webkit-font-s
 /* ── NAVBAR ── */
 .nav-outer{width:100%;position:sticky;top:0;z-index:999;background:rgba(255,255,255,.97);backdrop-filter:blur(18px);border-bottom:1px solid #e8edf3;transition:.3s ease;}
 .nav-outer.scrolled{box-shadow:0 8px 30px rgba(0,0,0,0.06);}
-.nav-inner{width:100%;max-width:1600px;margin:auto;height:92px;padding:0 20px 0 28px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none !important;}
-.nav-logo img{width:54px;height:54px;border-radius:14px;object-fit:cover;}
-.nav-logo-text{font-size:2rem;font-weight:800;color:#102542;letter-spacing:-1px;font-family:'Fraunces',serif;text-decoration:none !important;}
-.nav-logo-text span{color:#e63946;}
 .nav-menu{display:flex;align-items:center;gap:2px;flex:1;justify-content:flex-start;margin-left:30px;}
+.nav-inner{
+  width:100%;
+  max-width:1600px;
+  margin:auto;
+  height:110px;
+  padding:0 28px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+
+.nav-logo{
+  display:flex;
+  align-items:center;
+  text-decoration:none !important;
+  flex-shrink:0;
+}
+
+.nav-logo img{
+  height:100px;
+  width:auto;
+  max-width:320px;
+  object-fit:contain;
+  display:block;
+}
+
+/* keep for safety if some page still uses it */
+.nav-logo-text{
+  display:none;
+}
 .nav-item{position:relative;}
 .nav-link{border:none;background:none;padding:11px 16px;border-radius:10px;display:flex;align-items:center;gap:6px;font-size:.95rem;font-weight:600;color:#243b53;cursor:pointer;transition:.25s ease;}
 .nav-link:hover{background:#f1f5f9;color:#1b6ca8;}

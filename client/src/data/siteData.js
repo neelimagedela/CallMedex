@@ -31,7 +31,7 @@ export const NAV = [
       { ico: "🖼️", text: "Gallery", href: "https://callmedex.com/gallery.php" },
     ],
   },
-  { label: "Health Packages", href: "https://callmedex.com/health_packages.php", solo: true },
+  { label: "Health Packages", scroll: "health-packages", solo: true },
   {
     label: "Diagnostics",
     items: [

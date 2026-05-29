@@ -70,7 +70,7 @@ export function SpecialistsSection() {
 /* ─── Health Packages ───────────────────────────────────── */
 export function PackagesSection() {
   return (
-    <section className="sec sec-alt">
+    <section id="health-packages" className="sec">
       <div className="wrap">
         <SectionHeader
           eyebrow="📦 Health Packages"
