@@ -435,9 +435,7 @@ FILE: server\src\modules\auth\models\otp.model.js
 const db = require("../../../config/db");
 
 const createOtp = async (data) => {
-  const expiresAt = new Date(
-    Date.now() + Number(process.env.OTP_EXPIRES_MINUTES || 5) * 60 * 1000
-  );
+  const expiresMinutes = Number(process.env.OTP_EXPIRES_MINUTES || 5);
 
   await db.execute(
     `
@@ -448,43 +446,66 @@ const createOtp = async (data) => {
       type,
       expires_at
     )
-    VALUES (?, ?, ?, ?)
+    VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))
     `,
-    [data.userId, data.otpHash, data.type, expiresAt]
+    [data.userId, data.otpHash, data.type, expiresMinutes]
   );
 };
 
-const findLatestOtp = async(data) => {
+/**
+ * Finds the latest unused, non-expired OTP for a user.
+ * Expiry is checked in SQL using the DB server's NOW() to avoid
+ * any Node.js ↔ MySQL timezone mismatch.
+ */
+const findLatestOtp = async (data) => {
+  const [rows] = await db.execute(
+    `
+    SELECT *
+    FROM verification_otps
+    WHERE user_id = ?
+    AND type = ?
+    AND is_used = FALSE
+    AND expires_at > NOW()
+    ORDER BY id DESC
+    LIMIT 1
+    `,
+    [data.userId, data.type]
+  );
 
-    const [rows] = await db.execute(
-        `
-        SELECT *
-        FROM verification_otps
-        WHERE user_id = ?
-        AND type = ?
-        AND is_used = FALSE
-        ORDER BY id DESC
-        LIMIT 1
-        `,
-        [
-            data.userId,
-            data.type
-        ]
-    );
-
-    return rows[0];
+  return rows[0];
 };
 
-const deleteOtp = async(otpId) => {
+/**
+ * Finds the latest unused OTP regardless of expiry (used to mark
+ * a stale OTP as used before issuing a new one).
+ */
+const findLatestOtpAny = async (data) => {
+  const [rows] = await db.execute(
+    `
+    SELECT *
+    FROM verification_otps
+    WHERE user_id = ?
+    AND type = ?
+    AND is_used = FALSE
+    ORDER BY id DESC
+    LIMIT 1
+    `,
+    [data.userId, data.type]
+  );
 
-    await db.execute(
-        `
-        DELETE FROM verification_otps
-        WHERE id = ?
-        `,
-        [otpId]
-    );
+  return rows[0];
 };
+
+const deleteOtp = async (otpId) => {
+  await db.execute(
+    `
+    DELETE FROM verification_otps
+    WHERE id = ?
+    `,
+    [otpId]
+  );
+};
+
 const markOtpUsed = async (otpId) => {
   await db.execute(
     `
@@ -497,10 +518,11 @@ const markOtpUsed = async (otpId) => {
 };
 
 module.exports = {
-    createOtp,
-    findLatestOtp,
-    deleteOtp,
-    markOtpUsed
+  createOtp,
+  findLatestOtp,
+  findLatestOtpAny,
+  deleteOtp,
+  markOtpUsed,
 };
 
 ===============================
@@ -849,6 +871,7 @@ const {
 const {
   createOtp,
   findLatestOtp,
+  findLatestOtpAny,
   markOtpUsed,
 } = require("../models/otp.model");
 
@@ -861,21 +884,16 @@ const registerUser = async (userData) => {
 
   registerSchema.parse(userData);
 
-  const sanitizedData =
-    sanitizeInput(userData);
+  const sanitizedData = sanitizeInput(userData);
 
-  const existingUser =
-    await findUserByEmailOrPhone(
-      sanitizedData.email,
-      sanitizedData.phone
-    );
+  const existingUser = await findUserByEmailOrPhone(
+    sanitizedData.email,
+    sanitizedData.phone
+  );
 
   if (existingUser) {
 
-    if (
-      existingUser.registration_status !==
-      "PROFILE_COMPLETED"
-    ) {
+    if (existingUser.registration_status !== "PROFILE_COMPLETED") {
 
       if (!existingUser.is_email_verified) {
 
@@ -889,43 +907,25 @@ const registerUser = async (userData) => {
 
       return {
         success: true,
-        message:
-          existingUser.is_email_verified
-            ? "Resume registration"
-            : "Resume registration. OTP resent to email.",
+        message: existingUser.is_email_verified
+          ? "Resume registration"
+          : "Resume registration. OTP resent to email.",
 
         data: {
           userId: existingUser.id,
-          publicUserId:
-            existingUser.public_user_id,
-
-          registrationStatus:
-            existingUser.registration_status,
-
-          isEmailVerified:
-            existingUser.is_email_verified,
-
-          isPhoneVerified:
-            existingUser.is_phone_verified,
-
-          nextStep:
-            existingUser.is_email_verified
-              ? "LOGIN"
-              : "VERIFY_EMAIL",
+          publicUserId: existingUser.public_user_id,
+          registrationStatus: existingUser.registration_status,
+          isEmailVerified: existingUser.is_email_verified,
+          isPhoneVerified: existingUser.is_phone_verified,
+          nextStep: existingUser.is_email_verified ? "LOGIN" : "VERIFY_EMAIL",
         },
       };
     }
 
-    throw new AppError(
-      "User already exists",
-      409
-    );
+    throw new AppError("User already exists", 409);
   }
 
-  const passwordHash =
-    await hashPassword(
-      sanitizedData.password
-    );
+  const passwordHash = await hashPassword(sanitizedData.password);
 
   const user = await createUser({
     ...sanitizedData,
@@ -941,65 +941,37 @@ const registerUser = async (userData) => {
 
   return {
     success: true,
-    message:
-      "Registration initiated. OTP sent to email.",
+    message: "Registration initiated. OTP sent to email.",
 
     data: {
       userId: user.id,
       publicUserId: null,
-      registrationStatus:
-        "PENDING_VERIFICATION",
-
+      registrationStatus: "PENDING_VERIFICATION",
       nextStep: "VERIFY_EMAIL",
     },
   };
 };
 
-const sendOtp = async ({
-  userId,
-  type,
-  target,
-  name,
-}) => {
+const sendOtp = async ({ userId, type, target, name }) => {
 
   const otp = generateOtp();
+  const otpHash = await hashOtp(otp);
 
-  const otpHash =
-    await hashOtp(otp);
-
-  const existingOtp =
-    await findLatestOtp({
-      userId,
-      type,
-    });
+  // Invalidate any existing unused OTP regardless of expiry
+  const existingOtp = await findLatestOtpAny({ userId, type });
 
   if (existingOtp) {
-    await markOtpUsed(
-      existingOtp.id
-    );
+    await markOtpUsed(existingOtp.id);
   }
 
-  await createOtp({
-    userId,
-    otpHash,
-    type,
-  });
+  await createOtp({ userId, otpHash, type });
 
   if (type === "email") {
-
-    await sendEmailOtp(
-      target,
-      otp,
-      name
-    );
+    await sendEmailOtp(target, otp, name);
   }
 
   if (type === "phone") {
-
-    await sendPhoneOtp(
-      target,
-      otp
-    );
+    await sendPhoneOtp(target, otp);
   }
 
   return {
@@ -1012,193 +984,110 @@ const verifyOtp = async (data) => {
 
   verifyOtpSchema.parse(data);
 
-  const otpRecord =
-    await findLatestOtp({
-      userId: data.userId,
-      type: data.type,
-    });
+  // findLatestOtp already filters by is_used = FALSE AND expires_at > NOW()
+  const otpRecord = await findLatestOtp({
+    userId: data.userId,
+    type: data.type,
+  });
 
   if (!otpRecord) {
-
-    throw new AppError(
-      "OTP not found",
-      404
-    );
+    // Could be not found OR expired — give a generic message to avoid information leakage
+    throw new AppError("OTP is invalid or has expired. Please request a new one.", 400);
   }
 
-  if (
-    new Date(otpRecord.expires_at) <
-    new Date()
-  ) {
-
-    await markOtpUsed(
-      otpRecord.id
-    );
-
-    throw new AppError(
-      "OTP expired",
-      400
-    );
-  }
-
-  const otpMatches =
-    await compareOtp(
-      data.otp,
-      otpRecord.otp_hash
-    );
+  const otpMatches = await compareOtp(data.otp, otpRecord.otp_hash);
 
   if (!otpMatches) {
-
-    throw new AppError(
-      "Invalid OTP",
-      400
-    );
+    throw new AppError("Invalid OTP", 400);
   }
 
-  const user =
-    await findUserById(
-      data.userId
-    );
+  const user = await findUserById(data.userId);
 
   if (!user) {
-
-    throw new AppError(
-      "User not found",
-      404
-    );
+    throw new AppError("User not found", 404);
   }
 
-  let publicUserId =
-    user.public_user_id;
+  let publicUserId = user.public_user_id;
 
   if (!publicUserId) {
-
-    publicUserId =
-      generatePublicUserId(
-        user.role,
-        user.id
-      );
+    publicUserId = generatePublicUserId(user.role, user.id);
   }
 
   if (data.type === "email") {
-
-    await completeEmailVerification(
-      user.id,
-      publicUserId
-    );
+    await completeEmailVerification(user.id, publicUserId);
   }
 
   if (data.type === "phone") {
-
-    await updatePhoneVerification(
-      user.id
-    );
+    await updatePhoneVerification(user.id);
   }
 
-  await markOtpUsed(
-    otpRecord.id
-  );
+  await markOtpUsed(otpRecord.id);
 
   return {
     success: true,
-    message:
-      `${data.type} verified successfully`,
+    message: `${data.type} verified successfully`,
 
     data: {
       userId: user.id,
       publicUserId,
-      registrationStatus:
-        "VERIFIED",
-
+      registrationStatus: "VERIFIED",
       nextStep: "LOGIN",
     },
   };
 };
 
-const loginUser = async (
-  credentials,
-  req
-) => {
+const loginUser = async (credentials, req) => {
 
   loginSchema.parse(credentials);
 
-  const sanitizedData =
-    sanitizeInput(credentials);
+  const sanitizedData = sanitizeInput(credentials);
 
-  const user =
-    await findUserByEmail(
-      sanitizedData.email
-    );
+  const user = await findUserByEmail(sanitizedData.email);
 
   if (!user) {
-
-    throw new AppError(
-      "Invalid credentials",
-      401
-    );
+    throw new AppError("Invalid credentials", 401);
   }
 
-  const passwordMatches =
-    await comparePassword(
-      sanitizedData.password,
-      user.password_hash
-    );
+  const passwordMatches = await comparePassword(
+    sanitizedData.password,
+    user.password_hash
+  );
 
   if (!passwordMatches) {
-
-    throw new AppError(
-      "Invalid credentials",
-      401
-    );
+    throw new AppError("Invalid credentials", 401);
   }
 
   if (
     !user.is_email_verified ||
-    user.registration_status ===
-    "PENDING_VERIFICATION"
+    user.registration_status === "PENDING_VERIFICATION"
   ) {
-
     return {
       success: false,
-
       requiresVerification: true,
-
-      message:
-        "Complete email verification first",
+      message: "Complete email verification first",
 
       data: {
         userId: user.id,
-        publicUserId:
-          user.public_user_id,
-
-        nextStep:
-          "VERIFY_EMAIL",
+        publicUserId: user.public_user_id,
+        nextStep: "VERIFY_EMAIL",
       },
     };
   }
 
-  const accessToken =
-    generateAccessToken({
-      id: user.id,
-      publicUserId:
-        user.public_user_id,
+  const accessToken = generateAccessToken({
+    id: user.id,
+    publicUserId: user.public_user_id,
+    role: user.role,
+  });
 
-      role: user.role,
-    });
+  const refreshToken = generateRefreshToken({ id: user.id });
 
-  const refreshToken =
-    generateRefreshToken({
-      id: user.id,
-    });
-
-  const session =
-    await createSession({
-      userId: user.id,
-      refreshToken,
-      ipAddress: req.ip,
-      userAgent:
-        req.headers["user-agent"],
-    });
+  const session = await createSession({
+    userId: user.id,
+    refreshToken,
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"],
+  });
 
   return {
     success: true,
@@ -1207,7 +1096,6 @@ const loginUser = async (
     data: {
       accessToken,
       refreshToken,
-
       sessionId: session.id,
 
       user: {
@@ -1219,21 +1107,16 @@ const loginUser = async (
       },
 
       nextStep:
-        user.registration_status ===
-        "VERIFIED"
+        user.registration_status === "VERIFIED"
           ? "ROLE_ONBOARDING"
           : "DASHBOARD",
     },
   };
 };
 
-const logoutUser = async (
-  sessionId
-) => {
+const logoutUser = async (sessionId) => {
 
-  await revokeSession(
-    sessionId
-  );
+  await revokeSession(sessionId);
 
   return {
     success: true,
@@ -2071,13 +1954,136 @@ module.exports = router;
 FILE: server\src\modules\profile\controllers\profile.controller.js
 ===============================
 
+const path = require("path");
+const fs = require("fs");
+const crypto = require("crypto");
+
 const asyncHandler = require("../../../shared/utils/asyncHandler");
 const { successResponse } = require("../../../shared/utils/response");
 const { upsertProfile, findProfileByUserId } = require("../models/profile.model");
 const AppError = require("../../../shared/utils/AppError");
 
+/**
+ * Known profile fields that arrive as base64-encoded files.
+ * These are saved to disk and their paths stored in the DB instead
+ * of the raw base64 string (which would overflow VARCHAR columns).
+ */
+const FILE_FIELDS = new Set([
+  // Phlebo
+  "aadhaarFront",
+  "phlebotomyCertificate",
+  // Doctor
+  "medicalCertificate",
+  "medicalLicense",
+  "idProof",
+  // Pharmacy
+  "drugLicenseDocument",
+  "gstCertificate",
+  "pharmacistCertificate",
+  "ownerIdProof",
+  // Organization
+  "registrationCertificate",
+  "governmentLicense",
+  "authorizedPersonIdProof",
+  // Admin
+  "aadhaarUpload",
+  "governmentIdProof",
+]);
+
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "application/pdf",
+]);
+
+const EXTENSION_MAP = {
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+  "application/pdf": "pdf",
+};
+
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+/**
+ * Saves a base64-encoded file to the uploads directory.
+ * Returns the server-relative path (e.g. /uploads/uuid.jpg).
+ * Throws AppError on invalid format, unsupported type, or size limit exceeded.
+ */
+function saveBase64File(base64String, fieldName) {
+  if (!base64String || typeof base64String !== "string") return null;
+
+  // Accept both raw base64 and data-URI format
+  const dataUriMatch = base64String.match(/^data:([^;]+);base64,(.+)$/);
+
+  let mimeType;
+  let rawBase64;
+
+  if (dataUriMatch) {
+    mimeType = dataUriMatch[1].toLowerCase();
+    rawBase64 = dataUriMatch[2];
+  } else {
+    // Treat as raw base64 — default to JPEG so it still saves
+    mimeType = "image/jpeg";
+    rawBase64 = base64String;
+  }
+
+  if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+    throw new AppError(
+      `Field "${fieldName}" has unsupported file type: ${mimeType}. Allowed: jpg, png, pdf.`,
+      400
+    );
+  }
+
+  const buffer = Buffer.from(rawBase64, "base64");
+
+  if (buffer.length > MAX_FILE_SIZE_BYTES) {
+    throw new AppError(
+      `Field "${fieldName}" exceeds the 5 MB size limit.`,
+      400
+    );
+  }
+
+  const ext = EXTENSION_MAP[mimeType];
+  const uploadDir = path.join(__dirname, "../../../../../uploads");
+
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  const fileName = `${crypto.randomUUID()}.${ext}`;
+  const filePath = path.join(uploadDir, fileName);
+
+  fs.writeFileSync(filePath, buffer);
+
+  return `/uploads/${fileName}`;
+}
+
+/**
+ * Iterates over profileData, detects base64 file fields, saves them
+ * to disk, and replaces their values with the saved file path.
+ */
+function processFileFields(profileData) {
+  const processed = { ...profileData };
+
+  for (const key of FILE_FIELDS) {
+    if (
+      key in processed &&
+      processed[key] &&
+      typeof processed[key] === "string" &&
+      processed[key].length > 255 // heuristic: real paths are short
+    ) {
+      processed[key] = saveBase64File(processed[key], key);
+    }
+  }
+
+  return processed;
+}
+
 const onboardProfileController = asyncHandler(async (req, res) => {
-  // If req.user is set (from JWT verification) we use it, otherwise check req.body.userId for flexibility during initial register-onboard flow
+  // Accept either JWT-authenticated user or userId/role passed in body
+  // (during the initial register → OTP → onboard flow before a session exists)
   const userId = req.user?.id || req.body.userId;
   const role = req.user?.role || req.body.role;
 
@@ -2089,8 +2095,11 @@ const onboardProfileController = asyncHandler(async (req, res) => {
     throw new AppError("User role is required", 400);
   }
 
-  // Filter out meta parameters from profile data
-  const { userId: bodyUserId, role: bodyRole, ...profileData } = req.body;
+  // Strip meta params so they don't leak into the profile table
+  const { userId: _uid, role: _role, ...rawProfileData } = req.body;
+
+  // Convert base64 file fields → file paths before hitting the DB
+  const profileData = processFileFields(rawProfileData);
 
   await upsertProfile(userId, role, profileData);
 
@@ -2101,8 +2110,8 @@ const onboardProfileController = asyncHandler(async (req, res) => {
     data: {
       userId,
       role,
-      registrationStatus: "PROFILE_COMPLETED"
-    }
+      registrationStatus: "PROFILE_COMPLETED",
+    },
   });
 });
 
@@ -2120,15 +2129,14 @@ const getProfileController = asyncHandler(async (req, res) => {
     res,
     status: 200,
     message: "Profile retrieved successfully",
-    data: profile
+    data: profile,
   });
 });
 
 module.exports = {
   onboardProfileController,
-  getProfileController
+  getProfileController,
 };
-
 
 ===============================
 FILE: server\src\modules\profile\models\profile.model.js
@@ -2307,23 +2315,24 @@ FILE: server\src\modules\profile\routes\profile.routes.js
 ===============================
 
 const express = require("express");
-const { onboardProfileController, getProfileController } = require("../controllers/profile.controller");
+
+const {
+  onboardProfileController,
+  getProfileController,
+} = require("../controllers/profile.controller");
+
 const { authenticate } = require("../../auth/middleware/auth.middleware");
 
 const router = express.Router();
 
-// Allow both token authentication and manual userId/role passing in body during initial registration-onboarding
-router.post("/onboard", (req, res, next) => {
-  if (req.headers.authorization || (req.cookies && req.cookies.accessToken)) {
-    return authenticate(req, res, next);
-  }
-  next();
-}, onboardProfileController);
+// During registration, user is not logged in yet.
+// So onboarding should use userId from request body.
+router.post("/onboard", onboardProfileController);
 
-router.get("/me", authenticate, getProfileController);
+// Logged-in profile routes
+router.get("/", authenticate, getProfileController);
 
 module.exports = router;
-
 
 ===============================
 FILE: server\src\shared\middleware\error.middleware.js

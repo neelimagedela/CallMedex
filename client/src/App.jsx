@@ -18,6 +18,7 @@ import {
 
 import Cardiology      from "./components/cardiology/Cardiology";
 import BodyDiagnostics from "./components/diagnostics/BodyDiagnostics";
+import { ToastProvider } from "./shared/toast.js";
 
 export default function App() {
   const [scrolled, setScrolled] = useState(false);
@@ -30,16 +31,16 @@ export default function App() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-
   return (
-    <>
+    <ToastProvider>
       <style>{GLOBAL_CSS}</style>
 
       <TopBar />
       <Navbar scrolled={scrolled} setPage={setPage} setStep={setStep} />
-       {page === "homeservices" && <HomeServices />}
-      {page === "cardiology"      && <Cardiology />}
-      {page === "bodydiagnostics" && <BodyDiagnostics />}
+
+      {page === "homeservices"   && <HomeServices />}
+      {page === "cardiology"     && <Cardiology />}
+      {page === "bodydiagnostics"&& <BodyDiagnostics />}
 
       {page === "home" && (
         <>
@@ -58,22 +59,20 @@ export default function App() {
         </>
       )}
 
-      {page === "login" && (
-       <Login setPage={setPage} />
-      )}
-
-      {page === "register" && (
-       <Register setPage={setPage} />
-      )}
+      {page === "login"    && <Login    setPage={setPage} />}
+      {page === "register" && <Register setPage={setPage} />}
 
       <Footer />
 
       <div className="fab-wrap">
-        <button className="fab fab-chat" title="AI Chat" onClick={() => alert("AI Assistant Coming Soon")}>
+        <button
+          className="fab fab-chat"
+          title="AI Chat"
+          onClick={() => alert("AI Assistant Coming Soon")}
+        >
           💬
         </button>
-        
       </div>
-    </>
+    </ToastProvider>
   );
 }

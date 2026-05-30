@@ -11,6 +11,9 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: no_32f82u14n
       MYSQL_DATABASE: callmedex
+      TZ: Asia/Kolkata
+
+    command: --default-time-zone='+05:30'
 
     ports:
       - "3306:3306"

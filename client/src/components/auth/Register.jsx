@@ -1,56 +1,44 @@
 import React, { useState } from "react";
 import "./Auth.css";
-import DoctorFields from "./roles/doctor/DoctorFields";
-import PatientFields from "./roles/patient/PatientFields";
-import AdminFields from "./roles/admin/AdminFields";
-import PharmacyFields from "./roles/pharmacy/PharmacyFields";
+import DoctorFields       from "./roles/doctor/DoctorFields";
+import PatientFields      from "./roles/patient/PatientFields";
+import AdminFields        from "./roles/admin/AdminFields";
+import PharmacyFields     from "./roles/pharmacy/PharmacyFields";
 import OrganizationFields from "./roles/organization/OrganizationFields";
-import PhleboFields from "./roles/phlebo/PhleboFields";
-import { api } from "../../shared/api";
+import PhleboFields       from "./roles/phlebo/PhleboFields";
+import { api }      from "../../shared/api";
+import { useToast } from "../../shared/toast.js";
 
 const Register = ({ setPage }) => {
+  const toast = useToast();
+
   const [selectedRole, setSelectedRole] = useState("");
   const [formData, setFormData] = useState({
-    name: "",
-    gender: "",
-    dob: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-    address: "",
-    city: "",
-    district: "",
-    state: "",
-    pincode: "",
-    country: ""
+    name: "", gender: "", dob: "",
+    email: "", phone: "", password: "", confirmPassword: "",
+    address: "", city: "", district: "", state: "", pincode: "", country: "",
   });
-
   const [roleData, setRoleData] = useState({});
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  
+  const [loading,  setLoading]  = useState(false);
+
   // OTP state
   const [showOtpScreen, setShowOtpScreen] = useState(false);
-  const [otp, setOtp] = useState("");
+  const [otp,    setOtp]    = useState("");
   const [userId, setUserId] = useState(null);
 
+  /* ─── Helpers ────────────────────────────────────────── */
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const fileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
+  const fileToBase64 = (file) =>
+    new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
+      reader.onload  = () => resolve(reader.result);
+      reader.onerror = (err) => reject(err);
     });
-  };
 
   const processRoleData = async (data) => {
     const processed = { ...data };
@@ -66,17 +54,22 @@ const Register = ({ setPage }) => {
     return processed;
   };
 
+  /* ─── Step 1 : Register ──────────────────────────────── */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
     if (!selectedRole) {
-      setError("Please select a role to register");
+      toast.warning("Please select a role to continue registration.");
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      toast.error("Passwords do not match. Please re-enter them.");
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      toast.warning("Password must be at least 8 characters long.");
       return;
     }
 
@@ -85,77 +78,112 @@ const Register = ({ setPage }) => {
     try {
       const payload = {
         ...formData,
-        role: selectedRole === "phlebotomist" ? "phlebo" : selectedRole
+        role: selectedRole === "phlebotomist" ? "phlebo" : selectedRole,
       };
-      
+
       const response = await api.post("/auth/register", payload);
 
       if (response.data.success) {
         setUserId(response.data.data.userId);
         setShowOtpScreen(true);
+        toast.info("Registration started! Please check your email for the 6-digit OTP code.");
       } else {
-        setError(response.data.message || "Registration failed");
+        toast.error(response.data.message || "Registration failed. Please try again.");
       }
     } catch (err) {
-      console.error("Registration error:", err);
-      setError(err.response?.data?.message || "Registration failed. Try again.");
+      const status = err.response?.status;
+      const msg    = err.response?.data?.message;
+
+      if (status === 409) {
+        toast.error("An account already exists with this email or phone number. Please sign in instead.");
+      } else if (status === 400) {
+        toast.error(msg || "Some fields are invalid. Please review your details and try again.");
+      } else if (status === 429) {
+        toast.warning("Too many requests. Please wait a few minutes before trying again.");
+      } else {
+        toast.error(msg || "Unable to register right now. Please check your internet and try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  /* ─── Step 2 : Verify OTP + Onboard ─────────────────── */
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
     if (otp.length !== 6) {
-      setError("Please enter a valid 6-digit OTP");
+      toast.warning("Please enter the complete 6-digit OTP code.");
       return;
     }
 
     setLoading(true);
 
     try {
-      // 1. Verify OTP
+      // 1 — Verify OTP
       const otpResponse = await api.post("/auth/verify-otp", {
         userId,
         otp,
-        type: "email"
+        type: "email",
       });
 
-      if (otpResponse.data.success) {
-        // 2. Process and submit role-specific detailed onboarding fields
-        const cleanedRoleData = await processRoleData(roleData);
-        
-        await api.post("/profile/onboard", {
-          userId,
-          role: selectedRole === "phlebotomist" ? "phlebo" : selectedRole,
-          ...cleanedRoleData
-        });
-
-        alert("Account created and onboarded successfully!");
-        setPage("login");
-      } else {
-        setError(otpResponse.data.message || "OTP verification failed");
+      if (!otpResponse.data.success) {
+        toast.error(otpResponse.data.message || "OTP verification failed. Please try again.");
+        setLoading(false);
+        return;
       }
+
+      // 2 — Convert file fields to base64, then onboard
+      const cleanedRoleData = await processRoleData(roleData);
+
+      await api.post("/profile/onboard", {
+        userId,
+        role: selectedRole === "phlebotomist" ? "phlebo" : selectedRole,
+        ...cleanedRoleData,
+      });
+
+      toast.success("Your account has been created and verified successfully! You can now sign in.");
+      setTimeout(() => setPage("login"), 1200);
+
     } catch (err) {
-      console.error("OTP Verification/Onboarding error:", err);
-      setError(err.response?.data?.message || "OTP Verification/Onboarding failed. Try again.");
+      const status = err.response?.status;
+      const msg    = err.response?.data?.message;
+
+      if (status === 400) {
+        toast.error("The OTP you entered is incorrect or has expired. Please request a new one.");
+      } else if (status === 401) {
+        toast.error("Session expired. Please go back and start registration again.");
+      } else {
+        toast.error(msg || "Verification or onboarding failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  /* ─── Resend OTP ─────────────────────────────────────── */
+  const handleResendOtp = async () => {
+    if (!userId) return;
+    try {
+      await api.post("/auth/resend-otp", { userId, type: "email" });
+      setOtp("");
+      toast.info("A new OTP has been sent to your email address.");
+    } catch {
+      toast.error("Could not resend OTP. Please try again.");
+    }
+  };
+
+  /* ─── OTP Screen ─────────────────────────────────────── */
   if (showOtpScreen) {
     return (
       <div className="auth-container">
         <div className="auth-card" style={{ maxWidth: "500px", padding: "40px" }}>
           <div className="register-header" style={{ textAlign: "center" }}>
             <h1 className="register-title" style={{ fontSize: "32px" }}>Verify OTP</h1>
-            <p className="register-subtitle">Enter the 6-digit verification code sent to your email.</p>
+            <p className="register-subtitle">
+              Enter the 6-digit verification code sent to your email.
+            </p>
           </div>
-
-          {error && <div className="error-message" style={{ color: "#ef4444", marginBottom: "15px", fontWeight: "600", textAlign: "center" }}>{error}</div>}
 
           <form className="auth-form" onSubmit={handleOtpSubmit}>
             <div className="form-group">
@@ -166,7 +194,12 @@ const Register = ({ setPage }) => {
                 maxLength={6}
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                style={{ textAlign: "center", letterSpacing: "8px", fontSize: "24px", fontWeight: "700" }}
+                style={{
+                  textAlign: "center",
+                  letterSpacing: "8px",
+                  fontSize: "24px",
+                  fontWeight: "700",
+                }}
                 required
               />
             </div>
@@ -175,11 +208,31 @@ const Register = ({ setPage }) => {
               {loading ? "Verifying..." : "Verify & Complete Onboarding"}
             </button>
           </form>
+
+          <p style={{ textAlign: "center", marginTop: 16, fontSize: 14, color: "#64748b" }}>
+            Didn&apos;t receive the code?{" "}
+            <span
+              onClick={handleResendOtp}
+              style={{ color: "#1B6CA8", fontWeight: 600, cursor: "pointer" }}
+            >
+              Resend OTP
+            </span>
+          </p>
+
+          <p style={{ textAlign: "center", marginTop: 10, fontSize: 14, color: "#64748b" }}>
+            <span
+              onClick={() => setShowOtpScreen(false)}
+              style={{ color: "#64748b", cursor: "pointer", textDecoration: "underline" }}
+            >
+              ← Back to Registration
+            </span>
+          </p>
         </div>
       </div>
     );
   }
 
+  /* ─── Registration Form ──────────────────────────────── */
   return (
     <div className="auth-container">
       <div className="auth-card register-card">
@@ -190,10 +243,8 @@ const Register = ({ setPage }) => {
 
         <p className="auth-subtitle">Register for CallMedex</p>
 
-        {error && <div className="error-message" style={{ color: "#ef4444", marginBottom: "15px", fontWeight: "600" }}>{error}</div>}
-
         <form className="auth-form" onSubmit={handleSubmit}>
-          {/* Common Registration Fields */}
+          {/* Personal Information */}
           <div className="form-grid-2">
             <div className="form-group">
               <label>Full Name</label>
@@ -259,7 +310,7 @@ const Register = ({ setPage }) => {
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                placeholder="Create password"
+                placeholder="Create password (min 8 characters)"
                 required
               />
             </div>
@@ -283,87 +334,37 @@ const Register = ({ setPage }) => {
             <div className="form-grid-2">
               <div className="form-group">
                 <label>Address</label>
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  placeholder="Enter address"
-                  required
-                />
+                <input type="text" name="address" value={formData.address} onChange={handleInputChange} placeholder="Enter address" required />
               </div>
-
               <div className="form-group">
                 <label>City</label>
-                <input
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleInputChange}
-                  placeholder="Enter city"
-                  required
-                />
+                <input type="text" name="city" value={formData.city} onChange={handleInputChange} placeholder="Enter city" required />
               </div>
-
               <div className="form-group">
                 <label>District</label>
-                <input
-                  type="text"
-                  name="district"
-                  value={formData.district}
-                  onChange={handleInputChange}
-                  placeholder="Enter district"
-                  required
-                />
+                <input type="text" name="district" value={formData.district} onChange={handleInputChange} placeholder="Enter district" required />
               </div>
-
               <div className="form-group">
                 <label>State</label>
-                <input
-                  type="text"
-                  name="state"
-                  value={formData.state}
-                  onChange={handleInputChange}
-                  placeholder="Enter state"
-                  required
-                />
+                <input type="text" name="state" value={formData.state} onChange={handleInputChange} placeholder="Enter state" required />
               </div>
-
               <div className="form-group">
                 <label>Pincode</label>
-                <input
-                  type="text"
-                  name="pincode"
-                  value={formData.pincode}
-                  onChange={handleInputChange}
-                  placeholder="Enter pincode"
-                  required
-                />
+                <input type="text" name="pincode" value={formData.pincode} onChange={handleInputChange} placeholder="Enter pincode" required />
               </div>
-
               <div className="form-group">
                 <label>Country</label>
-                <input
-                  type="text"
-                  name="country"
-                  value={formData.country}
-                  onChange={handleInputChange}
-                  placeholder="Enter country"
-                  required
-                />
+                <input type="text" name="country" value={formData.country} onChange={handleInputChange} placeholder="Enter country" required />
               </div>
             </div>
           </div>
 
-          {/* Dropdown */}
+          {/* Role Selection */}
           <div className="form-group">
             <label>Select Role</label>
             <select
               value={selectedRole}
-              onChange={(e) => {
-                setSelectedRole(e.target.value);
-                setRoleData({});
-              }}
+              onChange={(e) => { setSelectedRole(e.target.value); setRoleData({}); }}
               required
             >
               <option value="">Choose Role</option>
@@ -376,13 +377,13 @@ const Register = ({ setPage }) => {
             </select>
           </div>
 
-          {/* Dynamic Components */}
-          {selectedRole === "doctor" && <DoctorFields onChange={setRoleData} />}
-          {selectedRole === "patient" && <PatientFields onChange={setRoleData} />}
-          {selectedRole === "admin" && <AdminFields onChange={setRoleData} />}
-          {selectedRole === "pharmacy" && <PharmacyFields onChange={setRoleData} />}
-          {selectedRole === "organization" && <OrganizationFields onChange={setRoleData} />}
-          {selectedRole === "phlebotomist" && <PhleboFields onChange={setRoleData} />}
+          {/* Role-specific fields */}
+          {selectedRole === "doctor"        && <DoctorFields       onChange={setRoleData} />}
+          {selectedRole === "patient"       && <PatientFields      onChange={setRoleData} />}
+          {selectedRole === "admin"         && <AdminFields        onChange={setRoleData} />}
+          {selectedRole === "pharmacy"      && <PharmacyFields     onChange={setRoleData} />}
+          {selectedRole === "organization"  && <OrganizationFields onChange={setRoleData} />}
+          {selectedRole === "phlebotomist"  && <PhleboFields       onChange={setRoleData} />}
 
           <button type="submit" className="auth-btn" disabled={loading}>
             {loading ? "Registering..." : "Create Account"}
@@ -390,8 +391,8 @@ const Register = ({ setPage }) => {
         </form>
 
         <p className="switch-auth">
-          Already have an account?
-          <span onClick={() => setPage("login")}> Sign In</span>
+          Already have an account?{" "}
+          <span onClick={() => setPage("login")}>Sign In</span>
         </p>
       </div>
     </div>
