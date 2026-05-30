@@ -28,6 +28,9 @@ npm run db:migrate
 Create a `.env` file inside `server/` according to `.env.example`
 
 ---
+If error in timestamp in tables run
+docker-compose down
+docker-compose up -d
 
 # Running The Project
 
