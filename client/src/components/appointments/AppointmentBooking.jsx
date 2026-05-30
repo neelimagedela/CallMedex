@@ -276,7 +276,18 @@ function ProgressSidebar({ activeStep }) {
 }
 
 // ── main component ─────────────────────────────────────────────────────────
-export default function AppointmentBooking({ title, scans }) {
+ export default function AppointmentBooking({
+  title,
+  scans,
+  mode = "scan",
+  bookingType = "appointment",
+  bookingEndpoint = "/appointment/book",
+  categories = [],
+  selectedCategory = "all",
+  setSelectedCategory,
+  search = "",
+  setSearch,
+}) {
   const branches = ["Akkayapalem", "Madhurwada", "KGH Branch"];
   const today = new Date().toISOString().split("T")[0];
 
@@ -400,29 +411,41 @@ export default function AppointmentBooking({ title, scans }) {
 
     // 4. Prepare booking data
     // Do NOT send userId from frontend
-    const payload = {
-      patientName: patient.name.trim(),
-      patientAge: Number(patient.age),
-      patientSex: patient.sex,
-      patientMobile: patient.mobile.trim(),
-      patientEmail: patient.email.trim().toLowerCase(),
-      patientAddress: patient.address.trim(),
-      branch,
-      scans: selectedScans.map((scan) => ({
-        id: scan.id,
-        name: scan.name,
-        subtitle: scan.subtitle,
-        price: Number(scan.price),
-        oldPrice: Number(scan.oldPrice || 0),
-      })),
-      appointmentDate: date,
-      timeSlot: slot,
-      prescription: base64Prescription,
-      totalAmount: Number(total),
-    };
+    
+      const payload = {
+  patientName: patient.name.trim(),
+  patientAge: Number(patient.age),
+  patientSex: patient.sex,
+  patientMobile: patient.mobile.trim(),
+  patientEmail: patient.email.trim().toLowerCase(),
+  patientAddress: patient.address.trim(),
+  branch,
+
+  ...(bookingType === "home-service"
+    ? {
+        tests: selectedScans.map((test) => ({
+          id: test.id,
+        })),
+        collectionDate: date,
+      }
+    : {
+        scans: selectedScans.map((scan) => ({
+          id: scan.id,
+          name: scan.name,
+          subtitle: scan.subtitle,
+          price: Number(scan.price),
+          oldPrice: Number(scan.oldPrice || 0),
+        })),
+        appointmentDate: date,
+      }),
+
+  timeSlot: slot,
+  prescription: base64Prescription,
+  totalAmount: Number(total),
+};
 
     // 5. Send booking request to backend
-    const response = await api.post("/appointment/book", payload);
+    const response = await api.post(bookingEndpoint, payload);
 
     // 6. Show success message
     if (response.data.success) {
@@ -543,11 +566,48 @@ export default function AppointmentBooking({ title, scans }) {
           <div style={S.secHead}>
             <div style={{ ...S.badge, background: "#7c3aed" }}>2</div>
             <div>
-              <p style={S.secTitle}>Select Scans</p>
-              <p style={S.secSub}>Choose up to 2 diagnostic tests</p>
+               <p style={S.secTitle}>
+                  {mode === "home-service" ? "Select Tests" : "Select Scans"}
+                </p>
+                <p style={S.secSub}>
+                  {mode === "home-service"
+                    ? "Choose up to 2 home service tests"
+                    : "Choose up to 2 diagnostic tests"}
+                </p>
             </div>
             {errors.scans && <p style={{ ...S.errTxt, marginLeft: "auto" }}>⚠ {errors.scans}</p>}
           </div>
+          {mode === "home-service" && (
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 260px",
+      gap: 12,
+      marginBottom: 16,
+    }}
+  >
+    <input
+      type="text"
+      placeholder="Search tests or features"
+      value={search}
+      onChange={(e) => setSearch?.(e.target.value)}
+      style={S.inp}
+    />
+
+    <select
+      value={selectedCategory}
+      onChange={(e) => setSelectedCategory?.(e.target.value)}
+      style={S.inp}
+    >
+      <option value="all">All Categories</option>
+      {categories.map((category) => (
+        <option key={category.category_id} value={category.category_name}>
+          {category.category_name}
+        </option>
+      ))}
+    </select>
+  </div>
+)}
           <div style={S.scanGrid}>
             {scans.map(scan => {
               const isSel = !!selectedScans.find(s => s.id === scan.id);
@@ -559,6 +619,25 @@ export default function AppointmentBooking({ title, scans }) {
                   <div style={S.scanIcon}>{scan.icon}</div>
                   <p style={{ margin: "0 0 2px", fontWeight: 700, fontSize: ".9rem", color: "#0A2540" }}>{scan.name}</p>
                   <p style={{ margin: "0 0 8px", fontSize: ".75rem", color: "#94a3b8", lineHeight: 1.4 }}>{scan.subtitle}</p>
+                  {mode === "home-service" && scan.features?.length > 0 && (
+  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+    {scan.features.slice(0, 4).map((feature, index) => (
+      <span
+        key={`${scan.id}-feature-${index}`}
+        style={{
+          fontSize: ".68rem",
+          color: "#0A9C87",
+          background: "#ecfcfc",
+          padding: "3px 7px",
+          borderRadius: 999,
+          fontWeight: 700,
+        }}
+      >
+        {feature}
+      </span>
+    ))}
+  </div>
+)}
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <span style={{ fontWeight: 700, fontSize: ".95rem", color: "#0A2540" }}>₹{scan.price}</span>
                     <span style={{ fontSize: ".78rem", color: "#b0bec5", textDecoration: "line-through" }}>₹{scan.oldPrice}</span>

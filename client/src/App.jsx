@@ -7,7 +7,7 @@ import SearchSection from "./components/home/Searchsection";
 import Footer from "./components/layout/Footer";
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
-
+import HomeServices from "./components/homeServices/HomeServices";
 import "./styles/index.css";
 import {
   AboutSection, SpecialistsSection, PackagesSection,
@@ -37,7 +37,7 @@ export default function App() {
 
       <TopBar />
       <Navbar scrolled={scrolled} setPage={setPage} setStep={setStep} />
-
+       {page === "homeservices" && <HomeServices />}
       {page === "cardiology"      && <Cardiology />}
       {page === "bodydiagnostics" && <BodyDiagnostics />}
 

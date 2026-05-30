@@ -35,7 +35,11 @@ export const NAV = [
   {
     label: "Diagnostics",
     items: [
-      { ico: "🏠", text: "Home Services", href: "https://callmedex.com/diagnostics/home-services" },
+       {
+  ico: "🏠",
+  text: "Home Services",
+  page: "homeservices"
+},
       { ico: "🩻", text: "Scans / Radiology", page: "bodydiagnostics" },
       { ico: "❤️", text: "Cardiology", page: "cardiology" },
       { ico: "🚶", text: "Walk-in Centers", href: "https://callmedex.com/diagnostics.php?service=walkincenters" },
