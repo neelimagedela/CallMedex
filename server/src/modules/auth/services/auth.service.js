@@ -41,6 +41,7 @@ const {
 const {
   createOtp,
   findLatestOtp,
+  findLatestOtpAny,
   markOtpUsed,
 } = require("../models/otp.model");
 
@@ -53,21 +54,16 @@ const registerUser = async (userData) => {
 
   registerSchema.parse(userData);
 
-  const sanitizedData =
-    sanitizeInput(userData);
+  const sanitizedData = sanitizeInput(userData);
 
-  const existingUser =
-    await findUserByEmailOrPhone(
-      sanitizedData.email,
-      sanitizedData.phone
-    );
+  const existingUser = await findUserByEmailOrPhone(
+    sanitizedData.email,
+    sanitizedData.phone
+  );
 
   if (existingUser) {
 
-    if (
-      existingUser.registration_status !==
-      "PROFILE_COMPLETED"
-    ) {
+    if (existingUser.registration_status !== "PROFILE_COMPLETED") {
 
       if (!existingUser.is_email_verified) {
 
@@ -81,43 +77,25 @@ const registerUser = async (userData) => {
 
       return {
         success: true,
-        message:
-          existingUser.is_email_verified
-            ? "Resume registration"
-            : "Resume registration. OTP resent to email.",
+        message: existingUser.is_email_verified
+          ? "Resume registration"
+          : "Resume registration. OTP resent to email.",
 
         data: {
           userId: existingUser.id,
-          publicUserId:
-            existingUser.public_user_id,
-
-          registrationStatus:
-            existingUser.registration_status,
-
-          isEmailVerified:
-            existingUser.is_email_verified,
-
-          isPhoneVerified:
-            existingUser.is_phone_verified,
-
-          nextStep:
-            existingUser.is_email_verified
-              ? "LOGIN"
-              : "VERIFY_EMAIL",
+          publicUserId: existingUser.public_user_id,
+          registrationStatus: existingUser.registration_status,
+          isEmailVerified: existingUser.is_email_verified,
+          isPhoneVerified: existingUser.is_phone_verified,
+          nextStep: existingUser.is_email_verified ? "LOGIN" : "VERIFY_EMAIL",
         },
       };
     }
 
-    throw new AppError(
-      "User already exists",
-      409
-    );
+    throw new AppError("User already exists", 409);
   }
 
-  const passwordHash =
-    await hashPassword(
-      sanitizedData.password
-    );
+  const passwordHash = await hashPassword(sanitizedData.password);
 
   const user = await createUser({
     ...sanitizedData,
@@ -133,65 +111,37 @@ const registerUser = async (userData) => {
 
   return {
     success: true,
-    message:
-      "Registration initiated. OTP sent to email.",
+    message: "Registration initiated. OTP sent to email.",
 
     data: {
       userId: user.id,
       publicUserId: null,
-      registrationStatus:
-        "PENDING_VERIFICATION",
-
+      registrationStatus: "PENDING_VERIFICATION",
       nextStep: "VERIFY_EMAIL",
     },
   };
 };
 
-const sendOtp = async ({
-  userId,
-  type,
-  target,
-  name,
-}) => {
+const sendOtp = async ({ userId, type, target, name }) => {
 
   const otp = generateOtp();
+  const otpHash = await hashOtp(otp);
 
-  const otpHash =
-    await hashOtp(otp);
-
-  const existingOtp =
-    await findLatestOtp({
-      userId,
-      type,
-    });
+  // Invalidate any existing unused OTP regardless of expiry
+  const existingOtp = await findLatestOtpAny({ userId, type });
 
   if (existingOtp) {
-    await markOtpUsed(
-      existingOtp.id
-    );
+    await markOtpUsed(existingOtp.id);
   }
 
-  await createOtp({
-    userId,
-    otpHash,
-    type,
-  });
+  await createOtp({ userId, otpHash, type });
 
   if (type === "email") {
-
-    await sendEmailOtp(
-      target,
-      otp,
-      name
-    );
+    await sendEmailOtp(target, otp, name);
   }
 
   if (type === "phone") {
-
-    await sendPhoneOtp(
-      target,
-      otp
-    );
+    await sendPhoneOtp(target, otp);
   }
 
   return {
@@ -204,193 +154,110 @@ const verifyOtp = async (data) => {
 
   verifyOtpSchema.parse(data);
 
-  const otpRecord =
-    await findLatestOtp({
-      userId: data.userId,
-      type: data.type,
-    });
+  // findLatestOtp already filters by is_used = FALSE AND expires_at > NOW()
+  const otpRecord = await findLatestOtp({
+    userId: data.userId,
+    type: data.type,
+  });
 
   if (!otpRecord) {
-
-    throw new AppError(
-      "OTP not found",
-      404
-    );
+    // Could be not found OR expired — give a generic message to avoid information leakage
+    throw new AppError("OTP is invalid or has expired. Please request a new one.", 400);
   }
 
-  if (
-    new Date(otpRecord.expires_at) <
-    new Date()
-  ) {
-
-    await markOtpUsed(
-      otpRecord.id
-    );
-
-    throw new AppError(
-      "OTP expired",
-      400
-    );
-  }
-
-  const otpMatches =
-    await compareOtp(
-      data.otp,
-      otpRecord.otp_hash
-    );
+  const otpMatches = await compareOtp(data.otp, otpRecord.otp_hash);
 
   if (!otpMatches) {
-
-    throw new AppError(
-      "Invalid OTP",
-      400
-    );
+    throw new AppError("Invalid OTP", 400);
   }
 
-  const user =
-    await findUserById(
-      data.userId
-    );
+  const user = await findUserById(data.userId);
 
   if (!user) {
-
-    throw new AppError(
-      "User not found",
-      404
-    );
+    throw new AppError("User not found", 404);
   }
 
-  let publicUserId =
-    user.public_user_id;
+  let publicUserId = user.public_user_id;
 
   if (!publicUserId) {
-
-    publicUserId =
-      generatePublicUserId(
-        user.role,
-        user.id
-      );
+    publicUserId = generatePublicUserId(user.role, user.id);
   }
 
   if (data.type === "email") {
-
-    await completeEmailVerification(
-      user.id,
-      publicUserId
-    );
+    await completeEmailVerification(user.id, publicUserId);
   }
 
   if (data.type === "phone") {
-
-    await updatePhoneVerification(
-      user.id
-    );
+    await updatePhoneVerification(user.id);
   }
 
-  await markOtpUsed(
-    otpRecord.id
-  );
+  await markOtpUsed(otpRecord.id);
 
   return {
     success: true,
-    message:
-      `${data.type} verified successfully`,
+    message: `${data.type} verified successfully`,
 
     data: {
       userId: user.id,
       publicUserId,
-      registrationStatus:
-        "VERIFIED",
-
+      registrationStatus: "VERIFIED",
       nextStep: "LOGIN",
     },
   };
 };
 
-const loginUser = async (
-  credentials,
-  req
-) => {
+const loginUser = async (credentials, req) => {
 
   loginSchema.parse(credentials);
 
-  const sanitizedData =
-    sanitizeInput(credentials);
+  const sanitizedData = sanitizeInput(credentials);
 
-  const user =
-    await findUserByEmail(
-      sanitizedData.email
-    );
+  const user = await findUserByEmail(sanitizedData.email);
 
   if (!user) {
-
-    throw new AppError(
-      "Invalid credentials",
-      401
-    );
+    throw new AppError("Invalid credentials", 401);
   }
 
-  const passwordMatches =
-    await comparePassword(
-      sanitizedData.password,
-      user.password_hash
-    );
+  const passwordMatches = await comparePassword(
+    sanitizedData.password,
+    user.password_hash
+  );
 
   if (!passwordMatches) {
-
-    throw new AppError(
-      "Invalid credentials",
-      401
-    );
+    throw new AppError("Invalid credentials", 401);
   }
 
   if (
     !user.is_email_verified ||
-    user.registration_status ===
-    "PENDING_VERIFICATION"
+    user.registration_status === "PENDING_VERIFICATION"
   ) {
-
     return {
       success: false,
-
       requiresVerification: true,
-
-      message:
-        "Complete email verification first",
+      message: "Complete email verification first",
 
       data: {
         userId: user.id,
-        publicUserId:
-          user.public_user_id,
-
-        nextStep:
-          "VERIFY_EMAIL",
+        publicUserId: user.public_user_id,
+        nextStep: "VERIFY_EMAIL",
       },
     };
   }
 
-  const accessToken =
-    generateAccessToken({
-      id: user.id,
-      publicUserId:
-        user.public_user_id,
+  const accessToken = generateAccessToken({
+    id: user.id,
+    publicUserId: user.public_user_id,
+    role: user.role,
+  });
 
-      role: user.role,
-    });
+  const refreshToken = generateRefreshToken({ id: user.id });
 
-  const refreshToken =
-    generateRefreshToken({
-      id: user.id,
-    });
-
-  const session =
-    await createSession({
-      userId: user.id,
-      refreshToken,
-      ipAddress: req.ip,
-      userAgent:
-        req.headers["user-agent"],
-    });
+  const session = await createSession({
+    userId: user.id,
+    refreshToken,
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"],
+  });
 
   return {
     success: true,
@@ -399,7 +266,6 @@ const loginUser = async (
     data: {
       accessToken,
       refreshToken,
-
       sessionId: session.id,
 
       user: {
@@ -411,21 +277,16 @@ const loginUser = async (
       },
 
       nextStep:
-        user.registration_status ===
-        "VERIFIED"
+        user.registration_status === "VERIFIED"
           ? "ROLE_ONBOARDING"
           : "DASHBOARD",
     },
   };
 };
 
-const logoutUser = async (
-  sessionId
-) => {
+const logoutUser = async (sessionId) => {
 
-  await revokeSession(
-    sessionId
-  );
+  await revokeSession(sessionId);
 
   return {
     success: true,

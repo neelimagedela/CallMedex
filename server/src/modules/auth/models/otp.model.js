@@ -1,9 +1,7 @@
 const db = require("../../../config/db");
 
 const createOtp = async (data) => {
-  const expiresAt = new Date(
-    Date.now() + Number(process.env.OTP_EXPIRES_MINUTES || 5) * 60 * 1000
-  );
+  const expiresMinutes = Number(process.env.OTP_EXPIRES_MINUTES || 5);
 
   await db.execute(
     `
@@ -14,43 +12,66 @@ const createOtp = async (data) => {
       type,
       expires_at
     )
-    VALUES (?, ?, ?, ?)
+    VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))
     `,
-    [data.userId, data.otpHash, data.type, expiresAt]
+    [data.userId, data.otpHash, data.type, expiresMinutes]
   );
 };
 
-const findLatestOtp = async(data) => {
+/**
+ * Finds the latest unused, non-expired OTP for a user.
+ * Expiry is checked in SQL using the DB server's NOW() to avoid
+ * any Node.js ↔ MySQL timezone mismatch.
+ */
+const findLatestOtp = async (data) => {
+  const [rows] = await db.execute(
+    `
+    SELECT *
+    FROM verification_otps
+    WHERE user_id = ?
+    AND type = ?
+    AND is_used = FALSE
+    AND expires_at > NOW()
+    ORDER BY id DESC
+    LIMIT 1
+    `,
+    [data.userId, data.type]
+  );
 
-    const [rows] = await db.execute(
-        `
-        SELECT *
-        FROM verification_otps
-        WHERE user_id = ?
-        AND type = ?
-        AND is_used = FALSE
-        ORDER BY id DESC
-        LIMIT 1
-        `,
-        [
-            data.userId,
-            data.type
-        ]
-    );
-
-    return rows[0];
+  return rows[0];
 };
 
-const deleteOtp = async(otpId) => {
+/**
+ * Finds the latest unused OTP regardless of expiry (used to mark
+ * a stale OTP as used before issuing a new one).
+ */
+const findLatestOtpAny = async (data) => {
+  const [rows] = await db.execute(
+    `
+    SELECT *
+    FROM verification_otps
+    WHERE user_id = ?
+    AND type = ?
+    AND is_used = FALSE
+    ORDER BY id DESC
+    LIMIT 1
+    `,
+    [data.userId, data.type]
+  );
 
-    await db.execute(
-        `
-        DELETE FROM verification_otps
-        WHERE id = ?
-        `,
-        [otpId]
-    );
+  return rows[0];
 };
+
+const deleteOtp = async (otpId) => {
+  await db.execute(
+    `
+    DELETE FROM verification_otps
+    WHERE id = ?
+    `,
+    [otpId]
+  );
+};
+
 const markOtpUsed = async (otpId) => {
   await db.execute(
     `
@@ -63,8 +84,9 @@ const markOtpUsed = async (otpId) => {
 };
 
 module.exports = {
-    createOtp,
-    findLatestOtp,
-    deleteOtp,
-    markOtpUsed
+  createOtp,
+  findLatestOtp,
+  findLatestOtpAny,
+  deleteOtp,
+  markOtpUsed,
 };
