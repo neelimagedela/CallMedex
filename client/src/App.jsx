@@ -1,34 +1,49 @@
 import { useState, useEffect } from "react";
+
 import GLOBAL_CSS from "./styles/globalStyles";
+import "./styles/index.css";
+
 import TopBar from "./components/layout/TopBar";
 import Navbar from "./components/layout/Navbar";
 import HeroSection from "./components/home/Herosection";
 import SearchSection from "./components/home/Searchsection";
-import PharmacyHomeDelivery from "./components/pharmacy/PharmacyHomeDelivery";
 import Footer from "./components/layout/Footer";
+
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
+
 import HomeServices from "./components/homeServices/HomeServices";
-import "./styles/index.css";
+import Cardiology from "./components/cardiology/Cardiology";
+import BodyDiagnostics from "./components/diagnostics/BodyDiagnostics";
+
+import PharmacyHomeDelivery from "./components/pharmacy/PharmacyHomeDelivery";
+import PharmacyDashboard from "./components/pharmacyDashboard/PharmacyDashboard";
+
+import { ToastProvider } from "./shared/toast.js";
+
 import {
-  AboutSection, SpecialistsSection, PackagesSection,
-  FeaturesSection, ServicesSection, MetricsSection,
-  AppointmentSection, BranchesSection, TestimonialsSection,
+  AboutSection,
+  SpecialistsSection,
+  PackagesSection,
+  FeaturesSection,
+  ServicesSection,
+  MetricsSection,
+  AppointmentSection,
+  BranchesSection,
+  TestimonialsSection,
   CTASection,
 } from "./components/home/sections";
 
-import Cardiology      from "./components/cardiology/Cardiology";
-import BodyDiagnostics from "./components/diagnostics/BodyDiagnostics";
-import { ToastProvider } from "./shared/toast.js";
-
 export default function App() {
   const [scrolled, setScrolled] = useState(false);
-  const [page,     setPage]     = useState("home");
-  const [step,     setStep]     = useState(1);
+  const [page, setPage] = useState("home");
+  const [step, setStep] = useState(1);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
+
     window.addEventListener("scroll", onScroll);
+
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
@@ -39,15 +54,9 @@ export default function App() {
       <TopBar />
       <Navbar scrolled={scrolled} setPage={setPage} setStep={setStep} />
 
-      {page === "homeservices"   && <HomeServices />}
-      {page === "cardiology"     && <Cardiology />}
-      {page === "bodydiagnostics"&& <BodyDiagnostics />}
-          {page === "pharmacy-home-delivery" && (
-      <PharmacyHomeDelivery setPage={setPage} />
-    )}
       {page === "home" && (
         <>
-          <HeroSection      setPage={setPage} />
+          <HeroSection setPage={setPage} />
           <SearchSection />
           <AboutSection />
           <SpecialistsSection />
@@ -62,7 +71,19 @@ export default function App() {
         </>
       )}
 
-      {page === "login"    && <Login    setPage={setPage} />}
+      {page === "homeservices" && <HomeServices />}
+      {page === "cardiology" && <Cardiology />}
+      {page === "bodydiagnostics" && <BodyDiagnostics />}
+
+      {page === "pharmacy-home-delivery" && (
+        <PharmacyHomeDelivery setPage={setPage} />
+      )}
+
+      {page === "pharmacy-dashboard" && (
+        <PharmacyDashboard setPage={setPage} />
+      )}
+
+      {page === "login" && <Login setPage={setPage} />}
       {page === "register" && <Register setPage={setPage} />}
 
       <Footer />

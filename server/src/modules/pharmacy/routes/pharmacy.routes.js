@@ -9,7 +9,18 @@ const {
   getMyPharmacyOrdersController,
 } = require("../controllers/pharmacy.controller");
 
+const {
+  getPharmacyDashboardProfileController,
+  getPharmacyInventoryController,
+  getPharmacyOrdersController,
+  updatePharmacyOrderStatusController,
+} = require("../controllers/pharmacyDashboard.controller");
+
 const router = express.Router();
+
+/*
+  Patient pharmacy booking routes
+*/
 
 router.get(
   "/patient-details",
@@ -33,6 +44,34 @@ router.get(
   "/orders/my",
   authenticate,
   getMyPharmacyOrdersController
+);
+
+/*
+  Pharmacy dashboard routes
+*/
+
+router.get(
+  "/dashboard/profile",
+  authenticate,
+  getPharmacyDashboardProfileController
+);
+
+router.get(
+  "/dashboard/inventory",
+  authenticate,
+  getPharmacyInventoryController
+);
+
+router.get(
+  "/dashboard/orders",
+  authenticate,
+  getPharmacyOrdersController
+);
+
+router.patch(
+  "/dashboard/orders/:orderId/status",
+  authenticate,
+  updatePharmacyOrderStatusController
 );
 
 module.exports = router;

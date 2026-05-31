@@ -1,114 +1,89 @@
-const asyncHandler = require(
-    "../../../shared/utils/asyncHandler"
-);
+const asyncHandler = require("../../../shared/utils/asyncHandler");
+
+const { successResponse } = require("../../../shared/utils/response");
 
 const {
-    successResponse
-} = require(
-    "../../../shared/utils/response"
-);
-
-const {
-    registerUser,
-    sendOtp,
-    verifyOtp,
-    loginUser,
-    logoutUser
+  registerUser,
+  sendOtp,
+  verifyOtp,
+  loginUser,
+  logoutUser,
 } = require("../services/auth.service");
 
-const registerController = asyncHandler(
-    async(req, res) => {
+const registerController = asyncHandler(async (req, res) => {
+  const result = await registerUser(req.body);
 
-        const result = await registerUser(
-            req.body
-        );
+  return successResponse({
+    res,
+    status: 201,
+    message: result.message,
+    data: result.data,
+  });
+});
 
-        return successResponse({
-            res,
-            status : 201,
-            message : result.message,
-            data : result.data
-        });
-    }
-);
+const sendOtpController = asyncHandler(async (req, res) => {
+  const result = await sendOtp(req.body);
 
-const sendOtpController = asyncHandler(
-    async(req, res) => {
+  return successResponse({
+    res,
+    message: result.message,
+  });
+});
 
-        const result = await sendOtp(
-            req.body
-        );
+/*
+  Same logic as sendOtpController.
+  This is added because frontend calls /auth/resend-otp.
+*/
+const resendOtpController = asyncHandler(async (req, res) => {
+  const result = await sendOtp(req.body);
 
-        return successResponse({
-            res,
-            message : result.message
-        });
-    }
-);
-const verifyOtpController = async (req, res, next) => {
-  try {
-    const result = await verifyOtp(req.body);
+  return successResponse({
+    res,
+    message: result.message || "OTP resent successfully",
+  });
+});
 
-    return res.status(200).json(result);
+const verifyOtpController = asyncHandler(async (req, res) => {
+  const result = await verifyOtp(req.body);
+
+  return res.status(200).json(result);
+});
+
+const loginController = asyncHandler(async (req, res) => {
+  const result = await loginUser(req.body, req);
+
+  if (result.data?.refreshToken) {
+    res.cookie("refreshToken", result.data.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
   }
-  catch(error) {
-    next(error);
-  }
-};
 
-const loginController = asyncHandler(
-    async(req, res) => {
+  return successResponse({
+    res,
+    message: result.message,
+    data: result.data,
+  });
+});
 
-        const result = await loginUser(
-            req.body,
-            req
-        );
+const logoutController = asyncHandler(async (req, res) => {
+  const result = await logoutUser(req.user.sessionId);
 
-        if(result.data?.refreshToken) {
+  res.clearCookie("refreshToken");
 
-            res.cookie(
-                "refreshToken",
-                result.data.refreshToken,
-                {
-                    httpOnly : true,
-                    secure :
-                        process.env.NODE_ENV
-                        === "production",
-                    sameSite : "strict",
-                    maxAge :
-                        7 * 24 * 60 * 60 * 1000
-                }
-            );
-        }
-
-        return successResponse({
-            res,
-            message : result.message,
-            data : result.data
-        });
-    }
-);
-
-const logoutController = asyncHandler(
-    async(req, res) => {
-
-        const result = await logoutUser(
-            req.user.sessionId
-        );
-
-        res.clearCookie("refreshToken");
-
-        return successResponse({
-            res,
-            message : result.message
-        });
-    }
-);
+  return successResponse({
+    res,
+    message: result.message,
+  });
+});
 
 module.exports = {
-    registerController,
-    sendOtpController,
-    verifyOtpController,
-    loginController,
-    logoutController
+  registerController,
+  sendOtpController,
+  resendOtpController,
+  verifyOtpController,
+  loginController,
+  logoutController,
 };

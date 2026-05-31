@@ -58,7 +58,8 @@ CREATE TABLE IF NOT EXISTS pharmacy_orders (
     'packed',
     'out_for_delivery',
     'delivered',
-    'cancelled'
+    'cancelled',
+    'completed'
   ) DEFAULT 'pending',
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -104,3 +105,4 @@ VALUES
 ('Aspirin 75mg', 'Aspirin', 'Generic', 'tablet', '75mg', 25.00, 70, FALSE),
 ('ORS Sachet', 'Oral Rehydration Salts', 'Generic', 'other', '21g', 15.00, 150, FALSE),
 ('Vitamin C Tablet', 'Ascorbic Acid', 'Generic', 'tablet', '500mg', 40.00, 100, FALSE);
+

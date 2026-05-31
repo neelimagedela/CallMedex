@@ -50,10 +50,7 @@ const searchMedicines = async (search) => {
     SELECT
       id,
       medicine_name,
-      generic_name,
-      brand_name,
       medicine_type,
-      strength,
       price,
       stock_quantity,
       requires_prescription
@@ -62,23 +59,18 @@ const searchMedicines = async (search) => {
       AND stock_quantity > 0
       AND (
         medicine_name LIKE ?
-        OR generic_name LIKE ?
-        OR brand_name LIKE ?
-        OR strength LIKE ?
+        OR medicine_type LIKE ?
       )
     ORDER BY medicine_name ASC
     LIMIT 30
     `,
-    [query, query, query, query]
+    [query, query]
   );
 
   return rows.map((row) => ({
     id: row.id,
     medicineName: row.medicine_name,
-    genericName: row.generic_name,
-    brandName: row.brand_name,
     medicineType: row.medicine_type,
-    strength: row.strength,
     price: Number(row.price || 0),
     stockQuantity: Number(row.stock_quantity || 0),
     requiresPrescription: Boolean(row.requires_prescription),
@@ -87,6 +79,7 @@ const searchMedicines = async (search) => {
 
 const createPharmacyOrder = async ({
   userId,
+  orderMode,
   patientName,
   patientEmail,
   patientPhone,
@@ -110,8 +103,7 @@ const createPharmacyOrder = async ({
         id,
         medicine_name,
         price,
-        stock_quantity,
-        requires_prescription
+        stock_quantity
       FROM pharmacy_medicines
       WHERE id IN (${placeholders})
         AND is_active = TRUE
@@ -143,7 +135,9 @@ const createPharmacyOrder = async ({
       const quantity = Number(item.quantity);
 
       if (quantity > Number(medicine.stock_quantity)) {
-        throw new Error(`${medicine.medicine_name} has only ${medicine.stock_quantity} stock available`);
+        throw new Error(
+          `${medicine.medicine_name} has only ${medicine.stock_quantity} stock available`
+        );
       }
 
       const unitPrice = Number(medicine.price);
@@ -160,7 +154,9 @@ const createPharmacyOrder = async ({
       });
     }
 
-    const deliveryCharge = subtotalAmount >= 500 ? 0 : 40;
+    const deliveryCharge =
+      orderMode === "online" && subtotalAmount < 500 ? 40 : 0;
+
     const totalAmount = subtotalAmount + deliveryCharge;
     const publicOrderId = generatePublicOrderId();
 
@@ -169,6 +165,7 @@ const createPharmacyOrder = async ({
       INSERT INTO pharmacy_orders (
         public_order_id,
         user_id,
+        order_mode,
         patient_name,
         patient_email,
         patient_phone,
@@ -181,11 +178,12 @@ const createPharmacyOrder = async ({
         total_amount,
         status
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         publicOrderId,
         userId,
+        orderMode,
         patientName,
         patientEmail,
         patientPhone,
@@ -240,6 +238,7 @@ const createPharmacyOrder = async ({
     return {
       id: orderId,
       publicOrderId,
+      orderMode,
       items: orderItems,
       subtotalAmount,
       deliveryCharge,
@@ -260,6 +259,7 @@ const getMyPharmacyOrders = async (userId) => {
     SELECT
       id,
       public_order_id,
+      order_mode,
       patient_name,
       patient_email,
       patient_phone,
@@ -321,6 +321,7 @@ const getMyPharmacyOrders = async (userId) => {
   return orders.map((order) => ({
     id: order.id,
     publicOrderId: order.public_order_id,
+    orderMode: order.order_mode,
     patientName: order.patient_name,
     patientEmail: order.patient_email,
     patientPhone: order.patient_phone,

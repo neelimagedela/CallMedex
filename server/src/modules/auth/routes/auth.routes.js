@@ -5,7 +5,8 @@ const {
     sendOtpController,
     verifyOtpController,
     loginController,
-    logoutController
+    logoutController,
+    resendOtpController
 } = require("../controllers/auth.controller");
 
 const {
@@ -28,7 +29,10 @@ router.post(
     "/verify-otp",
     verifyOtpController
 );
-
+router.post(
+    "/resend-otp",
+    resendOtpController
+);
 router.post(
     "/login",
     loginController

@@ -88,6 +88,7 @@ const createPharmacyOrderController = asyncHandler(async (req, res) => {
 
   const order = await createPharmacyOrder({
     userId,
+    orderMode: validated.orderMode,
     patientName: validated.deliveryName.trim(),
     patientEmail: user.email,
     patientPhone: validated.deliveryPhone.trim(),
@@ -101,7 +102,10 @@ const createPharmacyOrderController = asyncHandler(async (req, res) => {
   return successResponse({
     res,
     status: 201,
-    message: "Medicine order booked successfully",
+    message:
+      validated.orderMode === "online"
+        ? "Medicine delivery booked successfully"
+        : "Offline medicine pickup confirmed successfully",
     data: order,
   });
 });

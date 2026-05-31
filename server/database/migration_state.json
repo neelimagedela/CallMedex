@@ -9,5 +9,7 @@
   "008_create_home_service_tests.sql",
   "009_seed_home_service_tests.sql",
   "010_create_home_service_bookings.sql",
-  "011_create_pharmacy_home_delivery.sql"
+  "011_create_pharmacy_home_delivery.sql",
+  "012_add_service_mode_to_pharmacy_profiles.sql",
+  "014_update_pharmacy_orders_status.sql"
 ]

@@ -1,2 +1,36 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body, #root { width: 100%; max-width: 100%; margin: 0; padding: 0; }
+.pharmacy-dashboard-nav-btn {
+  border: none;
+  outline: none;
+  padding: 10px 18px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0a2540, #1b6ca8);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 20px rgba(10, 37, 64, 0.22);
+  transition: all 0.22s ease;
+  white-space: nowrap;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.pharmacy-dashboard-nav-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(10, 37, 64, 0.3);
+  background: linear-gradient(135deg, #123d66, #0a9c87);
+}
+
+.pharmacy-dashboard-nav-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 14px rgba(10, 37, 64, 0.2);
+}
+
+.pharmacy-dashboard-nav-icon {
+  font-size: 17px;
+  line-height: 1;
+}

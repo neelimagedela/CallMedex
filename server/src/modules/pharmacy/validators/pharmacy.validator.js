@@ -1,10 +1,14 @@
 const { z } = require("zod");
 
 const pharmacyOrderSchema = z.object({
+  orderMode: z.enum(["online", "offline"], {
+    errorMap: () => ({ message: "Invalid order mode" }),
+  }),
+
   deliveryName: z
     .string()
-    .min(3, "Delivery name is required")
-    .max(100, "Delivery name is too long"),
+    .min(3, "Name is required")
+    .max(100, "Name is too long"),
 
   deliveryPhone: z
     .string()
@@ -12,8 +16,8 @@ const pharmacyOrderSchema = z.object({
 
   deliveryAddress: z
     .string()
-    .min(5, "Delivery address is required")
-    .max(1000, "Delivery address is too long"),
+    .min(5, "Address is required")
+    .max(1000, "Address is too long"),
 
   city: z
     .string()

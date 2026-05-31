@@ -7,9 +7,7 @@ export const fetchPharmacyPatientDetails = async () => {
 
 export const fetchPharmacyMedicines = async (search = "") => {
   const response = await api.get("/pharmacy/medicines", {
-    params: {
-      search,
-    },
+    params: { search },
   });
 
   return response.data;

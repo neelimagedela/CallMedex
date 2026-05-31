@@ -32,6 +32,7 @@ const FILE_FIELDS = new Set([
   // Admin
   "aadhaarUpload",
   "governmentIdProof",
+  "pharmacyImages",
 ]);
 
 const ALLOWED_MIME_TYPES = new Set([

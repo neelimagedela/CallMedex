@@ -6,7 +6,13 @@ import logo from "../../assets/logo_medex.png";
 
 
 export default function Navbar({ scrolled, setPage, setStep }) {
-
+      const loggedInUser = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("user") || "null");
+      } catch {
+        return null;
+      }
+    })();
   return (
     <nav className={`nav-outer${scrolled ? " scrolled" : ""}`}>
       <div className="nav-inner">
@@ -84,7 +90,16 @@ export default function Navbar({ scrolled, setPage, setStep }) {
         {/* RIGHT */}
         <div className="nav-cta">
          {/* LOGIN BUTTON */}
-
+          {loggedInUser?.role === "pharmacy" && (
+                  <button
+          type="button"
+          className="pharmacy-dashboard-nav-btn"
+          onClick={() => setPage("pharmacy-dashboard")}
+        >
+          <span className="pharmacy-dashboard-nav-icon">🏥</span>
+          Dashboard
+        </button>
+        )}
          <button
            className="btn btn-login"
            onClick={() => setPage("login")}
