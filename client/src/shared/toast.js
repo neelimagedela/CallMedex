@@ -80,17 +80,22 @@ export const ToastProvider = ({ children }) => {
     dismiss,
   };
 
+  // ── Centered at top of page ──────────────────────────────────────
   const containerStyle = {
     position: "fixed",
-    top: 20,
-    right: 20,
+    top: 24,
+    left: "50%",
+    transform: "translateX(-50%)",
     zIndex: 99999,
     display: "flex",
     flexDirection: "column",
+    alignItems: "center",
     gap: 10,
-    maxWidth: 380,
-    width: "calc(100vw - 40px)",
+    width: "100%",
+    maxWidth: 480,
     pointerEvents: "none",
+    padding: "0 16px",
+    boxSizing: "border-box",
   };
 
   const toastNodes = toasts.map((t) => {
@@ -101,25 +106,26 @@ export const ToastProvider = ({ children }) => {
       alignItems: "flex-start",
       gap: 10,
       background: c.bg,
-      border: "1px solid " + c.border,
-      borderRadius: 14,
-      padding: "14px 16px",
-      boxShadow: "0 8px 28px rgba(0,0,0,0.10)",
+      border: "1.5px solid " + c.border,
+      borderRadius: 16,
+      padding: "14px 18px",
+      boxShadow: "0 8px 32px rgba(0,0,0,0.13)",
       pointerEvents: "all",
       cursor: "default",
+      width: "100%",
+      boxSizing: "border-box",
       animation: t.exiting
         ? "toast-out 0.32s ease forwards"
         : "toast-in 0.32s ease forwards",
-      minWidth: 280,
     };
 
     const textStyle = {
       flex: 1,
       fontSize: 14,
-      fontWeight: 500,
+      fontWeight: 600,
       color: c.text,
-      lineHeight: 1.45,
-      fontFamily: "var(--font, 'Plus Jakarta Sans', sans-serif)",
+      lineHeight: 1.5,
+      fontFamily: "'Segoe UI', 'Plus Jakarta Sans', sans-serif",
     };
 
     const btnStyle = {
@@ -129,7 +135,7 @@ export const ToastProvider = ({ children }) => {
       cursor: "pointer",
       color: c.text,
       opacity: 0.5,
-      fontSize: 18,
+      fontSize: 20,
       lineHeight: 1,
       padding: "0 2px",
       marginTop: -2,
@@ -151,12 +157,12 @@ export const ToastProvider = ({ children }) => {
 
   const keyframes = `
     @keyframes toast-in {
-      from { opacity: 0; transform: translateX(60px) scale(0.95); }
-      to   { opacity: 1; transform: translateX(0)    scale(1);    }
+      from { opacity: 0; transform: translateY(-24px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0)     scale(1);    }
     }
     @keyframes toast-out {
-      from { opacity: 1; transform: translateX(0)    scale(1);    }
-      to   { opacity: 0; transform: translateX(60px) scale(0.95); }
+      from { opacity: 1; transform: translateY(0)     scale(1);    }
+      to   { opacity: 0; transform: translateY(-24px) scale(0.96); }
     }
   `;
 

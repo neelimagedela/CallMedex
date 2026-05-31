@@ -14,7 +14,7 @@ const appointmentRoutes = require("./modules/appointment/routes/appointment.rout
 const path = require("path");
 const homeServiceRoutes = require("./modules/homeService/routes/homeService.routes");
 const errorMiddleware = require("./shared/middleware/error.middleware");
-
+const pharmacyRoutes = require("./modules/pharmacy/routes/pharmacy.routes");
 const app = express();
 
 app.use(helmet());
@@ -27,7 +27,7 @@ app.use(cors({
 app.use(express.json({ limit : "10mb" }));
 
 app.use(cookieParser());
-
+app.use("/pharmacy", pharmacyRoutes);
 const authLimiter = rateLimit({
     windowMs : 15 * 60 * 1000,
     max : 25,

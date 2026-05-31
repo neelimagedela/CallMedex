@@ -8,5 +8,6 @@
   "007_create_home_service_categories.sql",
   "008_create_home_service_tests.sql",
   "009_seed_home_service_tests.sql",
-  "010_create_home_service_bookings.sql"
+  "010_create_home_service_bookings.sql",
+  "011_create_pharmacy_home_delivery.sql"
 ]

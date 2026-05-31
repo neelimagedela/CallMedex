@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { api } from "../../shared/api";
+import { useToast } from "../../shared/toast.js";
 
 // ── constants ──────────────────────────────────────────────────────────────
 const PRE_DEFAULT = [
@@ -217,7 +218,7 @@ const S = {
   },
 };
 
-// ── F input (outside component to fix single-char bug) ─────────────────────
+// ── F input ────────────────────────────────────────────────────────────────
 const F = ({ name, type = "text", placeholder, value, onChange, colSpan, errors = {} }) => (
   <div style={colSpan ? { gridColumn: `span ${colSpan}` } : {}}>
     <input
@@ -276,7 +277,7 @@ function ProgressSidebar({ activeStep }) {
 }
 
 // ── main component ─────────────────────────────────────────────────────────
- export default function AppointmentBooking({
+export default function AppointmentBooking({
   title,
   scans,
   mode = "scan",
@@ -288,6 +289,7 @@ function ProgressSidebar({ activeStep }) {
   search = "",
   setSearch,
 }) {
+  const toast = useToast();
   const branches = ["Akkayapalem", "Madhurwada", "KGH Branch"];
   const today = new Date().toISOString().split("T")[0];
 
@@ -325,7 +327,10 @@ function ProgressSidebar({ activeStep }) {
     if (exists) {
       setSelectedScans(selectedScans.filter(s => s.id !== scan.id));
     } else {
-      if (selectedScans.length >= 2) { alert("Maximum 2 scans allowed"); return; }
+      if (selectedScans.length >= 2) {
+        toast.warning("You can select a maximum of 2 scans per appointment.");
+        return;
+      }
       setSelectedScans([...selectedScans, scan]);
     }
   };
@@ -333,148 +338,95 @@ function ProgressSidebar({ activeStep }) {
   const handleFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!["image/png", "image/jpeg", "application/pdf"].includes(file.type)) { alert("Only PDF / JPG / PNG allowed"); return; }
-    if (file.size > 5 * 1024 * 1024) { alert("File too large (max 5 MB)"); return; }
+    if (!["image/png", "image/jpeg", "application/pdf"].includes(file.type)) {
+      toast.error("Invalid file type. Please upload a PDF, JPG, or PNG file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File is too large. Maximum allowed size is 5 MB.");
+      return;
+    }
     setPrescription(file);
+    toast.success("Prescription uploaded successfully.");
   };
 
   const handleSubmit = async () => {
-  // 1. Check whether patient is logged in
-  const token = localStorage.getItem("accessToken");
-  const user = JSON.parse(localStorage.getItem("user") || "null");
+    const token = localStorage.getItem("accessToken");
+    const user = JSON.parse(localStorage.getItem("user") || "null");
 
-  if (!token || !user) {
-    alert("Please login as patient before booking a scan.");
-    return;
-  }
-
-  if (user.role !== "patient") {
-    alert("Only patient accounts can book scan appointments.");
-    return;
-  }
-
-  // 2. Validate form fields
-  const e = validate(patient, branch, selectedScans, date, slot, prescription);
-  setErrors(e);
-
-  if (Object.keys(e).length > 0) {
-    const first = [
-      "name",
-      "age",
-      "sex",
-      "mobile",
-      "email",
-      "branch",
-      "address",
-      "scans",
-      "date",
-      "slot",
-      "prescription",
-    ].find((k) => e[k]);
-
-    const secIdx = [
-      "name",
-      "age",
-      "sex",
-      "mobile",
-      "email",
-      "branch",
-      "address",
-    ].includes(first)
-      ? 0
-      : first === "scans"
-      ? 1
-      : ["date", "slot"].includes(first)
-      ? 2
-      : 3;
-
-    secRefs[secIdx]?.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
-
-    return;
-  }
-
-  try {
-    // 3. Convert prescription file to base64
-    let base64Prescription = null;
-
-    if (prescription) {
-      base64Prescription = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(prescription);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = (error) => reject(error);
-      });
-    }
-
-    // 4. Prepare booking data
-    // Do NOT send userId from frontend
-    
-      const payload = {
-  patientName: patient.name.trim(),
-  patientAge: Number(patient.age),
-  patientSex: patient.sex,
-  patientMobile: patient.mobile.trim(),
-  patientEmail: patient.email.trim().toLowerCase(),
-  patientAddress: patient.address.trim(),
-  branch,
-
-  ...(bookingType === "home-service"
-    ? {
-        tests: selectedScans.map((test) => ({
-          id: test.id,
-        })),
-        collectionDate: date,
-      }
-    : {
-        scans: selectedScans.map((scan) => ({
-          id: scan.id,
-          name: scan.name,
-          subtitle: scan.subtitle,
-          price: Number(scan.price),
-          oldPrice: Number(scan.oldPrice || 0),
-        })),
-        appointmentDate: date,
-      }),
-
-  timeSlot: slot,
-  prescription: base64Prescription,
-  totalAmount: Number(total),
-};
-
-    // 5. Send booking request to backend
-    const response = await api.post(bookingEndpoint, payload);
-
-    // 6. Show success message
-    if (response.data.success) {
-      setSubmitted(true);
-
-      alert("Scan appointment booked successfully.");
-
-      setTimeout(() => {
-        postRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }, 100);
-    } else {
-      alert(response.data.message || "Booking failed.");
-    }
-  } catch (err) {
-    console.error("Booking error:", err);
-
-    if (err.response?.status === 401) {
-      alert("Session expired. Please login again.");
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("user");
+    if (!token || !user) {
+      toast.error("Please log in as a patient before booking a scan appointment.");
       return;
     }
 
-    alert(err.response?.data?.message || "Failed to book appointment. Try again.");
-  }
-};
+    if (user.role !== "patient") {
+      toast.error("Only patient accounts can book scan appointments. Please log in with a patient account.");
+      return;
+    }
+
+    const e = validate(patient, branch, selectedScans, date, slot, prescription);
+    setErrors(e);
+
+    if (Object.keys(e).length > 0) {
+      toast.warning("Please fill in all required fields before confirming your appointment.");
+      const first = ["name","age","sex","mobile","email","branch","address","scans","date","slot","prescription"].find(k => e[k]);
+      const secIdx = ["name","age","sex","mobile","email","branch","address"].includes(first) ? 0
+        : first === "scans" ? 1
+        : ["date","slot"].includes(first) ? 2
+        : 3;
+      secRefs[secIdx]?.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
+    try {
+      let base64Prescription = null;
+      if (prescription) {
+        base64Prescription = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(prescription);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = (error) => reject(error);
+        });
+      }
+
+      const payload = {
+        patientName: patient.name.trim(),
+        patientAge: Number(patient.age),
+        patientSex: patient.sex,
+        patientMobile: patient.mobile.trim(),
+        patientEmail: patient.email.trim().toLowerCase(),
+        patientAddress: patient.address.trim(),
+        branch,
+        ...(bookingType === "home-service"
+          ? { tests: selectedScans.map(t => ({ id: t.id })), collectionDate: date }
+          : { scans: selectedScans.map(s => ({ id: s.id, name: s.name, subtitle: s.subtitle, price: Number(s.price), oldPrice: Number(s.oldPrice || 0) })), appointmentDate: date }),
+        timeSlot: slot,
+        prescription: base64Prescription,
+        totalAmount: Number(total),
+      };
+
+      const response = await api.post(bookingEndpoint, payload);
+
+      if (response.data.success) {
+        setSubmitted(true);
+        toast.success("Your appointment has been confirmed successfully! Please check the details below.");
+        setTimeout(() => {
+          postRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      } else {
+        toast.error(response.data.message || "Booking failed. Please try again.");
+      }
+    } catch (err) {
+      console.error("Booking error:", err);
+      if (err.response?.status === 401) {
+        toast.error("Your session has expired. Please log in again.");
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
+        return;
+      }
+      toast.error(err.response?.data?.message || "Failed to book appointment. Please try again.");
+    }
+  };
 
   const preTests = getPreTest(selectedScans);
 
@@ -566,48 +518,21 @@ function ProgressSidebar({ activeStep }) {
           <div style={S.secHead}>
             <div style={{ ...S.badge, background: "#7c3aed" }}>2</div>
             <div>
-               <p style={S.secTitle}>
-                  {mode === "home-service" ? "Select Tests" : "Select Scans"}
-                </p>
-                <p style={S.secSub}>
-                  {mode === "home-service"
-                    ? "Choose up to 2 home service tests"
-                    : "Choose up to 2 diagnostic tests"}
-                </p>
+              <p style={S.secTitle}>{mode === "home-service" ? "Select Tests" : "Select Scans"}</p>
+              <p style={S.secSub}>{mode === "home-service" ? "Choose up to 2 home service tests" : "Choose up to 2 diagnostic tests"}</p>
             </div>
             {errors.scans && <p style={{ ...S.errTxt, marginLeft: "auto" }}>⚠ {errors.scans}</p>}
           </div>
           {mode === "home-service" && (
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "1fr 260px",
-      gap: 12,
-      marginBottom: 16,
-    }}
-  >
-    <input
-      type="text"
-      placeholder="Search tests or features"
-      value={search}
-      onChange={(e) => setSearch?.(e.target.value)}
-      style={S.inp}
-    />
-
-    <select
-      value={selectedCategory}
-      onChange={(e) => setSelectedCategory?.(e.target.value)}
-      style={S.inp}
-    >
-      <option value="all">All Categories</option>
-      {categories.map((category) => (
-        <option key={category.category_id} value={category.category_name}>
-          {category.category_name}
-        </option>
-      ))}
-    </select>
-  </div>
-)}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 12, marginBottom: 16 }}>
+              <input type="text" placeholder="Search tests or features" value={search}
+                onChange={e => setSearch?.(e.target.value)} style={S.inp} />
+              <select value={selectedCategory} onChange={e => setSelectedCategory?.(e.target.value)} style={S.inp}>
+                <option value="all">All Categories</option>
+                {categories.map(c => <option key={c.category_id} value={c.category_name}>{c.category_name}</option>)}
+              </select>
+            </div>
+          )}
           <div style={S.scanGrid}>
             {scans.map(scan => {
               const isSel = !!selectedScans.find(s => s.id === scan.id);
@@ -620,24 +545,14 @@ function ProgressSidebar({ activeStep }) {
                   <p style={{ margin: "0 0 2px", fontWeight: 700, fontSize: ".9rem", color: "#0A2540" }}>{scan.name}</p>
                   <p style={{ margin: "0 0 8px", fontSize: ".75rem", color: "#94a3b8", lineHeight: 1.4 }}>{scan.subtitle}</p>
                   {mode === "home-service" && scan.features?.length > 0 && (
-  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-    {scan.features.slice(0, 4).map((feature, index) => (
-      <span
-        key={`${scan.id}-feature-${index}`}
-        style={{
-          fontSize: ".68rem",
-          color: "#0A9C87",
-          background: "#ecfcfc",
-          padding: "3px 7px",
-          borderRadius: 999,
-          fontWeight: 700,
-        }}
-      >
-        {feature}
-      </span>
-    ))}
-  </div>
-)}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                      {scan.features.slice(0, 4).map((feature, index) => (
+                        <span key={`${scan.id}-feature-${index}`} style={{ fontSize: ".68rem", color: "#0A9C87", background: "#ecfcfc", padding: "3px 7px", borderRadius: 999, fontWeight: 700 }}>
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <span style={{ fontWeight: 700, fontSize: ".95rem", color: "#0A2540" }}>₹{scan.price}</span>
                     <span style={{ fontSize: ".78rem", color: "#b0bec5", textDecoration: "line-through" }}>₹{scan.oldPrice}</span>
@@ -746,7 +661,6 @@ function ProgressSidebar({ activeStep }) {
               </div>
             </div>
 
-            {/* Pre-test instructions */}
             <div style={{ ...S.section, marginTop: 18 }}>
               <div style={S.secHead}>
                 <div style={{ ...S.badge, background: "#f59e0b" }}>📋</div>
@@ -765,7 +679,6 @@ function ProgressSidebar({ activeStep }) {
               </div>
             </div>
 
-            {/* What to bring */}
             <div style={S.section}>
               <div style={S.secHead}>
                 <div style={{ ...S.badge, background: "#8b5cf6" }}>🎒</div>
@@ -775,14 +688,7 @@ function ProgressSidebar({ activeStep }) {
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {[
-                  "Valid government-issued photo ID",
-                  "Original prescription document",
-                  "Previous test reports (if any)",
-                  "Insurance card (if applicable)",
-                  "List of current medications",
-                  "Emergency contact number",
-                ].map((item, i) => (
+                {["Valid government-issued photo ID","Original prescription document","Previous test reports (if any)","Insurance card (if applicable)","List of current medications","Emergency contact number"].map((item, i) => (
                   <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 12px", background: "#f5f3ff", borderRadius: 10, border: "1px solid #ddd6fe" }}>
                     <span style={{ color: "#7c3aed", fontSize: ".85rem" }}>✦</span>
                     <p style={{ margin: 0, fontSize: ".82rem", color: "#3b0764", lineHeight: 1.5 }}>{item}</p>
@@ -791,7 +697,6 @@ function ProgressSidebar({ activeStep }) {
               </div>
             </div>
 
-            {/* Download Receipt */}
             <div style={{ ...S.section, background: "#f0fdf4", border: "1.5px solid #6ee7b7" }}>
               <div style={S.secHead}>
                 <div style={{ ...S.badge, background: "#10b981" }}>⬇</div>

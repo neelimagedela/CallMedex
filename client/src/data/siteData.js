@@ -54,13 +54,13 @@ export const NAV = [
       { ico: "🏡", text: "Consultation at Home", href: "https://callmedex.com/consultation.php?service=consultation-athome" },
     ],
   },
-  {
-    label: "Pharmacy",
-    items: [
-      { ico: "🚚", text: "Home Delivery", href: "https://callmedex.com/pharmacy.php?service=home-delivery" },
-    ],
-  },
-  { label: "Blog", href: "https://callmedex.com/blog.php", solo: true },
+      {
+      label: "Pharmacy",
+      items: [
+        { ico: "🚚", text: "Home Delivery", page: "pharmacy-home-delivery" },
+      ],
+    },
+      { label: "Blog", href: "https://callmedex.com/blog.php", solo: true },
 ];
 
 export const LOGINS = [

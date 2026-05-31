@@ -4,6 +4,7 @@ import TopBar from "./components/layout/TopBar";
 import Navbar from "./components/layout/Navbar";
 import HeroSection from "./components/home/Herosection";
 import SearchSection from "./components/home/Searchsection";
+import PharmacyHomeDelivery from "./components/pharmacy/PharmacyHomeDelivery";
 import Footer from "./components/layout/Footer";
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
@@ -41,7 +42,9 @@ export default function App() {
       {page === "homeservices"   && <HomeServices />}
       {page === "cardiology"     && <Cardiology />}
       {page === "bodydiagnostics"&& <BodyDiagnostics />}
-
+          {page === "pharmacy-home-delivery" && (
+      <PharmacyHomeDelivery setPage={setPage} />
+    )}
       {page === "home" && (
         <>
           <HeroSection      setPage={setPage} />
