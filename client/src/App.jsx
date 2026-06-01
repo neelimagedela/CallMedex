@@ -21,6 +21,9 @@ import BodyDiagnostics from "./components/diagnostics/BodyDiagnostics";
 import PharmacyHomeDelivery from "./components/pharmacy/PharmacyHomeDelivery";
 import PharmacyDashboard from "./components/pharmacyDashboard/PharmacyDashboard";
 
+// ✅ FIX 1: Import ConsultancyHome (was missing — caused blank page)
+import ConsultancyHome from "./components/consultancy/consultancyHome";
+
 import { ToastProvider } from "./shared/toast.js";
 
 import {
@@ -40,18 +43,18 @@ export default function App() {
   const [scrolled, setScrolled] = useState(false);
   const [page,     setPage]     = useState("home");
   const [step,     setStep]     = useState(1);
-const [isLoggedIn, setIsLoggedIn] = useState(
-  !!localStorage.getItem("accessToken")
-);
 
-const [user, setUser] = useState(
-  JSON.parse(localStorage.getItem("user")) || null
-);
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    !!localStorage.getItem("accessToken")
+  );
+
+  const [user, setUser] = useState(
+    JSON.parse(localStorage.getItem("user")) || null
+  );
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
-
     window.addEventListener("scroll", onScroll);
-
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
@@ -93,6 +96,9 @@ const [user, setUser] = useState(
 
     {page === "homeservices" && <HomeServices />}
 
+    {/* ✅ FIX 2: Render ConsultancyHome for "consultancy-home" page (was missing) */}
+    {page === "consultancy-home" && <ConsultancyHome />}
+
     {page === "pharmacy-home-delivery" && (
       <PharmacyHomeDelivery setPage={setPage} />
     )}
@@ -113,6 +119,7 @@ const [user, setUser] = useState(
       <Register setPage={setPage} />
     )}
 
+<<<<<<< Updated upstream
     {page === "profile" && user?.role === "patient" && (
   <PatientProfile setPage={setPage} setUser={setUser} />
 )}
@@ -131,6 +138,91 @@ const [user, setUser] = useState(
     </button>
   </div>
 )}
+=======
+    {page === "profile" && (
+      <div
+        style={{
+          maxWidth: "900px",
+          margin: "40px auto",
+          background: "#fff",
+          padding: "30px",
+          borderRadius: "15px",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
+        }}
+      >
+        <h1>Edit Profile</h1>
+
+        <div style={{ display: "grid", gap: "15px" }}>
+
+          <input
+            type="text"
+            placeholder="Full Name"
+            defaultValue={user?.name || ""}
+          />
+
+          <input
+            type="number"
+            placeholder="Age"
+          />
+
+          <input
+            type="text"
+            placeholder="Gender"
+          />
+
+          <input
+            type="text"
+            placeholder="Phone Number"
+          />
+
+          <input
+            type="email"
+            placeholder="Email"
+            defaultValue={user?.email || ""}
+          />
+
+          <input
+            type="text"
+            placeholder="Height (cm)"
+          />
+
+          <input
+            type="text"
+            placeholder="Weight (kg)"
+          />
+
+          <input
+            type="text"
+            placeholder="Blood Group"
+          />
+
+          <textarea
+            rows="4"
+            placeholder="Medical History"
+          />
+
+          <textarea
+            rows="3"
+            placeholder="Allergies"
+          />
+
+          <button
+            style={{
+              background: "#007bff",
+              color: "#fff",
+              padding: "12px",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+            }}
+          >
+            Save Changes
+          </button>
+
+        </div>
+      </div>
+    )}
+>>>>>>> Stashed changes
 
     {page === "bookings" && user?.role === "patient" && (
   <PatientBookings setPage={setPage} />
@@ -177,5 +269,5 @@ const [user, setUser] = useState(
       </button>
     </div>
     </ToastProvider>
-);
+  );
 }

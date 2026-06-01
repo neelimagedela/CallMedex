@@ -51,7 +51,7 @@ export const NAV = [
       { ico: "📹", text: "Tele Consultation", href: "https://callmedex.com/consultation.php?service=tele-consultation" },
       { ico: "🏥", text: "Walk-in Clinics", href: "https://callmedex.com/consultation.php?service=walkin-clinics" },
       { ico: "🌏", text: "NRI Tele Consultation", href: "https://callmedex.com/consultation.php?service=nri-teleconsultation" },
-      { ico: "🏡", text: "Consultation at Home", href: "https://callmedex.com/consultation.php?service=consultation-athome" },
+      { ico: "🏡", text: "Consultation at Home", page: "consultancy-home" },
     ],
   },
       {
