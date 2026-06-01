@@ -24,6 +24,8 @@ import PharmacyDashboard from "./components/pharmacyDashboard/PharmacyDashboard"
 import ConsultancyHome from "./components/consultancy/consultancyHome";
 
 import { ToastProvider } from "./shared/toast.js";
+import WalkInClinic from "./components/walkinclinic/WalkInClinic";
+import TeleConsultationPage from "./components/consultation/TeleConsultationPage";
 
 import {
   AboutSection,
@@ -66,61 +68,70 @@ export default function App() {
   return (
     <ToastProvider>
       <style>{GLOBAL_CSS}</style>
+     <TopBar />
 
-      <TopBar />
+<Navbar
+  scrolled={scrolled}
+  setPage={setPage}
+  setStep={setStep}
+  isLoggedIn={isLoggedIn}
+  user={user}
+  setIsLoggedIn={setIsLoggedIn}
+  setUser={setUser}
+/>
 
-      <Navbar
-        scrolled={scrolled}
-        setPage={setPage}
-        setStep={setStep}
-        isLoggedIn={isLoggedIn}
-        user={user}
-        setIsLoggedIn={setIsLoggedIn}
-        setUser={setUser}
-      />
+{page === "home" && (
+  <>
+    <HeroSection setPage={setPage} />
+    <SearchSection />
+    <AboutSection />
+    <SpecialistsSection />
+    <PackagesSection />
+    <FeaturesSection />
+    <ServicesSection setPage={setPage} />
+    <MetricsSection />
+    <AppointmentSection />
+    <BranchesSection />
+    <TestimonialsSection />
+    <CTASection setPage={setPage} />
+  </>
+)}
 
-      {page === "home" && (
-        <>
-          <HeroSection setPage={setPage} />
-          <SearchSection />
-          <AboutSection />
-          <SpecialistsSection />
-          <PackagesSection />
-          <FeaturesSection />
-          <ServicesSection setPage={setPage} />
-          <MetricsSection />
-          <AppointmentSection />
-          <BranchesSection />
-          <TestimonialsSection />
-          <CTASection setPage={setPage} />
-        </>
-      )}
+{page === "homeservices" && <HomeServices />}
 
-      {page === "homeservices" && <HomeServices />}
-      {page === "cardiology" && <Cardiology />}
-      {page === "bodydiagnostics" && <BodyDiagnostics />}
+{page === "cardiology" && <Cardiology />}
 
-      {page === "consultancy-home" && (
-        <ConsultancyHome setPage={setPage} />
-      )}
+{page === "bodydiagnostics" && <BodyDiagnostics />}
 
-      {page === "pharmacy-home-delivery" && (
-        <PharmacyHomeDelivery setPage={setPage} />
-      )}
+{page === "walkin-clinic" && (
+  <WalkInClinic setPage={setPage} />
+)}
 
-      {page === "pharmacy-dashboard" && (
-        <PharmacyDashboard setPage={setPage} />
-      )}
+{page === "tele-consultation" && (
+  <TeleConsultationPage />
+)}
 
-      {page === "login" && (
-        <Login
-          setPage={setPage}
-          setIsLoggedIn={setIsLoggedIn}
-          setUser={setUser}
-        />
-      )}
+{page === "consultancy-home" && (
+  <ConsultancyHome setPage={setPage} />
+)}
 
-      {page === "register" && <Register setPage={setPage} />}
+{page === "pharmacy-home-delivery" && (
+  <PharmacyHomeDelivery setPage={setPage} />
+)}
+
+{page === "pharmacy-dashboard" && (
+  <PharmacyDashboard setPage={setPage} />
+)}
+
+{page === "login" && (
+  <Login
+    setPage={setPage}
+    setIsLoggedIn={setIsLoggedIn}
+    setUser={setUser}
+  />
+)}
+{page === "register" && <Register setPage={setPage} />}
+      
 
       {page === "profile" && user?.role === "patient" && (
         <PatientProfile setPage={setPage} setUser={setUser} />
