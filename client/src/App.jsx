@@ -21,7 +21,6 @@ import BodyDiagnostics from "./components/diagnostics/BodyDiagnostics";
 import PharmacyHomeDelivery from "./components/pharmacy/PharmacyHomeDelivery";
 import PharmacyDashboard from "./components/pharmacyDashboard/PharmacyDashboard";
 
-// ✅ FIX 1: Import ConsultancyHome (was missing — caused blank page)
 import ConsultancyHome from "./components/consultancy/consultancyHome";
 
 import { ToastProvider } from "./shared/toast.js";
@@ -41,233 +40,151 @@ import {
 
 export default function App() {
   const [scrolled, setScrolled] = useState(false);
-  const [page,     setPage]     = useState("home");
-  const [step,     setStep]     = useState(1);
+  const [page, setPage] = useState("home");
+  const [step, setStep] = useState(1);
 
   const [isLoggedIn, setIsLoggedIn] = useState(
-    !!localStorage.getItem("accessToken")
+    Boolean(localStorage.getItem("accessToken"))
   );
 
-  const [user, setUser] = useState(
-    JSON.parse(localStorage.getItem("user")) || null
-  );
+  const [user, setUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
+
     window.addEventListener("scroll", onScroll);
+
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   return (
     <ToastProvider>
-    <style>{GLOBAL_CSS}</style>
+      <style>{GLOBAL_CSS}</style>
 
-    <TopBar />
+      <TopBar />
 
-    <Navbar
-      scrolled={scrolled}
-      setPage={setPage}
-      setStep={setStep}
-      isLoggedIn={isLoggedIn}
-      user={user}
-      setIsLoggedIn={setIsLoggedIn}
-      setUser={setUser}
-    />
-
-    {page === "cardiology" && <Cardiology />}
-    {page === "bodydiagnostics" && <BodyDiagnostics />}
-
-    {page === "home" && (
-      <>
-        <HeroSection setPage={setPage} />
-        <SearchSection />
-        <AboutSection />
-        <SpecialistsSection />
-        <PackagesSection />
-        <FeaturesSection />
-        <ServicesSection />
-        <MetricsSection />
-        <AppointmentSection />
-        <BranchesSection />
-        <TestimonialsSection />
-        <CTASection setPage={setPage} />
-      </>
-    )}
-
-    {page === "homeservices" && <HomeServices />}
-
-    {/* ✅ FIX 2: Render ConsultancyHome for "consultancy-home" page (was missing) */}
-    {page === "consultancy-home" && <ConsultancyHome />}
-
-    {page === "pharmacy-home-delivery" && (
-      <PharmacyHomeDelivery setPage={setPage} />
-    )}
-
-    {page === "pharmacy-dashboard" && (
-      <PharmacyDashboard setPage={setPage} />
-    )}
-
-    {page === "login" && (
-      <Login
+      <Navbar
+        scrolled={scrolled}
         setPage={setPage}
+        setStep={setStep}
+        isLoggedIn={isLoggedIn}
+        user={user}
         setIsLoggedIn={setIsLoggedIn}
         setUser={setUser}
       />
-    )}
 
-    {page === "register" && (
-      <Register setPage={setPage} />
-    )}
+      {page === "home" && (
+        <>
+          <HeroSection setPage={setPage} />
+          <SearchSection />
+          <AboutSection />
+          <SpecialistsSection />
+          <PackagesSection />
+          <FeaturesSection />
+          <ServicesSection setPage={setPage} />
+          <MetricsSection />
+          <AppointmentSection />
+          <BranchesSection />
+          <TestimonialsSection />
+          <CTASection setPage={setPage} />
+        </>
+      )}
 
-<<<<<<< Updated upstream
-    {page === "profile" && user?.role === "patient" && (
-  <PatientProfile setPage={setPage} setUser={setUser} />
-)}
+      {page === "homeservices" && <HomeServices />}
+      {page === "cardiology" && <Cardiology />}
+      {page === "bodydiagnostics" && <BodyDiagnostics />}
 
-{page === "profile" && user?.role !== "patient" && (
-  <div style={{ padding: "120px 40px", textAlign: "center" }}>
-    <h1>Access Denied</h1>
-    <p>Only patient accounts can access the patient profile page.</p>
+      {page === "consultancy-home" && (
+        <ConsultancyHome setPage={setPage} />
+      )}
 
-    <button
-      className="btn btn-login"
-      onClick={() => setPage("home")}
-      style={{ marginTop: 20 }}
-    >
-      Go Home
-    </button>
-  </div>
-)}
-=======
-    {page === "profile" && (
-      <div
-        style={{
-          maxWidth: "900px",
-          margin: "40px auto",
-          background: "#fff",
-          padding: "30px",
-          borderRadius: "15px",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
-        }}
-      >
-        <h1>Edit Profile</h1>
+      {page === "pharmacy-home-delivery" && (
+        <PharmacyHomeDelivery setPage={setPage} />
+      )}
 
-        <div style={{ display: "grid", gap: "15px" }}>
+      {page === "pharmacy-dashboard" && (
+        <PharmacyDashboard setPage={setPage} />
+      )}
 
-          <input
-            type="text"
-            placeholder="Full Name"
-            defaultValue={user?.name || ""}
-          />
+      {page === "login" && (
+        <Login
+          setPage={setPage}
+          setIsLoggedIn={setIsLoggedIn}
+          setUser={setUser}
+        />
+      )}
 
-          <input
-            type="number"
-            placeholder="Age"
-          />
+      {page === "register" && <Register setPage={setPage} />}
 
-          <input
-            type="text"
-            placeholder="Gender"
-          />
+      {page === "profile" && user?.role === "patient" && (
+        <PatientProfile setPage={setPage} setUser={setUser} />
+      )}
 
-          <input
-            type="text"
-            placeholder="Phone Number"
-          />
-
-          <input
-            type="email"
-            placeholder="Email"
-            defaultValue={user?.email || ""}
-          />
-
-          <input
-            type="text"
-            placeholder="Height (cm)"
-          />
-
-          <input
-            type="text"
-            placeholder="Weight (kg)"
-          />
-
-          <input
-            type="text"
-            placeholder="Blood Group"
-          />
-
-          <textarea
-            rows="4"
-            placeholder="Medical History"
-          />
-
-          <textarea
-            rows="3"
-            placeholder="Allergies"
-          />
+      {page === "profile" && user?.role !== "patient" && (
+        <div style={{ padding: "120px 40px", textAlign: "center" }}>
+          <h1>Access Denied</h1>
+          <p>Only patient accounts can access the patient profile page.</p>
 
           <button
-            style={{
-              background: "#007bff",
-              color: "#fff",
-              padding: "12px",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-            }}
+            className="btn btn-login"
+            onClick={() => setPage("home")}
+            style={{ marginTop: 20 }}
           >
-            Save Changes
+            Go Home
           </button>
-
         </div>
+      )}
+
+      {page === "bookings" && user?.role === "patient" && (
+        <PatientBookings setPage={setPage} />
+      )}
+
+      {page === "bookings" && user?.role !== "patient" && (
+        <div style={{ padding: "120px 40px", textAlign: "center" }}>
+          <h1>Access Denied</h1>
+          <p>Only patient accounts can view previous bookings.</p>
+
+          <button
+            className="btn btn-login"
+            onClick={() => setPage("home")}
+            style={{ marginTop: 20 }}
+          >
+            Go Home
+          </button>
+        </div>
+      )}
+
+      {page === "reports" && (
+        <div style={{ padding: "40px", maxWidth: "1000px", margin: "auto" }}>
+          <h1>Test Reports</h1>
+          <p>Uploaded PDFs and medical reports will appear here.</p>
+        </div>
+      )}
+
+      {page === "help" && (
+        <div style={{ padding: "40px", maxWidth: "1000px", margin: "auto" }}>
+          <h1>Help & Support</h1>
+          <p>Support information and contact details.</p>
+        </div>
+      )}
+
+      <Footer />
+
+      <div className="fab-wrap">
+        <button
+          className="fab fab-chat"
+          title="AI Chat"
+          onClick={() => alert("AI Assistant Coming Soon")}
+        >
+          💬
+        </button>
       </div>
-    )}
->>>>>>> Stashed changes
-
-    {page === "bookings" && user?.role === "patient" && (
-  <PatientBookings setPage={setPage} />
-)}
-
-{page === "bookings" && user?.role !== "patient" && (
-  <div style={{ padding: "120px 40px", textAlign: "center" }}>
-    <h1>Access Denied</h1>
-    <p>Only patient accounts can view previous bookings.</p>
-
-    <button
-      className="btn btn-login"
-      onClick={() => setPage("home")}
-      style={{ marginTop: 20 }}
-    >
-      Go Home
-    </button>
-  </div>
-)}
-
-    {page === "reports" && (
-      <div style={{ padding: "40px", maxWidth: "1000px", margin: "auto" }}>
-        <h1>Test Reports</h1>
-        <p>Uploaded PDFs and medical reports will appear here.</p>
-      </div>
-    )}
-
-    {page === "help" && (
-      <div style={{ padding: "40px", maxWidth: "1000px", margin: "auto" }}>
-        <h1>Help & Support</h1>
-        <p>Support information and contact details.</p>
-      </div>
-    )}
-
-    <Footer />
-
-    <div className="fab-wrap">
-      <button
-        className="fab fab-chat"
-        title="AI Chat"
-        onClick={() => alert("AI Assistant Coming Soon")}
-      >
-        💬
-      </button>
-    </div>
     </ToastProvider>
   );
 }
