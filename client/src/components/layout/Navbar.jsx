@@ -77,14 +77,21 @@ export default function Navbar({
                     {item.label}
                   </button>
                 ) : (
-                  <a
-                    className="nav-link"
-                    href={item.href}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {item.label}
-                  </a>
+                  <button
+  className="nav-link"
+  onClick={() => {
+    if (item.page) {
+      setPage(item.page);
+      return;
+    }
+
+    if (item.href) {
+      window.open(item.href, "_blank", "noopener,noreferrer");
+    }
+  }}
+>
+  {item.label}
+</button>
                 )}
               </div>
             ) : (

@@ -17,7 +17,7 @@ import Register from "./components/auth/Register";
 import HomeServices from "./components/homeServices/HomeServices";
 import Cardiology from "./components/cardiology/Cardiology";
 import BodyDiagnostics from "./components/diagnostics/BodyDiagnostics";
-
+import BlogPage from "./components/blog/BlogPage";
 import PharmacyHomeDelivery from "./components/pharmacy/PharmacyHomeDelivery";
 import PharmacyDashboard from "./components/pharmacyDashboard/PharmacyDashboard";
 
@@ -102,7 +102,7 @@ export default function App() {
 {page === "cardiology" && <Cardiology />}
 
 {page === "bodydiagnostics" && <BodyDiagnostics />}
-
+{page === "blog" && <BlogPage setPage={setPage} />}
 {page === "walkin-clinic" && (
   <WalkInClinic setPage={setPage} />
 )}

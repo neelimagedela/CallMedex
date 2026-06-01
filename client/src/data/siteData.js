@@ -60,7 +60,7 @@ export const NAV = [
         { ico: "🚚", text: "Home Delivery", page: "pharmacy-home-delivery" },
       ],
     },
-      { label: "Blog", href: "https://callmedex.com/blog.php", solo: true },
+      { label: "Blog", page: "blog", solo: true },
 ];
 
 export const LOGINS = [
