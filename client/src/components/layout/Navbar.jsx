@@ -157,15 +157,17 @@ export default function Navbar({
 
                   <hr />
 
-                  <button
-                    className="drop-item"
-                    onClick={() => {
-                      setShowProfile(false);
-                      setPage("profile");
-                    }}
-                  >
-                    Edit Profile
-                  </button>
+                  {loggedInUser?.role === "patient" && (
+  <button
+    className="drop-item"
+    onClick={() => {
+      setShowProfile(false);
+      setPage("profile");
+    }}
+  >
+    Edit Profile
+  </button>
+)}
 
                   <button
                     className="drop-item"

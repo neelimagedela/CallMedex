@@ -35,8 +35,14 @@ const Login = ({ setPage, setIsLoggedIn, setUser }) => {
         toast.success(`Welcome back, ${user.name}! You are now logged in.`);
 
         setTimeout(() => {
-          setPage("home");
-        }, 800);
+  if (user.role === "patient") {
+    setPage("profile");
+  } else if (user.role === "pharmacy") {
+    setPage("pharmacy-dashboard");
+  } else {
+    setPage("home");
+  }
+}, 800);
       } else if (response.data.requiresVerification) {
         setUserId(response.data.data.userId);
         setShowOtpScreen(true);

@@ -1,3 +1,5 @@
+import PatientBookings from "./components/profile/PatientBookings";
+import PatientProfile from "./components/profile/PatientProfile";
 import { useState, useEffect } from "react";
 
 import GLOBAL_CSS from "./styles/globalStyles";
@@ -111,96 +113,43 @@ const [user, setUser] = useState(
       <Register setPage={setPage} />
     )}
 
-    {page === "profile" && (
-  <div
-    style={{
-      maxWidth: "900px",
-      margin: "40px auto",
-      background: "#fff",
-      padding: "30px",
-      borderRadius: "15px",
-      boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
-    }}
-  >
-    <h1>Edit Profile</h1>
+    {page === "profile" && user?.role === "patient" && (
+  <PatientProfile setPage={setPage} setUser={setUser} />
+)}
 
-    <div style={{ display: "grid", gap: "15px" }}>
+{page === "profile" && user?.role !== "patient" && (
+  <div style={{ padding: "120px 40px", textAlign: "center" }}>
+    <h1>Access Denied</h1>
+    <p>Only patient accounts can access the patient profile page.</p>
 
-      <input
-        type="text"
-        placeholder="Full Name"
-        defaultValue={user?.name || ""}
-      />
-
-      <input
-        type="number"
-        placeholder="Age"
-      />
-
-      <input
-        type="text"
-        placeholder="Gender"
-      />
-
-      <input
-        type="text"
-        placeholder="Phone Number"
-      />
-
-      <input
-        type="email"
-        placeholder="Email"
-        defaultValue={user?.email || ""}
-      />
-
-      <input
-        type="text"
-        placeholder="Height (cm)"
-      />
-
-      <input
-        type="text"
-        placeholder="Weight (kg)"
-      />
-
-      <input
-        type="text"
-        placeholder="Blood Group"
-      />
-
-      <textarea
-        rows="4"
-        placeholder="Medical History"
-      />
-
-      <textarea
-        rows="3"
-        placeholder="Allergies"
-      />
-
-      <button
-        style={{
-          background: "#007bff",
-          color: "#fff",
-          padding: "12px",
-          border: "none",
-          borderRadius: "8px",
-          cursor: "pointer",
-        }}
-      >
-        Save Changes
-      </button>
-
-    </div>
+    <button
+      className="btn btn-login"
+      onClick={() => setPage("home")}
+      style={{ marginTop: 20 }}
+    >
+      Go Home
+    </button>
   </div>
 )}
 
-    {page === "bookings" && (
-      <div style={{ padding: "40px", maxWidth: "1000px", margin: "auto" }}>
-        <h1>Previous Bookings</h1>
-        <p>Patient appointment history will appear here.</p>
-      </div>
-    )}
+    {page === "bookings" && user?.role === "patient" && (
+  <PatientBookings setPage={setPage} />
+)}
+
+{page === "bookings" && user?.role !== "patient" && (
+  <div style={{ padding: "120px 40px", textAlign: "center" }}>
+    <h1>Access Denied</h1>
+    <p>Only patient accounts can view previous bookings.</p>
+
+    <button
+      className="btn btn-login"
+      onClick={() => setPage("home")}
+      style={{ marginTop: 20 }}
+    >
+      Go Home
+    </button>
+  </div>
+)}
 
     {page === "reports" && (
       <div style={{ padding: "40px", maxWidth: "1000px", margin: "auto" }}>

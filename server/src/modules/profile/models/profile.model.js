@@ -159,8 +159,169 @@ const findProfileByUserId = async (userId, role) => {
   );
   return rows[0];
 };
+const getPatientFullProfileByUserId = async (userId) => {
+  const [rows] = await db.execute(
+    `
+    SELECT
+      u.id,
+      u.public_user_id,
+      u.name,
+      u.email,
+      u.phone,
+      u.role,
+      u.gender,
+      u.dob,
+      u.address,
+      u.city,
+      u.district,
+      u.state,
+      u.pincode,
+      u.country,
+      u.registration_status,
 
+      pp.blood_group,
+      pp.height,
+      pp.weight,
+      pp.medical_history,
+      pp.has_other_condition,
+      pp.other_condition
+    FROM users u
+    LEFT JOIN patient_profiles pp
+      ON pp.user_id = u.id
+    WHERE u.id = ?
+      AND u.role = 'patient'
+    LIMIT 1
+    `,
+    [userId]
+  );
+
+  return rows[0];
+};
+
+const updatePatientFullProfileByUserId = async (userId, data) => {
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    await connection.execute(
+      `
+      UPDATE users
+      SET
+        name = ?,
+        phone = ?,
+        email = ?,
+        gender = ?,
+        dob = ?,
+        address = ?,
+        city = ?,
+        district = ?,
+        state = ?,
+        pincode = ?,
+        country = ?
+      WHERE id = ?
+        AND role = 'patient'
+      `,
+      [
+        data.name,
+        data.phone,
+        data.email,
+        data.gender || null,
+        data.dob || null,
+        data.address || null,
+        data.city || null,
+        data.district || null,
+        data.state || null,
+        data.pincode || null,
+        data.country || "India",
+        userId,
+      ]
+    );
+
+    const medicalHistoryJson = Array.isArray(data.medicalHistory)
+      ? JSON.stringify(data.medicalHistory)
+      : JSON.stringify([]);
+
+    await connection.execute(
+      `
+      INSERT INTO patient_profiles (
+        user_id,
+        blood_group,
+        height,
+        weight,
+        medical_history,
+        has_other_condition,
+        other_condition
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        blood_group = VALUES(blood_group),
+        height = VALUES(height),
+        weight = VALUES(weight),
+        medical_history = VALUES(medical_history),
+        has_other_condition = VALUES(has_other_condition),
+        other_condition = VALUES(other_condition)
+      `,
+      [
+        userId,
+        data.bloodGroup || null,
+        data.height || null,
+        data.weight || null,
+        medicalHistoryJson,
+        data.hasOtherCondition ? 1 : 0,
+        data.otherCondition || null,
+      ]
+    );
+
+    await connection.commit();
+
+    return getPatientFullProfileByUserId(userId);
+  } catch (error) {
+    await connection.rollback();
+
+    if (error.code === "ER_DUP_ENTRY") {
+      error.status = 409;
+      error.message = "Email or phone number already exists";
+    }
+
+    throw error;
+  } finally {
+    connection.release();
+  }
+};
+const findPatientBookingsByUserId = async (userId) => {
+  const [rows] = await db.execute(
+    `
+    SELECT
+      id,
+      receipt_id,
+      patient_name,
+      patient_age,
+      patient_sex,
+      patient_mobile,
+      patient_email,
+      patient_address,
+      branch,
+      scans,
+      appointment_date,
+      time_slot,
+      prescription_path,
+      total_amount,
+      status,
+      created_at
+    FROM appointments
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    `,
+    [userId]
+  );
+
+  return rows;
+};
 module.exports = {
   upsertProfile,
   findProfileByUserId,
+  getPatientFullProfileByUserId,
+  updatePatientFullProfileByUserId,
+  findPatientBookingsByUserId,
 };
