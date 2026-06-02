@@ -17,9 +17,8 @@ const pharmacyRoutes = require("./modules/pharmacy/routes/pharmacy.routes");
 const consultancyHomeRoutes = require("./modules/consultancyHome/routes/consultancyHome.routes");
 const walkInCentersRoutes = require("./modules/walkInCenters/routes/walkInCenters.routes");
 const clinicRoutes = require("./modules/clinic/routes/clinic.routes");
-
+const teleConsultationRoutes = require("./modules/teleConsultation/routes/teleConsultation.routes");
 const errorMiddleware = require("./shared/middleware/error.middleware");
-
 const app = express();
 
 app.use(helmet());
@@ -72,6 +71,11 @@ app.use("/pharmacy", pharmacyRoutes);
 app.use("/consultancy-home", consultancyHomeRoutes);
 app.use("/walk-in-centers", walkInCentersRoutes);
 app.use("/clinic", clinicRoutes);
+app.use(
+  "/api/tele-consultation",
+  teleConsultationRoutes
+);
+
 
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 

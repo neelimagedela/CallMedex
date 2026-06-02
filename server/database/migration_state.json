@@ -16,5 +16,6 @@
   "015_create_consultancy_home.sql",
   "016_create_consultancy_home.sql",
   "017_create_clinic_appointments.sql",
+  "018_create_tele_consultation_bookings.sql",
   "019_create_diagnostic_walkin_bookings.sql"
 ]

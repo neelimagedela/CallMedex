@@ -17,11 +17,37 @@ export default function PatientBookings({ setPage }) {
     try {
       setLoading(true);
 
-      const res = await api.get("/profile/bookings");
+      const [scanRes, teleRes] = await Promise.allSettled([
+        api.get("/profile/bookings"),
+        api.get("/api/tele-consultation/my-bookings"),
+      ]);
 
-      if (res.data.success) {
-        setBookings(res.data.data || []);
-      }
+      const scanBookings =
+        scanRes.status === "fulfilled" && scanRes.value.data.success
+          ? (scanRes.value.data.data || []).map((b) => ({
+              ...b,
+              bookingType: "scan",
+            }))
+          : [];
+
+      const teleBookings =
+        teleRes.status === "fulfilled" && teleRes.value.data.success
+          ? (teleRes.value.data.data || []).map((b) => ({
+              ...b,
+              // normalize field names to match BookingCard expectations
+              patientName: b.patient_name,
+              patientMobile: b.patient_mobile,
+              appointmentDate: b.appointment_date,
+              timeSlot: b.time_slot,
+              totalAmount: b.consultation_fee,
+              receiptId: b.receipt_id,
+              status: b.status || "pending",
+              bookingType: "consultation",
+              specialization: b.specialization,
+            }))
+          : [];
+
+      setBookings([...teleBookings, ...scanBookings]);
     } catch (err) {
       toast.error(
         err.response?.data?.message ||

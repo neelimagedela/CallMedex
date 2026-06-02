@@ -11,7 +11,7 @@ import {
   TIME_SLOTS,
   CONSULTATION_FEE,
 } from "./teleConsultationData";
-
+import { api } from "../../shared/api";
 const sectionHeader = (
   number,
   title,
@@ -82,7 +82,9 @@ const TeleConsultationPage = () => {
   
   const consultationFee = CONSULTATION_FEE;
 const today = new Date().toISOString().split("T")[0];
-  const handleSubmit = () => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
     if (
       !patient.name ||
       !patient.age ||
@@ -92,13 +94,35 @@ const today = new Date().toISOString().split("T")[0];
       !patient.address ||
       !specialization ||
       !date ||
-      !slot 
+      !slot
     ) {
-      alert("Please fill all fields");
+      alert("Please fill all required fields");
       return;
     }
 
-    setConfirmed(true);
+    try {
+      setSubmitting(true);
+      await api.post("/api/tele-consultation/book", {
+        patientName: patient.name,
+        patientAge: Number(patient.age),
+        patientGender: patient.gender,
+        patientMobile: patient.mobile,
+        patientEmail: patient.email,
+        patientAddress: patient.address,
+        specialization,
+        appointmentDate: date,
+        timeSlot: slot,
+        consultationFee: consultationFee,
+      });
+      setConfirmed(true);
+    } catch (err) {
+      alert(
+        err.response?.data?.message ||
+          "Booking failed. Please make sure you are logged in and try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (confirmed) {
@@ -428,9 +452,10 @@ const today = new Date().toISOString().split("T")[0];
 
       <button
   onClick={handleSubmit}
-  style={buttonStyle}
+  disabled={submitting}
+  style={{ ...buttonStyle, opacity: submitting ? 0.7 : 1 }}
 >
-  Book Tele Consultation
+  {submitting ? "Booking..." : "Book Tele Consultation"}
 </button>
     </div>
   );
