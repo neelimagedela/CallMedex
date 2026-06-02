@@ -4,7 +4,13 @@ const crypto = require("crypto");
 
 const asyncHandler = require("../../../shared/utils/asyncHandler");
 const { successResponse } = require("../../../shared/utils/response");
-const { upsertProfile, findProfileByUserId } = require("../models/profile.model");
+const {
+  upsertProfile,
+  findProfileByUserId,
+  getPatientFullProfileByUserId,
+  updatePatientFullProfileByUserId,
+  findPatientBookingsByUserId,
+} = require("../models/profile.model");
 const AppError = require("../../../shared/utils/AppError");
 
 /**
@@ -177,8 +183,274 @@ const getProfileController = asyncHandler(async (req, res) => {
     data: profile,
   });
 });
+const allowedBloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+const allowedGenders = ["male", "female", "other"];
 
+function calculateAgeFromDob(dob) {
+  if (!dob) return null;
+
+  const birthDate = new Date(dob);
+  const today = new Date();
+
+  if (Number.isNaN(birthDate.getTime())) return null;
+  if (birthDate >= today) return null;
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
+    age -= 1;
+  }
+
+  return age;
+}
+
+function parseMedicalHistory(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+function formatDateForInput(value) {
+  if (!value) return "";
+
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return value.slice(0, 10);
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+function formatPatientProfile(row) {
+  return {
+    id: row.public_user_id,
+    internalId: row.id,
+    role: row.role,
+
+    name: row.name || "",
+    email: row.email || "",
+    phone: row.phone || "",
+    gender: row.gender || "",
+    dob: formatDateForInput(row.dob),
+    age: calculateAgeFromDob(row.dob),
+
+    address: row.address || "",
+    city: row.city || "",
+    district: row.district || "",
+    state: row.state || "",
+    pincode: row.pincode || "",
+    country: row.country || "India",
+
+    bloodGroup: row.blood_group || "",
+    height: row.height ? String(row.height) : "",
+    weight: row.weight ? String(row.weight) : "",
+    medicalHistory: parseMedicalHistory(row.medical_history),
+    hasOtherCondition: Boolean(row.has_other_condition),
+    otherCondition: row.other_condition || "",
+    registrationStatus: row.registration_status,
+  };
+}
+
+function validatePatientUpdate(data) {
+  const name = String(data.name || "").trim();
+  const phone = String(data.phone || "").trim();
+  const email = String(data.email || "").trim().toLowerCase();
+  const gender = String(data.gender || "").trim().toLowerCase();
+  const dob = formatDateForInput(data.dob);
+  const pincode = String(data.pincode || "").trim();
+  const bloodGroup = String(data.bloodGroup || "").trim();
+
+  const height =
+    data.height === "" || data.height === null || data.height === undefined
+      ? null
+      : Number(data.height);
+
+  const weight =
+    data.weight === "" || data.weight === null || data.weight === undefined
+      ? null
+      : Number(data.weight);
+
+  if (name.length < 3 || name.length > 100) {
+    throw new AppError("Name must be between 3 and 100 characters", 400);
+  }
+
+  if (!/^[a-zA-Z\s]+$/.test(name)) {
+    throw new AppError("Name must contain only letters and spaces", 400);
+  }
+
+  if (!/^[6-9]\d{9}$/.test(phone)) {
+    throw new AppError("Enter a valid 10-digit Indian mobile number", 400);
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new AppError("Enter a valid email address", 400);
+  }
+
+  if (gender && !allowedGenders.includes(gender)) {
+    throw new AppError("Invalid gender selected", 400);
+  }
+
+  if (dob) {
+    const age = calculateAgeFromDob(dob);
+
+    if (age === null || age < 0 || age > 120) {
+      throw new AppError("Enter a valid date of birth", 400);
+    }
+  }
+
+  if (pincode && !/^\d{6}$/.test(pincode)) {
+    throw new AppError("Enter a valid 6-digit pincode", 400);
+  }
+
+  if (bloodGroup && !allowedBloodGroups.includes(bloodGroup)) {
+    throw new AppError("Invalid blood group selected", 400);
+  }
+
+  if (
+    height !== null &&
+    (!Number.isFinite(height) || height < 30 || height > 250)
+  ) {
+    throw new AppError("Height must be between 30 and 250 cm", 400);
+  }
+
+  if (
+    weight !== null &&
+    (!Number.isFinite(weight) || weight < 1 || weight > 300)
+  ) {
+    throw new AppError("Weight must be between 1 and 300 kg", 400);
+  }
+
+  return {
+    name,
+    phone,
+    email,
+    gender: gender || null,
+    dob: dob || null,
+    address: String(data.address || "").trim(),
+    city: String(data.city || "").trim(),
+    district: String(data.district || "").trim(),
+    state: String(data.state || "").trim(),
+    pincode: pincode || null,
+    country: String(data.country || "India").trim(),
+
+    bloodGroup: bloodGroup || null,
+    height,
+    weight,
+    medicalHistory: Array.isArray(data.medicalHistory)
+      ? data.medicalHistory
+      : [],
+    hasOtherCondition: Boolean(data.hasOtherCondition),
+    otherCondition: String(data.otherCondition || "").trim(),
+  };
+}
+
+const getPatientProfileController = asyncHandler(async (req, res) => {
+  if (req.user.role !== "patient") {
+    throw new AppError("Only patients can access patient profile", 403);
+  }
+
+  const profile = await getPatientFullProfileByUserId(req.user.id);
+
+  if (!profile) {
+    throw new AppError("Patient profile not found", 404);
+  }
+
+  return successResponse({
+    res,
+    status: 200,
+    message: "Patient profile retrieved successfully",
+    data: formatPatientProfile(profile),
+  });
+});
+
+const updatePatientProfileController = asyncHandler(async (req, res) => {
+  if (req.user.role !== "patient") {
+    throw new AppError("Only patients can update patient profile", 403);
+  }
+
+  const validated = validatePatientUpdate(req.body);
+
+  const updatedProfile = await updatePatientFullProfileByUserId(
+    req.user.id,
+    validated
+  );
+
+  return successResponse({
+    res,
+    status: 200,
+    message: "Patient profile updated successfully",
+    data: formatPatientProfile(updatedProfile),
+  });
+});
+function parseScans(value) {
+  if (!value) return [];
+
+  if (Array.isArray(value)) return value;
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function formatBooking(row) {
+  return {
+    id: row.id,
+    receiptId: row.receipt_id,
+    patientName: row.patient_name,
+    patientAge: row.patient_age,
+    patientSex: row.patient_sex,
+    patientMobile: row.patient_mobile,
+    patientEmail: row.patient_email,
+    patientAddress: row.patient_address,
+    branch: row.branch,
+    scans: parseScans(row.scans),
+    appointmentDate: row.appointment_date
+      ? String(row.appointment_date).slice(0, 10)
+      : "",
+    timeSlot: row.time_slot,
+    prescriptionPath: row.prescription_path,
+    totalAmount: Number(row.total_amount || 0),
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
+const getPatientBookingsController = asyncHandler(async (req, res) => {
+  if (req.user.role !== "patient") {
+    throw new AppError("Only patients can view previous bookings", 403);
+  }
+
+  const bookings = await findPatientBookingsByUserId(req.user.id);
+
+  return successResponse({
+    res,
+    status: 200,
+    message: "Patient bookings retrieved successfully",
+    data: bookings.map(formatBooking),
+  });
+});
 module.exports = {
   onboardProfileController,
   getProfileController,
+  getPatientProfileController,
+  updatePatientProfileController,
+  getPatientBookingsController,
 };

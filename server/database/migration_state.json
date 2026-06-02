@@ -11,5 +11,11 @@
   "010_create_home_service_bookings.sql",
   "011_create_pharmacy_home_delivery.sql",
   "012_add_service_mode_to_pharmacy_profiles.sql",
-  "014_update_pharmacy_orders_status.sql"
+  "014_update_pharmacy_orders_status.sql",
+<<<<<<< Updated upstream
+  "013_optimize_patient_profiles.sql",
+  "015_add_receipt_id_to_appointments.sql"
+=======
+  "015_create_consultancy_home.sql"
+>>>>>>> Stashed changes
 ]

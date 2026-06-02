@@ -48,10 +48,10 @@ export const NAV = [
   {
     label: "Consultation",
     items: [
-      { ico: "📹", text: "Tele Consultation", href: "https://callmedex.com/consultation.php?service=tele-consultation" },
-      { ico: "🏥", text: "Walk-in Clinics", href: "https://callmedex.com/consultation.php?service=walkin-clinics" },
+      { ico: "🖥️", text: "Tele Consultation", page: "tele-consultation"},
+      {icon: "🏥", text: "Walk-in Clinics", page: "walkin-clinic"},
       { ico: "🌏", text: "NRI Tele Consultation", href: "https://callmedex.com/consultation.php?service=nri-teleconsultation" },
-      { ico: "🏡", text: "Consultation at Home", href: "https://callmedex.com/consultation.php?service=consultation-athome" },
+      { ico: "🏡", text: "Consultation at Home", page: "consultancy-home" },
     ],
   },
       {
@@ -60,7 +60,7 @@ export const NAV = [
         { ico: "🚚", text: "Home Delivery", page: "pharmacy-home-delivery" },
       ],
     },
-      { label: "Blog", href: "https://callmedex.com/blog.php", solo: true },
+      { label: "Blog", page: "blog", solo: true },
 ];
 
 export const LOGINS = [

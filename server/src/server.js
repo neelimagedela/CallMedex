@@ -5,42 +5,45 @@ const cors = require("cors");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
+const path = require("path");
 
 const db = require("./config/db");
 
 const authRoutes = require("./modules/auth/routes/auth.routes");
 const profileRoutes = require("./modules/profile/routes/profile.routes");
 const appointmentRoutes = require("./modules/appointment/routes/appointment.routes");
-const path = require("path");
 const homeServiceRoutes = require("./modules/homeService/routes/homeService.routes");
-const errorMiddleware = require("./shared/middleware/error.middleware");
 const pharmacyRoutes = require("./modules/pharmacy/routes/pharmacy.routes");
+const consultancyHomeRoutes = require("./modules/consultancyHome/routes/consultancyHome.routes");
+
+const errorMiddleware = require("./shared/middleware/error.middleware");
+
 const app = express();
 
 app.use(helmet());
 
-app.use(cors({
-    origin : true,
-    credentials : true
-}));
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
 
-app.use(express.json({ limit : "10mb" }));
-
+app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
-app.use("/pharmacy", pharmacyRoutes);
+
 const authLimiter = rateLimit({
-    windowMs : 15 * 60 * 1000,
-    max : 25,
-    standardHeaders : true,
-    legacyHeaders : false,
-    message : {
-        success : false,
-        message : "Too many requests"
-    }
+  windowMs: 15 * 60 * 1000,
+  max: 25,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many requests",
+  },
 });
 
 app.use("/auth", authLimiter);
-
 
 app.get("/health", async (req, res) => {
   try {
@@ -62,8 +65,12 @@ app.get("/health", async (req, res) => {
 app.use("/auth", authRoutes);
 app.use("/profile", profileRoutes);
 app.use("/appointment", appointmentRoutes);
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/home-service", homeServiceRoutes);
+app.use("/pharmacy", pharmacyRoutes);
+app.use("/consultancy-home", consultancyHomeRoutes);
+
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
 app.use(errorMiddleware);
 
 const PORT = process.env.PORT || 5000;

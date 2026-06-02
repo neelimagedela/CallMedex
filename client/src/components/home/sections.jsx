@@ -132,7 +132,7 @@ export function FeaturesSection() {
 }
 
 /* ─── Services ──────────────────────────────────────────── */
-export function ServicesSection() {
+export function ServicesSection({setPage}) {
   return (
     <section className="sec sec-alt">
       <div className="wrap">
