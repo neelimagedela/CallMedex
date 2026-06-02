@@ -10,6 +10,7 @@ const {
   getPatientFullProfileByUserId,
   updatePatientFullProfileByUserId,
   findPatientBookingsByUserId,
+  findPatientConsultationBookingsByUserId,
 } = require("../models/profile.model");
 const AppError = require("../../../shared/utils/AppError");
 
@@ -438,14 +439,43 @@ const getPatientBookingsController = asyncHandler(async (req, res) => {
     throw new AppError("Only patients can view previous bookings", 403);
   }
 
-  const bookings = await findPatientBookingsByUserId(req.user.id);
+  const scanBookings =
+  await findPatientBookingsByUserId(req.user.id);
 
-  return successResponse({
-    res,
-    status: 200,
-    message: "Patient bookings retrieved successfully",
-    data: bookings.map(formatBooking),
-  });
+const consultationBookings =
+  await findPatientConsultationBookingsByUserId(req.user.id);
+
+const allBookings = [
+  ...scanBookings.map((booking) => ({
+    ...formatBooking(booking),
+    bookingType: "scan",
+  })),
+
+  ...consultationBookings.map((booking) => ({
+  id: booking.id,
+  receiptId: booking.receipt_id,
+  bookingType: "consultation",
+
+  patientName: booking.patient_name,
+  patientMobile: booking.patient_phone,
+
+  appointmentDate: booking.appointment_date,
+  timeSlot: booking.time_slot,
+
+  totalAmount: Number(booking.total_amount),
+  status: booking.booking_status,
+
+  branch: "Consultation at Home",
+  scans: [],
+}))
+];
+
+return successResponse({
+  res,
+  status: 200,
+  message: "Patient bookings retrieved successfully",
+  data: allBookings,
+});
 });
 module.exports = {
   onboardProfileController,

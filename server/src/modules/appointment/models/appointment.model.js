@@ -4,10 +4,12 @@ const createAppointment = async (appointmentData) => {
   const scansJson = Array.isArray(appointmentData.scans)
     ? JSON.stringify(appointmentData.scans)
     : JSON.stringify(appointmentData.scans || []);
-
+const receiptId =
+  `AP${Date.now()}${Math.floor(Math.random() * 1000)}`;
   const [result] = await db.execute(
     `
     INSERT INTO appointments (
+      receipt_id,
       user_id,
       patient_name,
       patient_age,
@@ -23,9 +25,10 @@ const createAppointment = async (appointmentData) => {
       total_amount,
       status
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
     `,
     [
+      receiptId,
       appointmentData.userId || null,
       appointmentData.patientName,
       appointmentData.patientAge,

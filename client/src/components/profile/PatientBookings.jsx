@@ -80,6 +80,9 @@ export default function PatientBookings({ setPage }) {
 }
 
 function BookingCard({ booking }) {
+
+  const isConsultation =
+  booking.bookingType === "consultation";
   const scans = booking.scans || [];
 
   return (
@@ -107,11 +110,21 @@ function BookingCard({ booking }) {
       </div>
 
       <div style={S.scanBox}>
-        <h3 style={S.scanTitle}>Selected Scans</h3>
+        <h3 style={S.scanTitle}>
+  {isConsultation
+    ? "Consultation Service"
+    : "Selected Scans"}
+</h3>
 
-        {scans.length === 0 ? (
-          <p style={S.sub}>No scan details available.</p>
-        ) : (
+        {isConsultation ? (
+  <div>
+    <p>Consultation at Home</p>
+    <p>Date: {booking.appointmentDate}</p>
+    <p>Time Slot: {booking.timeSlot}</p>
+  </div>
+) : scans.length === 0 ? (
+  <p style={S.sub}>No scan details available.</p>
+) : (
           <div style={S.scanList}>
             {scans.map((scan, index) => (
               <div key={scan.id || index} style={S.scanItem}>
@@ -122,12 +135,6 @@ function BookingCard({ booking }) {
           </div>
         )}
       </div>
-
-      {booking.prescriptionPath && (
-        <p style={S.prescription}>
-          Prescription uploaded: {booking.prescriptionPath}
-        </p>
-      )}
     </div>
   );
 }

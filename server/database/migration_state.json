@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 [
   "001_create_users.sql",
   "002_create_verification_otps.sql",
@@ -17,3 +18,6 @@
   "016_create_consultancy_home.sql",
   "017_create_clinic_appointments.sql"
 ]
+=======
+[]
+>>>>>>> Stashed changes

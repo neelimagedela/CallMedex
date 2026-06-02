@@ -318,10 +318,26 @@ const findPatientBookingsByUserId = async (userId) => {
 
   return rows;
 };
+
+const findPatientConsultationBookingsByUserId = async (userId) => {
+  const [rows] = await db.execute(
+    `
+    SELECT *
+    FROM consultancy_home_bookings
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    `,
+    [userId]
+  );
+
+  return rows;
+};
+
 module.exports = {
   upsertProfile,
   findProfileByUserId,
   getPatientFullProfileByUserId,
   updatePatientFullProfileByUserId,
   findPatientBookingsByUserId,
+  findPatientConsultationBookingsByUserId,
 };
