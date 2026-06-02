@@ -27,6 +27,8 @@ import DiagnosticWalkInCenters from "./components/diagnostics/DiagnosticWalkInCe
 import { ToastProvider } from "./shared/toast.js";
 import WalkInClinic from "./components/walkinclinic/WalkInClinic";
 import TeleConsultationPage from "./components/consultation/TeleConsultationPage";
+import ConsultationChoice from "./components/appointments/ConsultationChoice";
+
 
 import {
   AboutSection,
@@ -108,6 +110,8 @@ export default function App() {
       {page === "blog" && <BlogPage setPage={setPage} />}
 
       {page === "about" && <AboutPage setPage={setPage} />}
+
+      {page === "consultation-choice" && (<ConsultationChoice setPage={setPage} />)}
 
       {page === "walkin-clinic" && <WalkInClinic setPage={setPage} />}
 

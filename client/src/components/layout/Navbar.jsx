@@ -226,17 +226,15 @@ export default function Navbar({
 
           {/* BOOK APPOINTMENT - HIDE FOR PHARMACY */}
           {!isPharmacy && (
-            <a
-              className="btn btn-book"
-              href={SITE.patientPortal}
-              target="_blank"
-              rel="noreferrer"
-              style={{ marginLeft: "12px" }}
-            >
-              Book
-              <br />
-              Appointment
-            </a>
+            <button
+  className="btn btn-book"
+  onClick={() => setPage("consultation-choice")}
+  style={{ marginLeft: "12px" }}
+>
+  Book
+  <br />
+  Appointment
+</button>
           )}
         </div>
       </div>
