@@ -27,7 +27,7 @@ export const NAV = [
   {
     label: "About",
     items: [
-      { ico: "ℹ️", text: "About Us", href: "https://callmedex.com/about.php" },
+      { ico: "ℹ️", text: "About Us",  page: "about" },
       { ico: "🖼️", text: "Gallery", href: "https://callmedex.com/gallery.php" },
     ],
   },

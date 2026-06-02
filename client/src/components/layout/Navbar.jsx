@@ -15,13 +15,15 @@ export default function Navbar({
 }) {
   const [showProfile, setShowProfile] = useState(false);
 
-  const loggedInUser = user || (() => {
-    try {
-      return JSON.parse(localStorage.getItem("user") || "null");
-    } catch {
-      return null;
-    }
-  })();
+  const loggedInUser =
+    user ||
+    (() => {
+      try {
+        return JSON.parse(localStorage.getItem("user") || "null");
+      } catch {
+        return null;
+      }
+    })();
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
@@ -78,20 +80,20 @@ export default function Navbar({
                   </button>
                 ) : (
                   <button
-  className="nav-link"
-  onClick={() => {
-    if (item.page) {
-      setPage(item.page);
-      return;
-    }
+                    className="nav-link"
+                    onClick={() => {
+                      if (item.page) {
+                        setPage(item.page);
+                        return;
+                      }
 
-    if (item.href) {
-      window.open(item.href, "_blank", "noopener,noreferrer");
-    }
-  }}
->
-  {item.label}
-</button>
+                      if (item.href) {
+                        window.open(item.href, "_blank", "noopener,noreferrer");
+                      }
+                    }}
+                  >
+                    {item.label}
+                  </button>
                 )}
               </div>
             ) : (
@@ -165,16 +167,16 @@ export default function Navbar({
                   <hr />
 
                   {loggedInUser?.role === "patient" && (
-  <button
-    className="drop-item"
-    onClick={() => {
-      setShowProfile(false);
-      setPage("profile");
-    }}
-  >
-    Edit Profile
-  </button>
-)}
+                    <button
+                      className="drop-item"
+                      onClick={() => {
+                        setShowProfile(false);
+                        setPage("profile");
+                      }}
+                    >
+                      Edit Profile
+                    </button>
+                  )}
 
                   <button
                     className="drop-item"
