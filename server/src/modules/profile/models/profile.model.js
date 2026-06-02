@@ -22,14 +22,13 @@ const getTableName = (role) => {
 
 const mapCamelToSnake = (data, role) => {
   const mapped = {};
-  
-  // Custom manual mappings for edge cases
+
   const mappings = {
     // Patient
     bloodGroup: "blood_group",
     medicalHistory: "medical_history",
     otherCondition: "other_condition",
-    
+
     // Doctor
     medicalLicenseNumber: "medical_license_number",
     hospitalOrClinicName: "hospital_clinic_name",
@@ -41,7 +40,7 @@ const mapCamelToSnake = (data, role) => {
     medicalCertificate: "medical_certificate",
     medicalLicense: "medical_license",
     idProof: "id_proof",
-    
+
     // Phlebotomist
     phleboType: "phlebo_type",
     certificationNumber: "certification_number",
@@ -52,7 +51,7 @@ const mapCamelToSnake = (data, role) => {
     governmentIdType: "government_id_type",
     aadhaarFront: "aadhaar_front",
     phlebotomyCertificate: "phlebotomy_certificate",
-    
+
     // Pharmacy
     pharmacyName: "pharmacy_name",
     pharmacyType: "pharmacy_type",
@@ -72,7 +71,7 @@ const mapCamelToSnake = (data, role) => {
     pharmacistCertificate: "pharmacist_certificate",
     pharmacyImages: "pharmacy_images",
     ownerIdProof: "owner_id_proof",
-    
+
     // Organization
     institutionName: "institution_name",
     institutionType: "institution_type",
@@ -88,7 +87,7 @@ const mapCamelToSnake = (data, role) => {
     registrationCertificate: "registration_certificate",
     governmentLicense: "government_license",
     authorizedPersonIdProof: "authorized_person_id_proof",
-    
+
     // Admin
     accessLevel: "access_level",
     officeLocation: "office_location",
@@ -99,27 +98,30 @@ const mapCamelToSnake = (data, role) => {
     securityAnswer: "security_answer",
     twoFAEnabled: "two_fa_enabled",
     aadhaarUpload: "aadhaar_upload",
-    governmentIdProof: "government_id_proof"
+    governmentIdProof: "government_id_proof",
   };
 
   for (const key in data) {
     if (data[key] === undefined) continue;
-    
+
     const dbKey = mappings[key] || key.replace(/([A-Z])/g, "_$1").toLowerCase();
     let val = data[key];
 
-    // Format fields appropriately
-    if (["medical_history", "languages_known", "available_days", "permissions"].includes(dbKey)) {
+    if (
+      ["medical_history", "languages_known", "available_days", "permissions"].includes(
+        dbKey
+      )
+    ) {
       val = Array.isArray(val) ? JSON.stringify(val) : val;
     } else if (typeof val === "boolean") {
       val = val ? 1 : 0;
     } else if (val === "") {
       val = null;
     }
-    
+
     mapped[dbKey] = val;
   }
-  
+
   return mapped;
 };
 
@@ -130,7 +132,7 @@ const upsertProfile = async (userId, role, profileData) => {
 
   const keys = Object.keys(data);
   const values = Object.values(data);
-  
+
   const placeholders = keys.map(() => "?").join(", ");
   const updates = keys.map((key) => `${key} = VALUES(${key})`).join(", ");
 
@@ -142,7 +144,6 @@ const upsertProfile = async (userId, role, profileData) => {
 
   const [result] = await db.execute(query, values);
 
-  // Update users registration status to PROFILE_COMPLETED
   await db.execute(
     `UPDATE users SET registration_status = 'PROFILE_COMPLETED' WHERE id = ?`,
     [userId]
@@ -153,12 +154,15 @@ const upsertProfile = async (userId, role, profileData) => {
 
 const findProfileByUserId = async (userId, role) => {
   const tableName = getTableName(role);
+
   const [rows] = await db.execute(
     `SELECT * FROM ${tableName} WHERE user_id = ? LIMIT 1`,
     [userId]
   );
+
   return rows[0];
 };
+
 const getPatientFullProfileByUserId = async (userId) => {
   const [rows] = await db.execute(
     `
@@ -289,12 +293,14 @@ const updatePatientFullProfileByUserId = async (userId, data) => {
     connection.release();
   }
 };
+
 const findPatientBookingsByUserId = async (userId) => {
   const [rows] = await db.execute(
     `
     SELECT
       id,
       receipt_id,
+      'Diagnostic Scan' AS booking_type,
       patient_name,
       patient_age,
       patient_sex,
@@ -322,7 +328,22 @@ const findPatientBookingsByUserId = async (userId) => {
 const findPatientConsultationBookingsByUserId = async (userId) => {
   const [rows] = await db.execute(
     `
-    SELECT *
+    SELECT
+      id,
+      receipt_id,
+      'Consultation Home' AS booking_type,
+      patient_name,
+      NULL AS patient_age,
+      NULL AS patient_sex,
+      patient_phone AS patient_mobile,
+      patient_email,
+      patient_address,
+      NULL AS branch,
+      appointment_date,
+      time_slot,
+      total_amount,
+      booking_status AS status,
+      created_at
     FROM consultancy_home_bookings
     WHERE user_id = ?
     ORDER BY created_at DESC
@@ -333,6 +354,34 @@ const findPatientConsultationBookingsByUserId = async (userId) => {
   return rows;
 };
 
+const findPatientClinicBookingsByUserId = async (userId) => {
+  const [rows] = await db.execute(
+    `
+    SELECT
+      id,
+      receipt_id,
+      user_id,
+      patient_name,
+      patient_age,
+      patient_gender,
+      patient_mobile,
+      patient_email,
+      patient_address,
+      clinic_branch,
+      appointment_date,
+      time_slot,
+      consultation_fee,
+      status,
+      created_at
+    FROM clinic_appointments
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    `,
+    [userId]
+  );
+
+  return rows;
+};
 module.exports = {
   upsertProfile,
   findProfileByUserId,
@@ -340,4 +389,6 @@ module.exports = {
   updatePatientFullProfileByUserId,
   findPatientBookingsByUserId,
   findPatientConsultationBookingsByUserId,
+  findPatientClinicBookingsByUserId,
+
 };

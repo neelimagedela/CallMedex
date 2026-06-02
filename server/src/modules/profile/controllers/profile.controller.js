@@ -11,6 +11,7 @@ const {
   updatePatientFullProfileByUserId,
   findPatientBookingsByUserId,
   findPatientConsultationBookingsByUserId,
+  findPatientClinicBookingsByUserId,
 } = require("../models/profile.model");
 const AppError = require("../../../shared/utils/AppError");
 
@@ -439,43 +440,69 @@ const getPatientBookingsController = asyncHandler(async (req, res) => {
     throw new AppError("Only patients can view previous bookings", 403);
   }
 
-  const scanBookings =
-  await findPatientBookingsByUserId(req.user.id);
+  const scanBookings = await findPatientBookingsByUserId(req.user.id);
 
-const consultationBookings =
-  await findPatientConsultationBookingsByUserId(req.user.id);
+  const consultationBookings =
+    await findPatientConsultationBookingsByUserId(req.user.id);
 
-const allBookings = [
-  ...scanBookings.map((booking) => ({
-    ...formatBooking(booking),
-    bookingType: "scan",
-  })),
+  const clinicBookings =
+    await findPatientClinicBookingsByUserId(req.user.id);
 
-  ...consultationBookings.map((booking) => ({
-  id: booking.id,
-  receiptId: booking.receipt_id,
-  bookingType: "consultation",
+  const allBookings = [
+    ...scanBookings.map((booking) => ({
+      ...formatBooking(booking),
+      bookingType: "scan",
+    })),
 
-  patientName: booking.patient_name,
-  patientMobile: booking.patient_phone,
+    ...consultationBookings.map((booking) => ({
+      id: booking.id,
+      receiptId: booking.receipt_id,
+      bookingType: "consultation",
 
-  appointmentDate: booking.appointment_date,
-  timeSlot: booking.time_slot,
+      patientName: booking.patient_name,
+      patientMobile: booking.patient_phone,
 
-  totalAmount: Number(booking.total_amount),
-  status: booking.booking_status,
+      appointmentDate: booking.appointment_date,
+      timeSlot: booking.time_slot,
 
-  branch: "Consultation at Home",
-  scans: [],
-}))
-];
+      totalAmount: Number(booking.total_amount),
+      status: booking.booking_status,
 
-return successResponse({
-  res,
-  status: 200,
-  message: "Patient bookings retrieved successfully",
-  data: allBookings,
-});
+      branch: "Consultation at Home",
+      scans: [],
+    })),
+
+    ...clinicBookings.map((booking) => ({
+      id: booking.id,
+      receiptId: booking.receipt_id,
+      bookingType: "walkin",
+
+      patientName: booking.patient_name,
+      patientAge: booking.patient_age,
+      patientSex: booking.patient_gender,
+      patientMobile: booking.patient_mobile,
+      patientEmail: booking.patient_email,
+      patientAddress: booking.patient_address,
+
+      appointmentDate: booking.appointment_date
+        ? String(booking.appointment_date).slice(0, 10)
+        : "",
+      timeSlot: booking.time_slot,
+
+      totalAmount: Number(booking.consultation_fee || 0),
+      status: booking.status,
+
+      branch: booking.clinic_branch,
+      scans: [],
+    })),
+  ].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  return successResponse({
+    res,
+    status: 200,
+    message: "Patient bookings retrieved successfully",
+    data: allBookings,
+  });
 });
 module.exports = {
   onboardProfileController,

@@ -15,7 +15,11 @@ const appointmentRoutes = require("./modules/appointment/routes/appointment.rout
 const homeServiceRoutes = require("./modules/homeService/routes/homeService.routes");
 const pharmacyRoutes = require("./modules/pharmacy/routes/pharmacy.routes");
 const consultancyHomeRoutes = require("./modules/consultancyHome/routes/consultancyHome.routes");
+<<<<<<< Updated upstream
 const walkInCentersRoutes = require("./modules/walkInCenters/routes/walkInCenters.routes");
+=======
+const clinicRoutes = require("./modules/clinic/routes/clinic.routes");
+>>>>>>> Stashed changes
 const errorMiddleware = require("./shared/middleware/error.middleware");
 
 const app = express();
@@ -68,7 +72,7 @@ app.use("/appointment", appointmentRoutes);
 app.use("/home-service", homeServiceRoutes);
 app.use("/pharmacy", pharmacyRoutes);
 app.use("/consultancy-home", consultancyHomeRoutes);
-
+app.use("/clinic", clinicRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.use(errorMiddleware);

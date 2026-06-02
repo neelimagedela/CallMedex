@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { bookWalkInClinicAppointment } from "./walkInClinic.api";
+
 import {
   cardStyle,
   inputStyle,
@@ -12,13 +14,7 @@ import {
   CONSULTATION_FEE,
 } from "./walkInClinicConstants";
 
-
-const sectionHeader = (
-  number,
-  title,
-  subtitle,
-  color
-) => (
+const sectionHeader = (number, title, subtitle, color) => (
   <div
     style={{
       display: "flex",
@@ -54,19 +50,15 @@ const sectionHeader = (
         {title}
       </div>
 
-      <div
-        style={{
-          color: "#94a3b8",
-        }}
-      >
-        {subtitle}
-      </div>
+      <div style={{ color: "#94a3b8" }}>{subtitle}</div>
     </div>
   </div>
 );
 
 const WalkInClinic = () => {
   const [confirmed, setConfirmed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [receiptId, setReceiptId] = useState("");
 
   const [patient, setPatient] = useState({
     name: "",
@@ -80,10 +72,11 @@ const WalkInClinic = () => {
   const [branch, setBranch] = useState("");
   const [date, setDate] = useState("");
   const [slot, setSlot] = useState("");
-  
+
   const consultationFee = CONSULTATION_FEE;
-const today = new Date().toISOString().split("T")[0];
-  const handleSubmit = () => {
+  const today = new Date().toISOString().split("T")[0];
+
+  const handleSubmit = async () => {
     if (
       !patient.name ||
       !patient.age ||
@@ -93,13 +86,49 @@ const today = new Date().toISOString().split("T")[0];
       !patient.address ||
       !branch ||
       !date ||
-      !slot 
+      !slot
     ) {
       alert("Please fill all fields");
       return;
     }
 
-    setConfirmed(true);
+    if (Number(patient.age) <= 0) {
+      alert("Age must be greater than 0");
+      return;
+    }
+
+    const payload = {
+      patient_name: patient.name,
+      patient_age: Number(patient.age),
+      patient_gender: patient.gender.toLowerCase(),
+      patient_mobile: patient.mobile,
+      patient_email: patient.email,
+      patient_address: patient.address,
+      clinic_branch: branch,
+      appointment_date: date,
+      time_slot: slot,
+      consultation_fee: consultationFee,
+    };
+
+    try {
+      setLoading(true);
+
+      const result = await bookWalkInClinicAppointment(payload);
+
+      console.log("Walk-in clinic booking saved:", result);
+
+      setReceiptId(result?.data?.receiptId || "");
+      setConfirmed(true);
+    } catch (error) {
+      console.error("Walk-in clinic booking error:", error);
+
+      alert(
+        error?.response?.data?.message ||
+          "Failed to book appointment. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (confirmed) {
@@ -114,11 +143,15 @@ const today = new Date().toISOString().split("T")[0];
           boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
         }}
       >
-        <h1 style={{ color: "#16a34a" }}>
-          ✅ Appointment Confirmed
-        </h1>
+        <h1 style={{ color: "#16a34a" }}>✅ Appointment Confirmed</h1>
 
         <hr />
+
+        {receiptId && (
+          <p>
+            <strong>Receipt ID:</strong> {receiptId}
+          </p>
+        )}
 
         <p>
           <strong>Patient:</strong> {patient.name}
@@ -162,15 +195,15 @@ const today = new Date().toISOString().split("T")[0];
     <div style={pageStyle}>
       <div style={{ marginBottom: 30 }}>
         <h1
-  style={{
-    fontSize: "42px",
-    fontWeight: "800",
-    color: "#0f2744",
-    marginBottom: "8px",
-  }}
->
-  🏥 Walk-In Clinic Appointment
-</h1>
+          style={{
+            fontSize: "42px",
+            fontWeight: "800",
+            color: "#0f2744",
+            marginBottom: "8px",
+          }}
+        >
+          🏥 Walk-In Clinic Appointment
+        </h1>
 
         <p
           style={{
@@ -182,7 +215,6 @@ const today = new Date().toISOString().split("T")[0];
         </p>
       </div>
 
-      {/* Patient Information */}
       <div style={cardStyle}>
         {sectionHeader(
           1,
@@ -211,6 +243,8 @@ const today = new Date().toISOString().split("T")[0];
           />
 
           <input
+            type="number"
+            min="1"
             style={inputStyle}
             placeholder="Age"
             value={patient.age}
@@ -233,9 +267,9 @@ const today = new Date().toISOString().split("T")[0];
             }
           >
             <option value="">Select Gender</option>
-            <option>Male</option>
-            <option>Female</option>
-            <option>Other</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
           </select>
 
           <input
@@ -277,7 +311,6 @@ const today = new Date().toISOString().split("T")[0];
         </div>
       </div>
 
-      {/* Branch Selection */}
       <div style={cardStyle}>
         {sectionHeader(
           2,
@@ -306,10 +339,7 @@ const today = new Date().toISOString().split("T")[0];
                   branch === b
                     ? "2px solid #2563eb"
                     : "1px solid #dbe4ee",
-                background:
-                  branch === b
-                    ? "#eff6ff"
-                    : "#fff",
+                background: branch === b ? "#eff6ff" : "#fff",
               }}
             >
               <div
@@ -343,7 +373,6 @@ const today = new Date().toISOString().split("T")[0];
         </div>
       </div>
 
-      {/* Date & Time */}
       <div style={cardStyle}>
         {sectionHeader(
           3,
@@ -353,12 +382,13 @@ const today = new Date().toISOString().split("T")[0];
         )}
 
         <input
-  type="date"
-  min={today}
-  value={date}
-  onChange={(e) => setDate(e.target.value)}
-  style={inputStyle}
-/>
+          type="date"
+          min={today}
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          style={inputStyle}
+        />
+
         <div
           style={{
             display: "grid",
@@ -369,6 +399,7 @@ const today = new Date().toISOString().split("T")[0];
         >
           {TIME_SLOTS.map((s) => (
             <button
+              type="button"
               key={s}
               onClick={() => setSlot(s)}
               style={{
@@ -379,10 +410,7 @@ const today = new Date().toISOString().split("T")[0];
                   slot === s
                     ? "2px solid #2563eb"
                     : "1px solid #dbe4ee",
-                background:
-                  slot === s
-                    ? "#ecfeff"
-                    : "#fff",
+                background: slot === s ? "#ecfeff" : "#fff",
               }}
             >
               {s}
@@ -391,9 +419,6 @@ const today = new Date().toISOString().split("T")[0];
         </div>
       </div>
 
-     
-
-      {/* Summary */}
       <div style={cardStyle}>
         {sectionHeader(
           4,
@@ -403,37 +428,29 @@ const today = new Date().toISOString().split("T")[0];
         )}
 
         <p>
-          <strong>Patient:</strong>{" "}
-          {patient.name || "-"}
+          <strong>Patient:</strong> {patient.name || "-"}
         </p>
 
         <p>
-          <strong>Branch:</strong>{" "}
-          {branch || "-"}
+          <strong>Branch:</strong> {branch || "-"}
         </p>
 
         <p>
-          <strong>Date:</strong>{" "}
-          {date || "-"}
+          <strong>Date:</strong> {date || "-"}
         </p>
 
         <p>
-          <strong>Time:</strong>{" "}
-          {slot || "-"}
+          <strong>Time:</strong> {slot || "-"}
         </p>
 
         <p>
-          <strong>Consultation Fee:</strong> ₹
-          {consultationFee}
+          <strong>Consultation Fee:</strong> ₹{consultationFee}
         </p>
       </div>
 
-      <button
-  onClick={handleSubmit}
-  style={buttonStyle}
->
-  Confirm Appointment
-</button>
+      <button onClick={handleSubmit} style={buttonStyle} disabled={loading}>
+        {loading ? "Booking..." : "Confirm Appointment"}
+      </button>
     </div>
   );
 };
