@@ -42,14 +42,14 @@ export const NAV = [
 },
       { ico: "🩻", text: "Scans / Radiology", page: "bodydiagnostics" },
       { ico: "❤️", text: "Cardiology", page: "cardiology" },
-      { ico: "🚶", text: "Walk-in Centers", href: "https://callmedex.com/diagnostics.php?service=walkincenters" },
+      { ico: "🚶", text: "Walk-in Centers",  page: "diagnostic-walkin-centers"},
     ],
   },
   {
     label: "Consultation",
     items: [
       { ico: "🖥️", text: "Tele Consultation", page: "tele-consultation"},
-      {icon: "🏥", text: "Walk-in Clinics", page: "walkin-clinic"},
+      {ico: "🚶‍♂️🏥", text: "Walk-in Clinics", page: "walkin-clinic"},
       { ico: "🌏", text: "NRI Tele Consultation", href: "https://callmedex.com/consultation.php?service=nri-teleconsultation" },
       { ico: "🏡", text: "Consultation at Home", page: "consultancy-home" },
     ],

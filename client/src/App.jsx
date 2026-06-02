@@ -23,7 +23,7 @@ import PharmacyHomeDelivery from "./components/pharmacy/PharmacyHomeDelivery";
 import PharmacyDashboard from "./components/pharmacyDashboard/PharmacyDashboard";
 
 import ConsultancyHome from "./components/consultancy/consultancyHome";
-
+import DiagnosticWalkInCenters from "./components/diagnostics/DiagnosticWalkInCenters";
 import { ToastProvider } from "./shared/toast.js";
 import WalkInClinic from "./components/walkinclinic/WalkInClinic";
 import TeleConsultationPage from "./components/consultation/TeleConsultationPage";
@@ -104,7 +104,7 @@ export default function App() {
       {page === "cardiology" && <Cardiology />}
 
       {page === "bodydiagnostics" && <BodyDiagnostics />}
-
+      {page === "diagnostic-walkin-centers" && <DiagnosticWalkInCenters />}
       {page === "blog" && <BlogPage setPage={setPage} />}
 
       {page === "about" && <AboutPage setPage={setPage} />}

@@ -25,6 +25,10 @@ export default function Navbar({
       }
     })();
 
+  const role = loggedInUser?.role;
+  const isPharmacy = role === "pharmacy";
+  const isPatient = role === "patient";
+
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("user");
@@ -34,6 +38,40 @@ export default function Navbar({
 
     setShowProfile(false);
     setPage("home");
+  };
+
+  const handleMenuClick = (item) => {
+    if (item.page) {
+      setPage(item.page);
+      return;
+    }
+
+    if (item.step && setStep) {
+      setStep(item.step);
+      setPage("home");
+      return;
+    }
+
+    if (item.scroll) {
+      const section = document.getElementById(item.scroll);
+
+      if (section) {
+        const offset = 120;
+        const y =
+          section.getBoundingClientRect().top + window.pageYOffset - offset;
+
+        window.scrollTo({
+          top: y,
+          behavior: "smooth",
+        });
+      }
+
+      return;
+    }
+
+    if (item.href) {
+      window.open(item.href, "_blank", "noopener,noreferrer");
+    }
   };
 
   return (
@@ -56,90 +94,56 @@ export default function Navbar({
           {NAV.map((item, i) =>
             item.solo ? (
               <div className="nav-item" key={i}>
-                {item.scroll ? (
-                  <button
-                    className="nav-link"
-                    onClick={() => {
-                      const section = document.getElementById(item.scroll);
-
-                      if (section) {
-                        const offset = 120;
-                        const y =
-                          section.getBoundingClientRect().top +
-                          window.pageYOffset -
-                          offset;
-
-                        window.scrollTo({
-                          top: y,
-                          behavior: "smooth",
-                        });
-                      }
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                ) : (
-                  <button
-                    className="nav-link"
-                    onClick={() => {
-                      if (item.page) {
-                        setPage(item.page);
-                        return;
-                      }
-
-                      if (item.href) {
-                        window.open(item.href, "_blank", "noopener,noreferrer");
-                      }
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                )}
+                <button className="nav-link" onClick={() => handleMenuClick(item)}>
+                  {item.label}
+                </button>
               </div>
             ) : (
               <div className="nav-item" key={i}>
-                <button className="nav-link">
+                <button className="nav-link" type="button">
                   {item.label}
                   <ChevDown />
                 </button>
 
                 <div className="nav-drop">
-                  {item.items.map((d, j) => (
+                  {item.items?.map((d, j) => (
                     <button
                       className="drop-item"
                       key={j}
-                      onClick={() =>
-                        d.page ? setPage(d.page) : window.open(d.href, "_blank")
-                      }
+                      type="button"
+                      onClick={() => handleMenuClick(d)}
                     >
-                      <span className="drop-icon">{d.ico}</span>
-                      {d.text}
+                      {d.ico && <span className="drop-icon">{d.ico}</span>}
+
+                      <span>{d.label || d.text}</span>
                     </button>
                   ))}
                 </div>
               </div>
             )
           )}
-        </div>
 
-        {/* RIGHT SIDE */}
-        <div className="nav-cta">
-          {loggedInUser?.role === "pharmacy" && (
-            <button
-              type="button"
-              className="pharmacy-dashboard-nav-btn"
-              onClick={() => setPage("pharmacy-dashboard")}
-            >
-              <span className="pharmacy-dashboard-nav-icon">🏥</span>
-              Dashboard
-            </button>
-          )}
-
+          {/* LOGIN / ROLE BUTTONS */}
           {!isLoggedIn && !loggedInUser ? (
             <button className="btn btn-login" onClick={() => setPage("login")}>
               🔐 Login
             </button>
-          ) : (
+          ) : isPharmacy ? (
+            <>
+              <button
+                type="button"
+                className="pharmacy-dashboard-nav-btn"
+                onClick={() => setPage("pharmacy-dashboard")}
+              >
+                <span className="pharmacy-dashboard-nav-icon">🏥</span>
+                Dashboard
+              </button>
+
+              <button className="btn btn-login" onClick={handleLogout}>
+                Logout
+              </button>
+            </>
+          ) : isPatient ? (
             <div style={{ position: "relative" }}>
               <button
                 className="btn btn-login"
@@ -159,24 +163,22 @@ export default function Navbar({
                     borderRadius: "12px",
                     boxShadow: "0 8px 25px rgba(0,0,0,0.12)",
                     padding: "15px",
-                    zIndex: 999,
+                    zIndex: 9999,
                   }}
                 >
                   <h4>{loggedInUser?.name || "User"}</h4>
 
                   <hr />
 
-                  {loggedInUser?.role === "patient" && (
-                    <button
-                      className="drop-item"
-                      onClick={() => {
-                        setShowProfile(false);
-                        setPage("profile");
-                      }}
-                    >
-                      Edit Profile
-                    </button>
-                  )}
+                  <button
+                    className="drop-item"
+                    onClick={() => {
+                      setShowProfile(false);
+                      setPage("profile");
+                    }}
+                  >
+                    Edit Profile
+                  </button>
 
                   <button
                     className="drop-item"
@@ -216,18 +218,26 @@ export default function Navbar({
                 </div>
               )}
             </div>
+          ) : (
+            <button className="btn btn-login" onClick={handleLogout}>
+              Logout
+            </button>
           )}
 
-          <a
-            className="btn btn-book"
-            href={SITE.patientPortal}
-            target="_blank"
-            rel="noreferrer"
-          >
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Book
-            <br />
-            Appointment
-          </a>
+          {/* BOOK APPOINTMENT - HIDE FOR PHARMACY */}
+          {!isPharmacy && (
+            <a
+              className="btn btn-book"
+              href={SITE.patientPortal}
+              target="_blank"
+              rel="noreferrer"
+              style={{ marginLeft: "12px" }}
+            >
+              Book
+              <br />
+              Appointment
+            </a>
+          )}
         </div>
       </div>
     </nav>

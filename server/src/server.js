@@ -15,7 +15,7 @@ const appointmentRoutes = require("./modules/appointment/routes/appointment.rout
 const homeServiceRoutes = require("./modules/homeService/routes/homeService.routes");
 const pharmacyRoutes = require("./modules/pharmacy/routes/pharmacy.routes");
 const consultancyHomeRoutes = require("./modules/consultancyHome/routes/consultancyHome.routes");
-
+const walkInCentersRoutes = require("./modules/walkInCenters/routes/walkInCenters.routes");
 const errorMiddleware = require("./shared/middleware/error.middleware");
 
 const app = express();
@@ -44,7 +44,7 @@ const authLimiter = rateLimit({
 });
 
 app.use("/auth", authLimiter);
-
+app.use("/walk-in-centers", walkInCentersRoutes);
 app.get("/health", async (req, res) => {
   try {
     await db.query("SELECT 1");

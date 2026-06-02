@@ -34,3 +34,21 @@ html, body, #root { width: 100%; max-width: 100%; margin: 0; padding: 0; }
   font-size: 17px;
   line-height: 1;
 }
+.nav-menu {
+  gap: 20px;
+}
+
+.nav-drop {
+  z-index: 9999;
+}
+
+.btn-book {
+  margin-left: 12px;
+  text-align: center;
+  justify-content: center;
+  min-width: 138px;
+}
+
+.btn-login {
+  margin-right: 2px;
+}
