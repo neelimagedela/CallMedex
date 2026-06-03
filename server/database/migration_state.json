@@ -17,5 +17,15 @@
   "016_create_consultancy_home.sql",
   "017_create_clinic_appointments.sql",
   "018_create_tele_consultation_bookings.sql",
+  "005_create_profile_tables.sql",
+  "006_create_appointments_table.sql",
+  "007_create_home_service_categories.sql",
+  "008_create_home_service_tests.sql",
+  "009_seed_home_service_tests.sql",
+  "010_create_home_service_bookings.sql",
+  "011_create_pharmacy_home_delivery.sql",
+  "012_add_service_mode_to_pharmacy_profiles.sql",
+  "014_update_pharmacy_orders_status.sql",
+  "015_add_receipt_id_to_appointments.sql",
   "019_create_diagnostic_walkin_bookings.sql"
 ]
