@@ -30,9 +30,11 @@ const runMigrations = async () => {
       .filter((file) => file.endsWith(".sql"))
       .sort();
 
-    const executedMigrations = JSON.parse(
-      fs.readFileSync(stateFilePath, "utf8")
-    );
+    const rawState = fs.readFileSync(stateFilePath, "utf8").replace(/^\uFEFF/, "");
+
+     const executedMigrations = JSON.parse(
+  rawState || "[]"
+);
 
     for (const file of migrationFiles) {
       if (executedMigrations.includes(file)) {

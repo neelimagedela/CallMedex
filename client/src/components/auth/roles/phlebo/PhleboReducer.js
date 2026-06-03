@@ -7,7 +7,10 @@ export const initialState = {
   certificationNumber: "",
 
   availableDays: [],
-  availableTime: "",
+  morningStart: "",
+  morningEnd: "",
+  eveningStart: "",
+  eveningEnd: "",
   homeCollection: false,
   emergencyAvailability: false,
 

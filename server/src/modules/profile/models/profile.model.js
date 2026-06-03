@@ -53,7 +53,28 @@ const mapCamelToSnake = (data) => {
     governmentIdType: "government_id_type",
     aadhaarFront: "aadhaar_front",
     phlebotomyCertificate: "phlebotomy_certificate",
+    
+    // Phlebotomist
+   // Phlebotomist
+phleboType: "phlebo_type",
+certificationNumber: "certification_number",
 
+availableDays: "available_days",
+
+morningStart: "morning_start",
+morningEnd: "morning_end",
+
+eveningStart: "evening_start",
+eveningEnd: "evening_end",
+
+homeCollection: "home_collection",
+emergencyAvailability: "emergency_availability",
+
+governmentIdType: "government_id_type",
+aadhaarFront: "aadhaar_front",
+phlebotomyCertificate: "phlebotomy_certificate",
+    
+    // Pharmacy
     pharmacyName: "pharmacy_name",
     pharmacyType: "pharmacy_type",
     ownerName: "owner_name",

@@ -27,5 +27,9 @@
   "012_add_service_mode_to_pharmacy_profiles.sql",
   "014_update_pharmacy_orders_status.sql",
   "015_add_receipt_id_to_appointments.sql",
-  "019_create_diagnostic_walkin_bookings.sql"
+  "019_create_diagnostic_walkin_bookings.sql",
+  "013_optimize_patient_profiles.sql",
+  "014_update_pharmacy_orders_status.sql",
+  "015_add_receipt_id_to_appointments.sql",
+  "015_create_consultancy_home.sql"
 ]
