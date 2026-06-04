@@ -28,12 +28,15 @@ const getTableName = (role) => {
 
 const mapCamelToSnake = (data) => {
   const mappings = {
+    // Patient
     bloodGroup: "blood_group",
     medicalHistory: "medical_history",
     hasOtherCondition: "has_other_condition",
     otherCondition: "other_condition",
 
+    // Doctor
     medicalLicenseNumber: "medical_license_number",
+    yearsOfExperience: "years_of_experience",
     hospitalOrClinicName: "hospital_clinic_name",
     consultationFee: "consultation_fee",
     availableTimings: "available_timings",
@@ -44,7 +47,10 @@ const mapCamelToSnake = (data) => {
     medicalLicense: "medical_license",
     idProof: "id_proof",
 
+    // Phlebotomist
     phleboType: "phlebo_type",
+    qualification: "qualification",
+    specialization: "specialization",
     certificationNumber: "certification_number",
     availableDays: "available_days",
     availableTime: "available_time",
@@ -53,27 +59,7 @@ const mapCamelToSnake = (data) => {
     governmentIdType: "government_id_type",
     aadhaarFront: "aadhaar_front",
     phlebotomyCertificate: "phlebotomy_certificate",
-    
-    // Phlebotomist
-   // Phlebotomist
-phleboType: "phlebo_type",
-certificationNumber: "certification_number",
 
-availableDays: "available_days",
-
-morningStart: "morning_start",
-morningEnd: "morning_end",
-
-eveningStart: "evening_start",
-eveningEnd: "evening_end",
-
-homeCollection: "home_collection",
-emergencyAvailability: "emergency_availability",
-
-governmentIdType: "government_id_type",
-aadhaarFront: "aadhaar_front",
-phlebotomyCertificate: "phlebotomy_certificate",
-    
     // Pharmacy
     pharmacyName: "pharmacy_name",
     pharmacyType: "pharmacy_type",
@@ -94,6 +80,7 @@ phlebotomyCertificate: "phlebotomy_certificate",
     pharmacyImages: "pharmacy_images",
     ownerIdProof: "owner_id_proof",
 
+    // Organization
     institutionName: "institution_name",
     institutionType: "institution_type",
     licenseNumber: "license_number",
@@ -110,6 +97,7 @@ phlebotomyCertificate: "phlebotomy_certificate",
     governmentLicense: "government_license",
     authorizedPersonIdProof: "authorized_person_id_proof",
 
+    // Admin
     accessLevel: "access_level",
     officeLocation: "office_location",
     joiningDate: "joining_date",
@@ -139,15 +127,23 @@ phlebotomyCertificate: "phlebotomy_certificate",
       key === "district" ||
       key === "state" ||
       key === "pincode" ||
-      key === "country"
+      key === "country" ||
+
+      // Ignored because these columns do not exist in phlebo_profiles table
+      key === "morningStart" ||
+      key === "morningEnd" ||
+      key === "eveningStart" ||
+      key === "eveningEnd"
     ) {
       return;
     }
 
     const dbKey = mappings[key] || key;
 
-    if (Array.isArray(value) || typeof value === "object") {
-      mapped[dbKey] = JSON.stringify(value || []);
+    if (Array.isArray(value)) {
+      mapped[dbKey] = JSON.stringify(value);
+    } else if (value && typeof value === "object") {
+      mapped[dbKey] = JSON.stringify(value);
     } else if (typeof value === "boolean") {
       mapped[dbKey] = value ? 1 : 0;
     } else {

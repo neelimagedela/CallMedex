@@ -4,6 +4,8 @@ const crypto = require("crypto");
 
 const asyncHandler = require("../../../shared/utils/asyncHandler");
 const { successResponse } = require("../../../shared/utils/response");
+const AppError = require("../../../shared/utils/AppError");
+
 const {
   upsertProfile,
   findProfileByUserId,
@@ -11,34 +13,38 @@ const {
   updatePatientFullProfileByUserId,
   getAllPatientBookingsByUserId,
 } = require("../models/profile.model");
-const AppError = require("../../../shared/utils/AppError");
 
-/**
- * Known profile fields that arrive as base64-encoded files.
- * These are saved to disk and their paths stored in the DB instead
- * of the raw base64 string (which would overflow VARCHAR columns).
- */
+const { findUserById } = require("../../auth/models/user.model");
+
+/*
+  Known profile fields that arrive as base64 files.
+  We save these files to uploads and store only the file path in DB.
+*/
 const FILE_FIELDS = new Set([
   // Phlebo
   "aadhaarFront",
   "phlebotomyCertificate",
+
   // Doctor
   "medicalCertificate",
   "medicalLicense",
   "idProof",
+
   // Pharmacy
   "drugLicenseDocument",
   "gstCertificate",
   "pharmacistCertificate",
   "ownerIdProof",
+  "pharmacyImages",
+
   // Organization
   "registrationCertificate",
   "governmentLicense",
   "authorizedPersonIdProof",
+
   // Admin
   "aadhaarUpload",
   "governmentIdProof",
-  "pharmacyImages",
 ]);
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -55,17 +61,11 @@ const EXTENSION_MAP = {
   "application/pdf": "pdf",
 };
 
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
-/**
- * Saves a base64-encoded file to the uploads directory.
- * Returns the server-relative path (e.g. /uploads/uuid.jpg).
- * Throws AppError on invalid format, unsupported type, or size limit exceeded.
- */
 function saveBase64File(base64String, fieldName) {
   if (!base64String || typeof base64String !== "string") return null;
 
-  // Accept both raw base64 and data-URI format
   const dataUriMatch = base64String.match(/^data:([^;]+);base64,(.+)$/);
 
   let mimeType;
@@ -75,7 +75,6 @@ function saveBase64File(base64String, fieldName) {
     mimeType = dataUriMatch[1].toLowerCase();
     rawBase64 = dataUriMatch[2];
   } else {
-    // Treat as raw base64 — default to JPEG so it still saves
     mimeType = "image/jpeg";
     rawBase64 = base64String;
   }
@@ -90,10 +89,7 @@ function saveBase64File(base64String, fieldName) {
   const buffer = Buffer.from(rawBase64, "base64");
 
   if (buffer.length > MAX_FILE_SIZE_BYTES) {
-    throw new AppError(
-      `Field "${fieldName}" exceeds the 5 MB size limit.`,
-      400
-    );
+    throw new AppError(`Field "${fieldName}" exceeds the 5 MB size limit.`, 400);
   }
 
   const ext = EXTENSION_MAP[mimeType];
@@ -111,10 +107,6 @@ function saveBase64File(base64String, fieldName) {
   return `/uploads/${fileName}`;
 }
 
-/**
- * Iterates over profileData, detects base64 file fields, saves them
- * to disk, and replaces their values with the saved file path.
- */
 function processFileFields(profileData) {
   const processed = { ...profileData };
 
@@ -123,7 +115,7 @@ function processFileFields(profileData) {
       key in processed &&
       processed[key] &&
       typeof processed[key] === "string" &&
-      processed[key].length > 255 // heuristic: real paths are short
+      processed[key].length > 255
     ) {
       processed[key] = saveBase64File(processed[key], key);
     }
@@ -132,27 +124,56 @@ function processFileFields(profileData) {
   return processed;
 }
 
+function normalizeRole(role) {
+  if (role === "phlebotomist") return "phlebo";
+  return role;
+}
+
 const onboardProfileController = asyncHandler(async (req, res) => {
-  // Accept either JWT-authenticated user or userId/role passed in body
-  // (during the initial register → OTP → onboard flow before a session exists)
+  /*
+    This route is used after OTP verification.
+    During this flow the user may not have JWT yet, so we allow userId from body.
+  */
   const userId = req.user?.id || req.body.userId;
-  const role = req.user?.role || req.body.role;
 
   if (!userId) {
     throw new AppError("User not authenticated", 401);
   }
 
+  /*
+    Fix:
+    Earlier role was only taken from req.user or req.body.
+    If frontend sends role undefined, profile.model.js receives undefined
+    and throws: Invalid role for onboarding: undefined.
+    Now backend safely fetches role from users table using userId.
+  */
+  let role = req.user?.role || req.body.role;
+
+  if (!role) {
+    const user = await findUserById(userId);
+
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+
+    role = user.role;
+  }
+
+  role = normalizeRole(role);
+
   if (!role) {
     throw new AppError("User role is required", 400);
   }
 
-  // Strip meta params so they don't leak into the profile table
   const { userId: _uid, role: _role, ...rawProfileData } = req.body;
 
-  // Convert base64 file fields → file paths before hitting the DB
   const profileData = processFileFields(rawProfileData);
 
-  await upsertProfile(userId, role, profileData);
+  await upsertProfile({
+  userId,
+  role,
+  ...profileData,
+});
 
   return successResponse({
     res,
@@ -168,7 +189,7 @@ const onboardProfileController = asyncHandler(async (req, res) => {
 
 const getProfileController = asyncHandler(async (req, res) => {
   const userId = req.user?.id;
-  const role = req.user?.role;
+  const role = normalizeRole(req.user?.role);
 
   if (!userId) {
     throw new AppError("User not authenticated", 401);
@@ -183,6 +204,7 @@ const getProfileController = asyncHandler(async (req, res) => {
     data: profile,
   });
 });
+
 const allowedBloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const allowedGenders = ["male", "female", "other"];
 
@@ -208,17 +230,6 @@ function calculateAgeFromDob(dob) {
   return age;
 }
 
-function parseMedicalHistory(value) {
-  if (!value) return [];
-  if (Array.isArray(value)) return value;
-
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
 function formatDateForInput(value) {
   if (!value) return "";
 
@@ -230,123 +241,132 @@ function formatDateForInput(value) {
 
   if (Number.isNaN(date.getTime())) return "";
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  return date.toISOString().slice(0, 10);
 }
-function formatPatientProfile(row) {
+
+function parseJsonArray(value) {
+  if (!value) return [];
+
+  if (Array.isArray(value)) return value;
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function formatPatientProfile(profile) {
+  const dob = formatDateForInput(profile.dob);
+
   return {
-    id: row.public_user_id,
-    internalId: row.id,
-    role: row.role,
-
-    name: row.name || "",
-    email: row.email || "",
-    phone: row.phone || "",
-    gender: row.gender || "",
-    dob: formatDateForInput(row.dob),
-    age: calculateAgeFromDob(row.dob),
-
-    address: row.address || "",
-    city: row.city || "",
-    district: row.district || "",
-    state: row.state || "",
-    pincode: row.pincode || "",
-    country: row.country || "India",
-
-    bloodGroup: row.blood_group || "",
-    height: row.height ? String(row.height) : "",
-    weight: row.weight ? String(row.weight) : "",
-    medicalHistory: parseMedicalHistory(row.medical_history),
-    hasOtherCondition: Boolean(row.has_other_condition),
-    otherCondition: row.other_condition || "",
-    registrationStatus: row.registration_status,
+    name: profile.name || "",
+    email: profile.email || "",
+    phone: profile.phone || "",
+    gender: profile.gender || "",
+    dob,
+    age: dob ? calculateAgeFromDob(dob) : "",
+    address: profile.address || "",
+    city: profile.city || "",
+    district: profile.district || "",
+    state: profile.state || "",
+    pincode: profile.pincode || "",
+    country: profile.country || "India",
+    bloodGroup: profile.blood_group || "",
+    height: profile.height || "",
+    weight: profile.weight || "",
+    medicalHistory: parseJsonArray(profile.medical_history),
+    hasOtherCondition: Boolean(profile.has_other_condition),
+    otherCondition: profile.other_condition || "",
   };
 }
 
 function validatePatientUpdate(data) {
+  const errors = [];
+
   const name = String(data.name || "").trim();
-  const phone = String(data.phone || "").trim();
   const email = String(data.email || "").trim().toLowerCase();
-  const gender = String(data.gender || "").trim().toLowerCase();
-  const dob = formatDateForInput(data.dob);
+  const phone = String(data.phone || "").trim();
+  const gender = String(data.gender || "").trim();
+  const dob = String(data.dob || "").trim();
+  const address = String(data.address || "").trim();
+  const city = String(data.city || "").trim();
+  const district = String(data.district || "").trim();
+  const state = String(data.state || "").trim();
   const pincode = String(data.pincode || "").trim();
+  const country = String(data.country || "India").trim();
+
   const bloodGroup = String(data.bloodGroup || "").trim();
+  const height = data.height === "" || data.height == null ? null : Number(data.height);
+  const weight = data.weight === "" || data.weight == null ? null : Number(data.weight);
 
-  const height =
-    data.height === "" || data.height === null || data.height === undefined
-      ? null
-      : Number(data.height);
+  if (!name) errors.push("Name is required");
+  if (!/^[a-zA-Z\s]+$/.test(name)) errors.push("Name must contain only letters");
+  if (name.length < 3) errors.push("Name must be at least 3 characters");
 
-  const weight =
-    data.weight === "" || data.weight === null || data.weight === undefined
-      ? null
-      : Number(data.weight);
-
-  if (name.length < 3 || name.length > 100) {
-    throw new AppError("Name must be between 3 and 100 characters", 400);
-  }
-
-  if (!/^[a-zA-Z\s]+$/.test(name)) {
-    throw new AppError("Name must contain only letters and spaces", 400);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.push("Valid email is required");
   }
 
   if (!/^[6-9]\d{9}$/.test(phone)) {
-    throw new AppError("Enter a valid 10-digit Indian mobile number", 400);
+    errors.push("Valid 10-digit phone number is required");
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new AppError("Enter a valid email address", 400);
+  if (!allowedGenders.includes(gender)) {
+    errors.push("Valid gender is required");
   }
 
-  if (gender && !allowedGenders.includes(gender)) {
-    throw new AppError("Invalid gender selected", 400);
+  const age = calculateAgeFromDob(dob);
+
+  if (!dob || age === null || age < 0 || age > 120) {
+    errors.push("Valid date of birth is required");
   }
 
-  if (dob) {
-    const age = calculateAgeFromDob(dob);
+  if (!address) errors.push("Address is required");
+  if (!city) errors.push("City is required");
+  if (!state) errors.push("State is required");
 
-    if (age === null || age < 0 || age > 120) {
-      throw new AppError("Enter a valid date of birth", 400);
-    }
-  }
-
-  if (pincode && !/^\d{6}$/.test(pincode)) {
-    throw new AppError("Enter a valid 6-digit pincode", 400);
+  if (!/^\d{6}$/.test(pincode)) {
+    errors.push("Valid 6-digit pincode is required");
   }
 
   if (bloodGroup && !allowedBloodGroups.includes(bloodGroup)) {
-    throw new AppError("Invalid blood group selected", 400);
+    errors.push("Invalid blood group");
+  }
+
+  if (height !== null && (!Number.isFinite(height) || height < 30 || height > 250)) {
+    errors.push("Height must be between 30 and 250 cm");
+  }
+
+  if (weight !== null && (!Number.isFinite(weight) || weight < 1 || weight > 300)) {
+    errors.push("Weight must be between 1 and 300 kg");
   }
 
   if (
-    height !== null &&
-    (!Number.isFinite(height) || height < 30 || height > 250)
+    Array.isArray(data.medicalHistory) &&
+    data.medicalHistory.includes("Other") &&
+    !String(data.otherCondition || "").trim()
   ) {
-    throw new AppError("Height must be between 30 and 250 cm", 400);
+    errors.push("Other medical condition is required");
   }
 
-  if (
-    weight !== null &&
-    (!Number.isFinite(weight) || weight < 1 || weight > 300)
-  ) {
-    throw new AppError("Weight must be between 1 and 300 kg", 400);
+  if (errors.length > 0) {
+    throw new AppError(errors[0], 400);
   }
 
   return {
     name,
-    phone,
     email,
-    gender: gender || null,
-    dob: dob || null,
-    address: String(data.address || "").trim(),
-    city: String(data.city || "").trim(),
-    district: String(data.district || "").trim(),
-    state: String(data.state || "").trim(),
-    pincode: pincode || null,
-    country: String(data.country || "India").trim(),
+    phone,
+    gender,
+    dob,
+    address,
+    city,
+    district,
+    state,
+    pincode,
+    country,
 
     bloodGroup: bloodGroup || null,
     height,
@@ -397,41 +417,6 @@ const updatePatientProfileController = asyncHandler(async (req, res) => {
     data: formatPatientProfile(updatedProfile),
   });
 });
-function parseScans(value) {
-  if (!value) return [];
-
-  if (Array.isArray(value)) return value;
-
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function formatBooking(row) {
-  return {
-    id: row.id,
-    receiptId: row.receipt_id,
-    patientName: row.patient_name,
-    patientAge: row.patient_age,
-    patientSex: row.patient_sex,
-    patientMobile: row.patient_mobile,
-    patientEmail: row.patient_email,
-    patientAddress: row.patient_address,
-    branch: row.branch,
-    scans: parseScans(row.scans),
-    appointmentDate: row.appointment_date
-      ? String(row.appointment_date).slice(0, 10)
-      : "",
-    timeSlot: row.time_slot,
-    prescriptionPath: row.prescription_path,
-    totalAmount: Number(row.total_amount || 0),
-    status: row.status,
-    createdAt: row.created_at,
-  };
-}
 
 const getPatientBookingsController = asyncHandler(async (req, res) => {
   if (req.user.role !== "patient") {
@@ -447,6 +432,7 @@ const getPatientBookingsController = asyncHandler(async (req, res) => {
     data: bookings,
   });
 });
+
 module.exports = {
   onboardProfileController,
   getProfileController,
