@@ -527,20 +527,20 @@ const getAllPatientBookingsByUserId = async (userId) => {
   const [teleRows] = await db.execute(
     `
     SELECT
-      id,
-      receipt_id,
-      patient_name,
-      patient_mobile,
-      patient_email,
-      patient_address,
-      specialization,
-      appointment_date,
-      time_slot,
-      consultation_fee AS total_amount,
-      COALESCE(status, 'pending') AS status,
-      created_at
-    FROM tele_consultation_bookings
-    WHERE user_id = ?
+    id,
+    receipt_id,
+    patient_name,
+    patient_mobile,
+    patient_email,
+    patient_address,
+    specialization,
+    appointment_date,
+    time_slot,
+    consultation_fee AS total_amount,
+    COALESCE(booking_status, 'pending') AS status,
+    created_at
+FROM tele_consultation_bookings
+WHERE user_id = ?
     `,
     [userId]
   );

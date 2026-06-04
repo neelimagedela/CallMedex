@@ -50,5 +50,8 @@ html, body, #root { width: 100%; max-width: 100%; margin: 0; padding: 0; }
 }
 
 .btn-login {
-  margin-right: 2px;
+  margin-left: auto;
+}
+.nav-menu > div[style*="position: relative"] {
+  margin-left: auto;
 }
