@@ -3,6 +3,7 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const mysql = require("mysql2/promise");
+
 const migrationsPath = path.join(__dirname, "migrations");
 const stateFilePath = path.join(__dirname, "migration_state.json");
 
@@ -15,9 +16,7 @@ const loadState = () => {
 
     const raw = fs.readFileSync(stateFilePath, "utf8").replace(/^\uFEFF/, "").trim();
 
-    if (!raw) {
-      return [];
-    }
+    if (!raw) return [];
 
     const parsed = JSON.parse(raw);
 
@@ -34,6 +33,7 @@ const saveState = (executedMigrations) => {
 
 const runMigrations = async () => {
   let connection;
+  let currentFile = null;
 
   try {
     connection = await mysql.createConnection({
@@ -55,7 +55,6 @@ const runMigrations = async () => {
       .filter((file) => file.endsWith(".sql"))
       .sort();
 
-    // Load state ONCE before the loop
     const executedMigrations = loadState();
 
     console.log(`Found ${migrationFiles.length} migration file(s).`);
@@ -69,19 +68,18 @@ const runMigrations = async () => {
         continue;
       }
 
-      console.log(`Running migration: ${file}`);
+      currentFile = file;
+      console.log(`Running: ${file}`);
 
       const filePath = path.join(migrationsPath, file);
       const sql = fs.readFileSync(filePath, "utf8");
 
       await connection.query(sql);
 
-      // Save state immediately after EACH migration succeeds
-      // so if the next one fails, we don't re-run this one
       executedMigrations.push(file);
       saveState(executedMigrations);
 
-      console.log(`Completed: ${file}`);
+      console.log(`Done: ${file}`);
       ranCount++;
     }
 
@@ -93,7 +91,11 @@ const runMigrations = async () => {
 
     console.log("All migrations completed successfully.");
   } catch (error) {
-    console.error("Migration failed:", error.message);
+    console.error("─────────────────────────────────────");
+    console.error("Migration failed on file:", currentFile);
+    console.error("Error:", error.message);
+    console.error("SQL Error Code:", error.code);
+    console.error("─────────────────────────────────────");
     process.exit(1);
   } finally {
     if (connection) {
