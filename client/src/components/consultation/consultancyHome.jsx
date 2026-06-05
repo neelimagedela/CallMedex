@@ -1,6 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { consultancyHomeApi } from "./consultancyHome.api";
 
+const isPastSlotToday = (selectedDate, slot) => {
+  if (!selectedDate) return false;
+
+  const today = new Date().toISOString().split("T")[0];
+  if (selectedDate !== today) return false;
+
+  const now = new Date();
+
+  const startHourMap = {
+    "09 AM - 10 AM": 9,
+    "10 AM - 11 AM": 10,
+    "11 AM - 12 PM": 11,
+    "12 PM - 01 PM": 12,
+    "02 PM - 03 PM": 14,
+    "03 PM - 04 PM": 15,
+  };
+
+  const slotHour = startHourMap[slot];
+
+  return now.getHours() >= slotHour;
+};
 // ── styles ───────────────────────────────────────────────────────────────────
 const S = {
   page: {
@@ -212,6 +233,17 @@ export default function ConsultancyHome() {
   const [timeSlot,  setTimeSlot]  = useState("");
   const [phone,     setPhone]     = useState("");
   const [address,   setAddress]   = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const useProfileDetails = () => {
+  if (!patient) return;
+
+  setName(patient.name || "");
+  setEmail(patient.email || "");
+
+  setPhone(patient.phone || "");
+  setAddress(patient.address || "");
+};
   const [loading,   setLoading]   = useState(false);
   const [msg,       setMsg]       = useState({ text: "", type: "" });
   const [errors,    setErrors]    = useState({});
@@ -231,10 +263,6 @@ export default function ConsultancyHome() {
       setServices(serviceRes.data.data || []);
       const p = meRes.data.data || null;
       setPatient(p);
-      if (p) {
-        setPhone(p.phone || "");
-        setAddress(p.address || "");
-      }
     } catch {
       setMsg({ text: "Unable to load details. Please refresh.", type: "error" });
     }
@@ -396,23 +424,43 @@ export default function ConsultancyHome() {
             </div>
           </div>
 
+  <div style={{ marginBottom: 16 }}>
+    <button
+      type="button"
+      onClick={useProfileDetails}
+      style={{
+        padding: "10px 14px",
+        borderRadius: 10,
+        border: "1px solid #dbe4ee",
+        background: "#fff",
+        cursor: "pointer",
+        fontWeight: 600,
+      }}
+    >
+      Use My Profile Details
+    </button>
+  </div>
+
+
           <div style={{ ...S.grid2, marginBottom: 12 }}>
-            {/* Name — readonly */}
+            {/* Name*/}
             <div>
               <label style={S.label}>Full Name</label>
-              <input
-                readOnly
-                value={patient?.name || ""}
-                style={S.inpReadonly}
-              />
+             <input
+              placeholder="Enter your full name"
+              style={S.inp}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+             />
             </div>
-            {/* Email — readonly */}
+            {/* Email */}
             <div>
               <label style={S.label}>Email</label>
               <input
-                readOnly
-                value={patient?.email || ""}
-                style={S.inpReadonly}
+               placeholder="user@example.com"
+               style={S.inp}
+               value={email}
+               onChange={(e) => setEmail(e.target.value)}
               />
             </div>
           </div>
@@ -505,31 +553,87 @@ export default function ConsultancyHome() {
             {errors.date && <p style={S.errTxt}>⚠ {errors.date}</p>}
           </div>
 
-          {date && (
-            <div>
-              <label style={S.label}>Time Slot <span style={{ color: "#e63946" }}>*</span></label>
-              {slots.length === 0 ? (
-                <p style={{ color: "#94a3b8", fontSize: ".85rem" }}>No slots available for this date.</p>
-              ) : (
-                <div style={S.slotGrid}>
-                  {slots.map((s) => {
-                    const active = timeSlot === s.slot;
-                    return (
-                      <div
-                        key={s.slot}
-                        onClick={() => { if (!s.isBooked) { setTimeSlot(s.slot); setErrors((prev) => ({ ...prev, slot: "" })); } }}
-                        style={{ ...S.slotCard, ...(active ? S.slotActive : {}), ...(s.isBooked ? S.slotBooked : {}) }}
-                      >
-                        {s.slot}
-                        {s.isBooked && <div style={{ fontSize: ".65rem", color: "#94a3b8", marginTop: 2 }}>Booked</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {errors.slot && <p style={{ ...S.errTxt, marginTop: 8 }}>⚠ {errors.slot}</p>}
-            </div>
-          )}
+          <div>
+  <label style={S.label}>
+    Time Slot
+    <span style={{ color: "#e63946" }}>*</span>
+  </label>
+
+  {!date ? (
+    <div style={S.slotGrid}>
+      {[
+        "09 AM - 10 AM",
+        "10 AM - 11 AM",
+        "11 AM - 12 PM",
+        "12 PM - 01 PM",
+        "02 PM - 03 PM",
+        "03 PM - 04 PM",
+      ].map((slot) => (
+        <div
+          key={slot}
+          style={{
+            ...S.slotCard,
+            opacity: 0.5,
+            cursor: "not-allowed",
+          }}
+        >
+          {slot}
+        </div>
+      ))}
+    </div>
+  ) : slots.length === 0 ? (
+    <p style={{ color: "#94a3b8" }}>
+      No slots available for this date.
+    </p>
+  ) : (
+    <div style={S.slotGrid}>
+      {slots.map((s) => {
+      const active = timeSlot === s.slot;
+      const isPast = isPastSlotToday(date, s.slot);
+        return (
+          <div
+            key={s.slot}
+            onClick={() => {
+              if (!s.isBooked && !isPast) {
+                setTimeSlot(s.slot);
+                setErrors((prev) => ({
+                  ...prev,
+                  slot: "",
+                }));
+              }
+            }}
+            style={{
+  ...S.slotCard,
+  ...(active ? S.slotActive : {}),
+  ...(s.isBooked ? S.slotBooked : {}),
+  ...(isPast ? S.slotBooked : {}),
+}}
+          >
+            {s.slot}
+
+            {s.isBooked && (
+              <div
+                style={{
+                  fontSize: ".65rem",
+                  color: "#94a3b8",
+                  marginTop: 2,
+                }}
+              >
+                Unavailable
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  )}
+
+  {errors.slot && (
+    <p style={{ ...S.errTxt, marginTop: 8 }}>
+      ⚠ {errors.slot}
+    </p>
+  )}
+</div>
         </div>
 
         {/* SECTION 4 — Summary & Confirm */}
@@ -558,7 +662,7 @@ export default function ConsultancyHome() {
               </div>
             </>
           )}
-
+</div>
           <button
             style={loading ? S.confirmBtnDisabled : S.confirmBtn}
             disabled={loading}
@@ -568,6 +672,6 @@ export default function ConsultancyHome() {
           </button>
         </div>
       </div>
-    </div>
+
   );
 }

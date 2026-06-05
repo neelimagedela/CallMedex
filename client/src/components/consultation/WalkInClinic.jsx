@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
 
-import { api } from "../../shared/api";
-
 import { consultancyHomeApi } from "./consultancyHome.api";
 
+import { bookWalkInClinicAppointment } from "./walkInClinic.api";
+
 import {
-  SPECIALIZATIONS,
+  BRANCHES,
   TIME_SLOTS,
   CONSULTATION_FEE,
-} from "./teleConsultationData";
+} from "./walkInClinicConstants";
 
 import { S } from "./shared/consultationStyles";
 
@@ -20,8 +20,12 @@ import SlotGrid from "./shared/SlotGrid";
 
 import { openReceipt } from "./shared/receiptGenerator";
 
-const TeleConsultationPage = () => {
+const WalkInClinic = () => {
   const [confirmed, setConfirmed] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+
+  const [receiptId, setReceiptId] = useState("");
 
   const [patientProfile, setPatientProfile] =
     useState(null);
@@ -35,26 +39,23 @@ const TeleConsultationPage = () => {
     address: "",
   });
 
-  const [specialization, setSpecialization] =
-    useState("");
+
+  const [branch, setBranch] = useState("");
 
   const [date, setDate] = useState("");
 
   const [slot, setSlot] = useState("");
 
-  const [submitting, setSubmitting] =
-    useState(false);
-
   const consultationFee = CONSULTATION_FEE;
 
   const today =
     new Date().toISOString().split("T")[0];
-  
+
   const useProfileDetails = () => {
   setPatient({
     name: patientProfile?.name || "",
-    age: "",
-    gender: "",
+    age: patientProfile?.age || "",
+    gender: patientProfile?.gender || "",
     mobile: patientProfile?.phone || "",
     email: patientProfile?.email || "",
     address: patientProfile?.address || "",
@@ -70,13 +71,12 @@ const TeleConsultationPage = () => {
       const res =
         await consultancyHomeApi.getMe();
 
-      const p = res.data?.data || null;
+      const p = res?.data?.data || null;
 
       setPatientProfile(p);
-
     } catch (err) {
       console.error(
-        "Unable to load profile",
+        "Failed to load profile",
         err
       );
     }
@@ -90,61 +90,107 @@ const TeleConsultationPage = () => {
       !patient.mobile ||
       !patient.email ||
       !patient.address ||
-      !specialization ||
+      !branch ||
       !date ||
       !slot
     ) {
-      alert(
-        "Please fill all required fields"
-      );
+      alert("Please fill all fields");
       return;
     }
 
+    if (Number(patient.age) <= 0) {
+      alert("Age must be greater than 0");
+      return;
+    }
+
+    const payload = {
+      patient_name: patient.name,
+      patient_age: Number(patient.age),
+      patient_gender:
+        patient.gender.toLowerCase(),
+      patient_mobile: patient.mobile,
+      patient_email: patient.email,
+      patient_address: patient.address,
+      clinic_branch: branch,
+      appointment_date: date,
+      time_slot: slot,
+      consultation_fee: consultationFee,
+    };
+
     try {
-      setSubmitting(true);
+      setLoading(true);
 
-      const result = await api.post(
-"/api/tele-consultation/book",
-{
-patientName: patient.name,
-patientAge: Number(patient.age),
-patientGender: patient.gender,
-patientMobile: patient.mobile,
-patientEmail: patient.email,
-patientAddress: patient.address,
-specialization,
-appointmentDate: date,
-timeSlot: slot,
-consultationFee,
-}
-);
+      const result =
+        await bookWalkInClinicAppointment(
+          payload
+        );
 
-const receiptId =
-result?.data?.data?.receiptId || "";
+      console.log(
+        "Walk-In Response:",
+        result
+      );
 
-openReceipt({
-receiptId,
-serviceType: "Tele Consultation",
-title: "Tele Consultation Receipt",
-patientName: patient.name,
-patientEmail: patient.email,
-patientPhone: patient.mobile,
-appointmentDate: date,
-timeSlot: slot,
-amount: consultationFee,
-extraFieldLabel: "Specialization",
-extraFieldValue: specialization,
-});
+      const generatedReceiptId =
+        result?.data?.receiptId ||
+        result?.receiptId ||
+        "";
 
+      setReceiptId(
+        generatedReceiptId
+      );
+
+      openReceipt({
+        receiptId:
+          generatedReceiptId,
+
+        serviceType:
+          "Walk-In Clinic",
+
+        title:
+          "Walk-In Clinic Receipt",
+
+        patientName:
+          patient.name,
+
+        patientEmail:
+          patient.email,
+
+        patientPhone:
+          patient.mobile,
+
+        patientAddress:
+          patient.address,
+
+        appointmentDate:
+          date,
+
+        timeSlot:
+          slot,
+
+        amount:
+          consultationFee,
+
+        extraFieldLabel:
+          "Clinic Branch",
+
+        extraFieldValue:
+          branch,
+      });
 
       setConfirmed(true);
-    } catch (err) {
+    } catch (error) {
+      console.error(
+        "Walk-In booking error:",
+        error
+      );
+
       alert(
-        err.response?.data?.message ||
-          "Booking failed. Please make sure you are logged in and try again."
+        error?.response?.data
+          ?.message ||
+          "Failed to book appointment. Please try again."
       );
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
     if (confirmed) {
@@ -160,7 +206,7 @@ extraFieldValue: specialization,
             background: "white",
             borderRadius: 20,
             padding: "40px 36px",
-            maxWidth: 500,
+            maxWidth: 520,
             width: "100%",
             boxShadow:
               "0 4px 24px rgba(0,0,0,.08)",
@@ -173,202 +219,73 @@ extraFieldValue: specialization,
               marginBottom: 12,
             }}
           >
-            ✅
+            🏥
           </div>
 
           <h2
             style={{
               color: "#0A2540",
-              fontWeight: 700,
-              fontSize: "1.4rem",
-              margin: "0 0 8px",
+              marginBottom: 8,
             }}
           >
-            Tele Consultation Confirmed!
+            Walk-In Appointment Confirmed
           </h2>
 
           <p
             style={{
               color: "#64748b",
-              fontSize: ".88rem",
               marginBottom: 20,
             }}
           >
-            Your consultation booking has
-            been successfully created.
+            Your clinic appointment has been
+            successfully booked.
           </p>
 
-          <div
-            style={{
-              background: "#f8fafc",
-              borderRadius: 12,
-              padding: "14px 16px",
-              textAlign: "left",
-              marginBottom: 20,
-            }}
-          >
+          {receiptId && (
             <div
               style={{
-                display: "flex",
-                justifyContent:
-                  "space-between",
-                padding: "5px 0",
-                fontSize: ".88rem",
-              }}
-            >
-              <span
-                style={{
-                  color: "#64748b",
-                }}
-              >
-                Patient
-              </span>
-
-              <span
-                style={{
-                  fontWeight: 600,
-                }}
-              >
-                {patient.name}
-              </span>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent:
-                  "space-between",
-                padding: "5px 0",
-                fontSize: ".88rem",
-              }}
-            >
-              <span
-                style={{
-                  color: "#64748b",
-                }}
-              >
-                Specialization
-              </span>
-
-              <span
-                style={{
-                  fontWeight: 600,
-                }}
-              >
-                {specialization}
-              </span>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent:
-                  "space-between",
-                padding: "5px 0",
-                fontSize: ".88rem",
-              }}
-            >
-              <span
-                style={{
-                  color: "#64748b",
-                }}
-              >
-                Date
-              </span>
-
-              <span
-                style={{
-                  fontWeight: 600,
-                }}
-              >
-                {date}
-              </span>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent:
-                  "space-between",
-                padding: "5px 0",
-                fontSize: ".88rem",
-              }}
-            >
-              <span
-                style={{
-                  color: "#64748b",
-                }}
-              >
-                Time Slot
-              </span>
-
-              <span
-                style={{
-                  fontWeight: 600,
-                }}
-              >
-                {slot}
-              </span>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent:
-                  "space-between",
-                padding:
-                  "10px 0 0",
-                marginTop: 10,
-                borderTop:
-                  "1px solid #e2e8f0",
+                background: "#f8fafc",
+                padding: "12px",
+                borderRadius: 12,
+                marginBottom: 18,
                 fontWeight: 700,
               }}
             >
-              <span>Total</span>
-
-              <span>
-                ₹{consultationFee}
-              </span>
+              Receipt ID: {receiptId}
             </div>
-          </div>
+          )}
 
           <button
             style={S.confirmBtn}
             onClick={() =>
               openReceipt({
+                receiptId,
                 serviceType:
-                  "Tele Consultation",
-
+                  "Walk-In Clinic",
                 title:
-                  "Tele Consultation Receipt",
-
+                  "Walk-In Clinic Receipt",
                 patientName:
                   patient.name,
-
                 patientEmail:
                   patient.email,
-
                 patientPhone:
                   patient.mobile,
-
+                patientAddress:
+                  patient.address,
                 appointmentDate:
                   date,
-
                 timeSlot:
                   slot,
-
                 amount:
                   consultationFee,
-
                 extraFieldLabel:
-                  "Specialization",
-
+                  "Clinic Branch",
                 extraFieldValue:
-                  specialization,
+                  branch,
               })
             }
           >
-            ⬇ Re-open Receipt
+            Download / Print Receipt
           </button>
         </div>
       </div>
@@ -377,49 +294,43 @@ extraFieldValue: specialization,
 
   return (
     <div style={S.page}>
-
       {/* SIDEBAR */}
 
       <div style={S.sidebar}>
-
         <LoggedInCard
           patient={patientProfile}
         />
 
         <QuoteCard
-          icon="🩺"
-          quote="Healthcare consultation from anywhere."
+          icon="🏥"
+          quote="Professional healthcare at your nearest clinic."
           author="— CallMeDex Care Team"
         />
 
         <SupportCard />
-
       </div>
 
-      {/* MAIN */}
+      {/* MAIN CONTENT */}
 
       <div style={S.main}>
-
         <div
           style={{
-            marginBottom: 18,
+            marginBottom: 20,
           }}
         >
           <h1 style={S.h1}>
-            Tele Consultation
+            Walk-In Clinic
           </h1>
 
           <p style={S.sub}>
-            Consult with experienced
-            healthcare professionals
-            from anywhere.
+            Book an appointment at your
+            preferred clinic branch.
           </p>
         </div>
 
         {/* SECTION 1 */}
 
         <div style={S.section}>
-
           <SectionHeader
             step={1}
             title="Patient Information"
@@ -444,14 +355,13 @@ extraFieldValue: specialization,
 </div>
 
           <div style={S.grid2}>
-
             <div>
               <label style={S.label}>
                 Full Name
               </label>
 
               <input
-                placeholder="Enter you full name"
+                placeholder="Enter your full name"
                 style={S.inp}
                 value={patient.name}
                 onChange={(e) =>
@@ -473,7 +383,6 @@ extraFieldValue: specialization,
                 placeholder="Enter age"
                 type="number"
                 min="1"
-                max="120"
                 style={S.inp}
                 value={patient.age}
                 onChange={(e) =>
@@ -570,7 +479,7 @@ extraFieldValue: specialization,
               </label>
 
               <textarea
-                placeholder="Enter your address here "
+              placeholder="Enter you address here"
                 rows={3}
                 style={S.inp}
                 value={
@@ -585,72 +494,62 @@ extraFieldValue: specialization,
                 }
               />
             </div>
-
           </div>
-
         </div>
-                {/* SECTION 2 */}
+
+        {/* SECTION 2 */}
 
         <div style={S.section}>
-
           <SectionHeader
             step={2}
-            title="Select Doctor Specialization"
-            subtitle="Choose required specialist"
+            title="Select Clinic Branch"
+            subtitle="Choose your preferred clinic"
             color="#7c3aed"
           />
 
-          <div style={S.specializationGrid}>
+          <div
+            style={
+              S.specializationGrid
+            }
+          >
+            {BRANCHES.map((b) => (
+              <div
+                key={b}
+                onClick={() =>
+                  setBranch(b)
+                }
+                style={{
+                  ...S.specializationCard,
 
-            {SPECIALIZATIONS.map((spec) => {
-
-              const selected =
-                specialization === spec;
-
-              return (
+                  ...(branch === b
+                    ? S.specializationCardSel
+                    : {}),
+                }}
+              >
                 <div
-                  key={spec}
-                  onClick={() =>
-                    setSpecialization(spec)
-                  }
                   style={{
-                    ...S.specializationCard,
-
-                    ...(selected
-                      ? S.specializationCardSel
-                      : {}),
+                    fontSize:
+                      "1.5rem",
+                    marginBottom: 8,
                   }}
                 >
-                  <div
-                    style={{
-                      fontSize: "1.6rem",
-                      marginBottom: 8,
-                    }}
-                  >
-                    👨‍⚕️
-                  </div>
-
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      color: "#0A2540",
-                    }}
-                  >
-                    {spec}
-                  </div>
-
+                  🏥
                 </div>
-              );
-            })}
 
+                <div
+                  style={{
+                    fontWeight: 700,
+                  }}
+                >
+                  {b}
+                </div>
+              </div>
+            ))}
           </div>
-
         </div>
-
-        {/* SECTION 3 */}
+                {/* SECTION 3 */}
 
         <div style={S.section}>
-
           <SectionHeader
             step={3}
             title="Date & Time Slot"
@@ -689,13 +588,11 @@ extraFieldValue: specialization,
               onSelect={setSlot}
             />
           )}
-
         </div>
 
         {/* SECTION 4 */}
 
         <div style={S.section}>
-
           <SectionHeader
             step={4}
             title="Appointment Summary"
@@ -705,18 +602,17 @@ extraFieldValue: specialization,
 
           <div style={S.summaryRow}>
             <span>Patient</span>
+
             <strong>
               {patient.name || "-"}
             </strong>
           </div>
 
           <div style={S.summaryRow}>
-            <span>
-              Specialization
-            </span>
+            <span>Clinic Branch</span>
 
             <strong>
-              {specialization || "-"}
+              {branch || "-"}
             </strong>
           </div>
 
@@ -748,24 +644,22 @@ extraFieldValue: specialization,
 
           <button
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={loading}
             style={
-              submitting
+              loading
                 ? S.confirmBtnDisabled
                 : S.confirmBtn
             }
           >
-            {submitting
+            {loading
               ? "Booking..."
-              : "✓ Confirm Tele Consultation"}
+              : "✓ Confirm Appointment"}
           </button>
-
         </div>
 
       </div>
-
     </div>
   );
 };
 
-export default TeleConsultationPage;
+export default WalkInClinic;

@@ -22,10 +22,10 @@ import BodyDiagnostics from "./components/diagnostics/BodyDiagnostics";
 import BlogPage from "./components/blog/BlogPage";
 import PharmacyHomeDelivery from "./components/pharmacy/PharmacyHomeDelivery";
 import PharmacyDashboard from "./components/pharmacyDashboard/PharmacyDashboard";
-import ConsultancyHome from "./components/consultancy/consultancyHome";
+import ConsultancyHome from "./components/consultation/consultancyHome";
 import DiagnosticWalkInCenters from "./components/diagnostics/DiagnosticWalkInCenters";
 
-import WalkInClinic from "./components/walkinclinic/WalkInClinic";
+import WalkInClinic from "./components/consultation/WalkInClinic";
 import TeleConsultationPage from "./components/consultation/TeleConsultationPage";
 import ConsultationChoice from "./components/appointments/ConsultationChoice";
 

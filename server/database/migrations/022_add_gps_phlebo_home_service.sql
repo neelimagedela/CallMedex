@@ -3,7 +3,6 @@ ADD COLUMN patient_lat DECIMAL(10,8) NULL AFTER patient_address,
 ADD COLUMN patient_lng DECIMAL(11,8) NULL AFTER patient_lat;
 
 ALTER TABLE home_service_bookings
-ADD COLUMN assigned_phlebo_id BIGINT NULL AFTER user_id,
 ADD COLUMN accepted_at DATETIME NULL AFTER assigned_phlebo_id;
 
 CREATE TABLE IF NOT EXISTS phlebo_live_locations (
