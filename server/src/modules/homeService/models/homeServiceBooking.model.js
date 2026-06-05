@@ -2,15 +2,7 @@ const crypto = require("crypto");
 const db = require("../../../config/db");
 
 function generatePublicBookingId() {
-  const date = new Date();
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  const random = crypto.randomBytes(3).toString("hex").toUpperCase();
-
-  return `HS${year}${month}${day}${random}`;
+  return `HS${Date.now()}${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
 }
 
 function parseJsonArray(value) {
@@ -30,7 +22,6 @@ function normalizeBooking(row) {
   return {
     id: row.id,
     publicBookingId: row.public_booking_id,
-
     userId: row.user_id,
     assignedPhleboId: row.assigned_phlebo_id,
 
@@ -48,11 +39,10 @@ function normalizeBooking(row) {
 
     collectionDate: row.collection_date,
     timeSlot: row.time_slot,
+
     prescriptionPath: row.prescription_path,
-
     totalAmount: Number(row.total_amount || 0),
-    status: row.status || "pending",
-
+    status: row.status,
     phleboNotes: row.phlebo_notes || "",
 
     distanceKm:
@@ -123,6 +113,49 @@ const createHomeServiceBooking = async (bookingData) => {
     publicBookingId,
     ...bookingData,
   };
+};
+
+const getPhleboProfileByUserId = async (phleboUserId) => {
+  const [rows] = await db.execute(
+    `
+    SELECT
+      u.id AS user_id,
+      u.public_user_id,
+      u.name,
+      u.email,
+      u.phone,
+      u.role,
+
+      pp.id AS profile_id,
+      pp.phlebo_type,
+      pp.qualification,
+      pp.specialization,
+      pp.years_of_experience,
+      pp.certification_number,
+      pp.available_days,
+      pp.available_time,
+      pp.morning_start,
+      pp.morning_end,
+      pp.evening_start,
+      pp.evening_end,
+      pp.home_collection,
+      pp.emergency_availability,
+      pp.government_id_type,
+      pp.aadhaar_front,
+      pp.phlebotomy_certificate,
+      pp.created_at,
+      pp.updated_at
+    FROM users u
+    LEFT JOIN phlebo_profiles pp
+      ON pp.user_id = u.id
+    WHERE u.id = ?
+      AND u.role = 'phlebo'
+    LIMIT 1
+    `,
+    [phleboUserId]
+  );
+
+  return rows[0] || null;
 };
 
 const upsertPhleboLiveLocation = async ({
@@ -218,6 +251,7 @@ const getAssignedBookingsForPhlebo = async (phleboUserId) => {
     SELECT *
     FROM home_service_bookings
     WHERE assigned_phlebo_id = ?
+      AND status IN ('accepted', 'sample_collected', 'submitted_to_lab')
     ORDER BY collection_date ASC, created_at DESC
     `,
     [phleboUserId]
@@ -227,10 +261,29 @@ const getAssignedBookingsForPhlebo = async (phleboUserId) => {
 };
 
 const getPhleboHomeServiceBookings = async (phleboUserId) => {
-  const nearbyPending = await getNearbyPendingBookingsForPhlebo(phleboUserId, 10);
+  const nearbyPending = await getNearbyPendingBookingsForPhlebo(
+    phleboUserId,
+    10
+  );
+
   const assigned = await getAssignedBookingsForPhlebo(phleboUserId);
 
   return [...nearbyPending, ...assigned];
+};
+
+const getCompletedBookingsForPhlebo = async (phleboUserId) => {
+  const [rows] = await db.execute(
+    `
+    SELECT *
+    FROM home_service_bookings
+    WHERE assigned_phlebo_id = ?
+      AND status = 'completed'
+    ORDER BY updated_at DESC, collection_date DESC, created_at DESC
+    `,
+    [phleboUserId]
+  );
+
+  return rows.map(normalizeBooking);
 };
 
 const acceptHomeServiceBooking = async (bookingId, phleboUserId) => {
@@ -287,7 +340,9 @@ const updateHomeServiceBookingStatus = async (
   const [result] = await db.execute(
     `
     UPDATE home_service_bookings
-    SET status = ?
+    SET
+      status = ?,
+      updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
       AND assigned_phlebo_id = ?
     `,
@@ -299,8 +354,10 @@ const updateHomeServiceBookingStatus = async (
 
 module.exports = {
   createHomeServiceBooking,
+  getPhleboProfileByUserId,
   upsertPhleboLiveLocation,
   getPhleboHomeServiceBookings,
+  getCompletedBookingsForPhlebo,
   acceptHomeServiceBooking,
   getPhleboActiveBooking,
   updateHomeServiceBookingStatus,

@@ -12,8 +12,10 @@ const {
 
 const {
   createHomeServiceBooking,
+  getPhleboProfileByUserId,
   upsertPhleboLiveLocation,
   getPhleboHomeServiceBookings,
+  getCompletedBookingsForPhlebo,
   acceptHomeServiceBooking,
   getPhleboActiveBooking,
   updateHomeServiceBookingStatus,
@@ -143,7 +145,7 @@ const bookHomeServiceController = asyncHandler(async (req, res) => {
     );
   }
 
-  const requestedTestIds = tests.map((test) => test.id);
+  const requestedTestIds = tests.map((test) => Number(test.id));
 
   const dbTests = await getActiveHomeServiceTestsByIds(requestedTestIds);
 
@@ -185,6 +187,25 @@ const bookHomeServiceController = asyncHandler(async (req, res) => {
   });
 });
 
+const getPhleboProfileController = asyncHandler(async (req, res) => {
+  if (req.user.role !== "phlebo") {
+    throw new AppError("Only phlebos can access this profile", 403);
+  }
+
+  const profile = await getPhleboProfileByUserId(req.user.id);
+
+  if (!profile) {
+    throw new AppError("Phlebo profile not found", 404);
+  }
+
+  return successResponse({
+    res,
+    status: 200,
+    message: "Phlebo profile retrieved successfully",
+    data: profile,
+  });
+});
+
 const updatePhleboLocationController = asyncHandler(async (req, res) => {
   if (req.user.role !== "phlebo") {
     throw new AppError("Only phlebos can update live location", 403);
@@ -221,7 +242,22 @@ const listPhleboHomeServiceBookingsController = asyncHandler(async (req, res) =>
   return successResponse({
     res,
     status: 200,
-    message: "Nearby home service bookings retrieved successfully",
+    message: "Nearby and active home service bookings retrieved successfully",
+    data: bookings,
+  });
+});
+
+const listCompletedPhleboBookingsController = asyncHandler(async (req, res) => {
+  if (req.user.role !== "phlebo") {
+    throw new AppError("Only phlebos can access completed collections", 403);
+  }
+
+  const bookings = await getCompletedBookingsForPhlebo(req.user.id);
+
+  return successResponse({
+    res,
+    status: 200,
+    message: "Completed collections retrieved successfully",
     data: bookings,
   });
 });
@@ -250,9 +286,6 @@ const acceptHomeServiceBookingController = asyncHandler(async (req, res) => {
     res,
     status: 200,
     message: "Home service booking accepted successfully",
-    data: {
-      bookingId,
-    },
   });
 });
 
@@ -266,7 +299,7 @@ const getPhleboActiveBookingController = asyncHandler(async (req, res) => {
   return successResponse({
     res,
     status: 200,
-    message: "Active collection retrieved successfully",
+    message: "Active booking retrieved successfully",
     data: booking,
   });
 });
@@ -274,11 +307,11 @@ const getPhleboActiveBookingController = asyncHandler(async (req, res) => {
 const updateHomeServiceBookingStatusController = asyncHandler(
   async (req, res) => {
     if (req.user.role !== "phlebo") {
-      throw new AppError("Only phlebos can update collection status", 403);
+      throw new AppError("Only phlebos can update booking status", 403);
     }
 
     const bookingId = Number(req.params.bookingId);
-    const status = String(req.body.status || "").trim();
+    const { status } = req.body;
 
     if (!Number.isInteger(bookingId) || bookingId <= 0) {
       throw new AppError("Invalid booking ID", 400);
@@ -291,25 +324,26 @@ const updateHomeServiceBookingStatusController = asyncHandler(
     );
 
     if (!updated) {
-      throw new AppError("Unable to update booking status", 400);
+      throw new AppError(
+        "Unable to update booking status. Booking may not be assigned to you.",
+        400
+      );
     }
 
     return successResponse({
       res,
       status: 200,
-      message: "Collection status updated successfully",
-      data: {
-        bookingId,
-        status,
-      },
+      message: "Booking status updated successfully",
     });
   }
 );
 
 module.exports = {
   bookHomeServiceController,
+  getPhleboProfileController,
   updatePhleboLocationController,
   listPhleboHomeServiceBookingsController,
+  listCompletedPhleboBookingsController,
   acceptHomeServiceBookingController,
   getPhleboActiveBookingController,
   updateHomeServiceBookingStatusController,

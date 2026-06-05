@@ -1,11 +1,16 @@
 import { api } from "../../shared/api";
 
 export const phleboApi = {
+  getProfile: () => api.get("/home-service/phlebo/profile"),
+
   updateLocation: (payload) =>
     api.post("/home-service/phlebo/location", payload),
 
   getBookings: () =>
     api.get("/home-service/phlebo/bookings"),
+
+  getCompletedBookings: () =>
+    api.get("/home-service/phlebo/bookings/completed"),
 
   acceptBooking: (bookingId) =>
     api.patch(`/home-service/phlebo/bookings/${bookingId}/accept`),

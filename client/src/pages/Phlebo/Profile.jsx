@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { phleboApi } from "./phlebo.api";
 
 const safeJsonArray = (value) => {
   if (!value) return [];
@@ -24,47 +24,65 @@ const getValue = (...values) => {
   return "--";
 };
 
-const Profile = () => {
-  const [currentUser] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("user") || "{}");
-    } catch {
-      return {};
-    }
-  });
+const fieldCard = {
+  background: "#fff",
+  padding: "24px",
+  borderRadius: "12px",
+  border: "1px solid #e2e8f0",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+};
 
+const labelStyle = {
+  color: "#64748b",
+  fontSize: "14px",
+  marginBottom: "4px",
+};
+
+const valueStyle = {
+  color: "#0f172a",
+  fontSize: "16px",
+  fontWeight: "700",
+  wordBreak: "break-word",
+};
+
+function InfoItem({ label, value }) {
+  return (
+    <div
+      style={{
+        background: "#f8fafc",
+        padding: "14px",
+        borderRadius: "10px",
+        border: "1px solid #e2e8f0",
+      }}
+    >
+      <p style={labelStyle}>{label}</p>
+      <p style={valueStyle}>{value}</p>
+    </div>
+  );
+}
+
+const Profile = () => {
   const [profile, setProfile] = useState({});
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-
-    if (token) {
-      fetchProfile();
-    } else {
-      setLoading(false);
-    }
-  }, []);
 
   const fetchProfile = async () => {
     try {
       setLoading(true);
 
-      const token = localStorage.getItem("accessToken");
-
-      const res = await axios.get("http://localhost:5000/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await phleboApi.getProfile();
 
       setProfile(res.data?.data || {});
     } catch (err) {
       console.error("Failed to fetch phlebo profile:", err);
+      alert(err.response?.data?.message || "Failed to load phlebo profile");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
   const availableDays = safeJsonArray(
     profile.available_days || profile.availableDays
@@ -81,7 +99,6 @@ const Profile = () => {
         style={{
           maxWidth: "900px",
           margin: "0 auto",
-          fontFamily: "inherit",
           padding: "30px",
         }}
       >
@@ -91,173 +108,68 @@ const Profile = () => {
   }
 
   return (
-    <div style={{ maxWidth: "900px", margin: "0 auto", fontFamily: "inherit" }}>
+    <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
       <div
         style={{
-          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+          background: "linear-gradient(135deg, #0f766e, #0891b2)",
           color: "#fff",
           padding: "30px",
-          borderRadius: "12px",
-          display: "flex",
-          alignItems: "center",
-          gap: "24px",
-          marginBottom: "30px",
-          boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
+          borderRadius: "18px",
+          marginBottom: "24px",
         }}
       >
-        <div
-          style={{
-            width: "80px",
-            height: "80px",
-            borderRadius: "50%",
-            background: "#38bdf8",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "32px",
-            fontWeight: "700",
-            color: "#fff",
-            flexShrink: 0,
-          }}
-        >
-          {(currentUser.name || profile.name || "P").charAt(0).toUpperCase()}
-        </div>
+        <h2 style={{ margin: 0, fontSize: "30px" }}>
+          {getValue(profile.name, "Phlebo Profile")}
+        </h2>
 
-        <div>
-          <h2 style={{ margin: "0 0 8px", fontSize: "28px" }}>
-            {currentUser.name || profile.name || "Phlebotomist"}
-          </h2>
-
-          <p style={{ margin: 0, color: "#cbd5e1", fontSize: "15px" }}>
-            {currentUser.email || profile.email || "No email available"}
-          </p>
-
-          <p style={{ margin: "6px 0 0", color: "#94a3b8", fontSize: "14px" }}>
-            {currentUser.role || "phlebo"}
-          </p>
-        </div>
+        <p style={{ marginTop: "8px", opacity: 0.95 }}>
+          Manage your registered details, availability, and home collection
+          profile.
+        </p>
       </div>
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "24px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: "18px",
         }}
       >
-        <div
-          style={{
-            background: "#fff",
-            padding: "24px",
-            borderRadius: "12px",
-            border: "1px solid #e2e8f0",
-            boxShadow: "0 1px 3px 0 rgba(0,0,0,0.05)",
-          }}
-        >
+        <div style={fieldCard}>
           <h3
             style={{
-              margin: "0 0 20px 0",
+              margin: "0 0 18px",
               color: "#1e293b",
               borderBottom: "2px solid #f1f5f9",
               paddingBottom: "10px",
             }}
           >
-            Account Details
+            Basic Details
           </h3>
 
-          <div style={{ display: "grid", gap: "16px" }}>
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "12px",
-                  color: "#64748b",
-                  textTransform: "uppercase",
-                  fontWeight: "600",
-                }}
-              >
-                Registered Email
-              </label>
+          <div style={{ display: "grid", gap: "12px" }}>
+            <InfoItem
+              label="Public ID"
+              value={getValue(profile.public_user_id, profile.publicUserId)}
+            />
 
-              <span
-                style={{
-                  fontSize: "15px",
-                  color: "#334155",
-                  fontWeight: "500",
-                }}
-              >
-                {currentUser.email || profile.email || "N/A"}
-              </span>
-            </div>
+            <InfoItem label="Name" value={getValue(profile.name)} />
 
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "12px",
-                  color: "#64748b",
-                  textTransform: "uppercase",
-                  fontWeight: "600",
-                }}
-              >
-                Contact Number
-              </label>
+            <InfoItem label="Email" value={getValue(profile.email)} />
 
-              <span
-                style={{
-                  fontSize: "15px",
-                  color: "#334155",
-                  fontWeight: "500",
-                }}
-              >
-                {currentUser.phone || profile.phone || "+91 XXXXX XXXXX"}
-              </span>
-            </div>
+            <InfoItem
+              label="Phone Number"
+              value={getValue(profile.phone)}
+            />
 
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "12px",
-                  color: "#64748b",
-                  textTransform: "uppercase",
-                  fontWeight: "600",
-                }}
-              >
-                Primary System Role
-              </label>
-
-              <span
-                style={{
-                  display: "inline-block",
-                  marginTop: "4px",
-                  padding: "4px 10px",
-                  background: "#f1f5f9",
-                  color: "#475569",
-                  borderRadius: "4px",
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  textTransform: "uppercase",
-                }}
-              >
-                {currentUser.role || "Phlebotomist"}
-              </span>
-            </div>
+            <InfoItem label="Role" value={getValue(profile.role)} />
           </div>
         </div>
 
-        <div
-          style={{
-            background: "#fff",
-            padding: "24px",
-            borderRadius: "12px",
-            border: "1px solid #e2e8f0",
-            boxShadow: "0 1px 3px 0 rgba(0,0,0,0.05)",
-          }}
-        >
+        <div style={fieldCard}>
           <h3
             style={{
-              margin: "0 0 20px 0",
+              margin: "0 0 18px",
               color: "#1e293b",
               borderBottom: "2px solid #f1f5f9",
               paddingBottom: "10px",
@@ -266,40 +178,44 @@ const Profile = () => {
             Professional Details
           </h3>
 
-          <p>
-            <strong>Phlebo Type:</strong>{" "}
-            {getValue(profile.phlebo_type, profile.phleboType)}
-          </p>
+          <div style={{ display: "grid", gap: "12px" }}>
+            <InfoItem
+              label="Phlebo Type"
+              value={getValue(profile.phlebo_type, profile.phleboType)}
+            />
 
-          <p>
-            <strong>Qualification:</strong>{" "}
-            {getValue(profile.qualification)}
-          </p>
+            <InfoItem
+              label="Qualification"
+              value={getValue(profile.qualification)}
+            />
 
-          <p>
-            <strong>Specialization:</strong>{" "}
-            {getValue(profile.specialization)}
-          </p>
+            <InfoItem
+              label="Specialization"
+              value={getValue(profile.specialization)}
+            />
 
-          <p>
-            <strong>Certification Number:</strong>{" "}
-            {getValue(profile.certification_number, profile.certificationNumber)}
-          </p>
+            <InfoItem
+              label="Years of Experience"
+              value={getValue(
+                profile.years_of_experience,
+                profile.yearsOfExperience
+              )}
+            />
+
+            <InfoItem
+              label="Certification Number"
+              value={getValue(
+                profile.certification_number,
+                profile.certificationNumber
+              )}
+            />
+          </div>
         </div>
 
-        <div
-          style={{
-            background: "#fff",
-            padding: "24px",
-            borderRadius: "12px",
-            border: "1px solid #e2e8f0",
-            boxShadow: "0 1px 3px 0 rgba(0,0,0,0.05)",
-            gridColumn: "1 / -1",
-          }}
-        >
+        <div style={{ ...fieldCard, gridColumn: "1 / -1" }}>
           <h3
             style={{
-              margin: "0 0 20px 0",
+              margin: "0 0 18px",
               color: "#1e293b",
               borderBottom: "2px solid #f1f5f9",
               paddingBottom: "10px",
@@ -308,30 +224,50 @@ const Profile = () => {
             Availability Details
           </h3>
 
-          <p>
-            <strong>Available Days:</strong>{" "}
-            {availableDays.length ? availableDays.join(", ") : "Not Available"}
-          </p>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+              gap: "12px",
+            }}
+          >
+            <InfoItem
+              label="Available Days"
+              value={
+                availableDays.length
+                  ? availableDays.join(", ")
+                  : "Not Available"
+              }
+            />
 
-          <p>
-            <strong>Morning Slot:</strong> {morningStart} - {morningEnd}
-          </p>
+            <InfoItem
+              label="Morning Slot"
+              value={`${morningStart} - ${morningEnd}`}
+            />
 
-          <p>
-            <strong>Evening Slot:</strong> {eveningStart} - {eveningEnd}
-          </p>
+            <InfoItem
+              label="Evening Slot"
+              value={`${eveningStart} - ${eveningEnd}`}
+            />
 
-          <p>
-            <strong>Home Collection:</strong>{" "}
-            {profile.home_collection || profile.homeCollection ? "Yes" : "No"}
-          </p>
+            <InfoItem
+              label="Home Collection"
+              value={
+                profile.home_collection || profile.homeCollection
+                  ? "Yes"
+                  : "No"
+              }
+            />
 
-          <p>
-            <strong>Emergency Availability:</strong>{" "}
-            {profile.emergency_availability || profile.emergencyAvailability
-              ? "Yes"
-              : "No"}
-          </p>
+            <InfoItem
+              label="Emergency Availability"
+              value={
+                profile.emergency_availability || profile.emergencyAvailability
+                  ? "Yes"
+                  : "No"
+              }
+            />
+          </div>
         </div>
       </div>
     </div>
