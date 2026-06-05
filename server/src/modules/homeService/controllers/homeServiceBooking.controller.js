@@ -12,7 +12,11 @@ const {
 
 const {
   createHomeServiceBooking,
+  upsertPhleboLiveLocation,
   getPhleboHomeServiceBookings,
+  acceptHomeServiceBooking,
+  getPhleboActiveBooking,
+  updateHomeServiceBookingStatus,
 } = require("../models/homeServiceBooking.model");
 
 function saveBase64Prescription(base64File) {
@@ -64,6 +68,11 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || ""));
 }
 
+function isValidCoordinate(value) {
+  const num = Number(value);
+  return Number.isFinite(num);
+}
+
 const bookHomeServiceController = asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
@@ -78,6 +87,8 @@ const bookHomeServiceController = asyncHandler(async (req, res) => {
     patientMobile,
     patientEmail,
     patientAddress,
+    patientLat,
+    patientLng,
     branch,
     tests,
     collectionDate,
@@ -125,6 +136,13 @@ const bookHomeServiceController = asyncHandler(async (req, res) => {
     throw new AppError("Maximum 2 tests allowed per booking", 400);
   }
 
+  if (!isValidCoordinate(patientLat) || !isValidCoordinate(patientLng)) {
+    throw new AppError(
+      "Patient GPS location is required. Please click Use Current Location before booking.",
+      400
+    );
+  }
+
   const requestedTestIds = tests.map((test) => test.id);
 
   const dbTests = await getActiveHomeServiceTestsByIds(requestedTestIds);
@@ -148,6 +166,8 @@ const bookHomeServiceController = asyncHandler(async (req, res) => {
     patientMobile: patientMobile.trim(),
     patientEmail: patientEmail.trim().toLowerCase(),
     patientAddress: patientAddress.trim(),
+    patientLat: Number(patientLat),
+    patientLng: Number(patientLng),
     branch,
     tests: dbTests,
     collectionDate,
@@ -165,6 +185,32 @@ const bookHomeServiceController = asyncHandler(async (req, res) => {
   });
 });
 
+const updatePhleboLocationController = asyncHandler(async (req, res) => {
+  if (req.user.role !== "phlebo") {
+    throw new AppError("Only phlebos can update live location", 403);
+  }
+
+  const { latitude, longitude, isAvailable = true } = req.body;
+
+  if (!isValidCoordinate(latitude) || !isValidCoordinate(longitude)) {
+    throw new AppError("Valid latitude and longitude are required", 400);
+  }
+
+  const location = await upsertPhleboLiveLocation({
+    phleboUserId: req.user.id,
+    latitude: Number(latitude),
+    longitude: Number(longitude),
+    isAvailable: Boolean(isAvailable),
+  });
+
+  return successResponse({
+    res,
+    status: 200,
+    message: "Phlebo location updated successfully",
+    data: location,
+  });
+});
+
 const listPhleboHomeServiceBookingsController = asyncHandler(async (req, res) => {
   if (req.user.role !== "phlebo") {
     throw new AppError("Only phlebos can access home service bookings", 403);
@@ -175,12 +221,96 @@ const listPhleboHomeServiceBookingsController = asyncHandler(async (req, res) =>
   return successResponse({
     res,
     status: 200,
-    message: "Phlebo home service bookings retrieved successfully",
+    message: "Nearby home service bookings retrieved successfully",
     data: bookings,
   });
 });
 
+const acceptHomeServiceBookingController = asyncHandler(async (req, res) => {
+  if (req.user.role !== "phlebo") {
+    throw new AppError("Only phlebos can accept home service bookings", 403);
+  }
+
+  const bookingId = Number(req.params.bookingId);
+
+  if (!Number.isInteger(bookingId) || bookingId <= 0) {
+    throw new AppError("Invalid booking ID", 400);
+  }
+
+  const accepted = await acceptHomeServiceBooking(bookingId, req.user.id);
+
+  if (!accepted) {
+    throw new AppError(
+      "This booking is already accepted or no longer available",
+      409
+    );
+  }
+
+  return successResponse({
+    res,
+    status: 200,
+    message: "Home service booking accepted successfully",
+    data: {
+      bookingId,
+    },
+  });
+});
+
+const getPhleboActiveBookingController = asyncHandler(async (req, res) => {
+  if (req.user.role !== "phlebo") {
+    throw new AppError("Only phlebos can access active collection", 403);
+  }
+
+  const booking = await getPhleboActiveBooking(req.user.id);
+
+  return successResponse({
+    res,
+    status: 200,
+    message: "Active collection retrieved successfully",
+    data: booking,
+  });
+});
+
+const updateHomeServiceBookingStatusController = asyncHandler(
+  async (req, res) => {
+    if (req.user.role !== "phlebo") {
+      throw new AppError("Only phlebos can update collection status", 403);
+    }
+
+    const bookingId = Number(req.params.bookingId);
+    const status = String(req.body.status || "").trim();
+
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+      throw new AppError("Invalid booking ID", 400);
+    }
+
+    const updated = await updateHomeServiceBookingStatus(
+      bookingId,
+      req.user.id,
+      status
+    );
+
+    if (!updated) {
+      throw new AppError("Unable to update booking status", 400);
+    }
+
+    return successResponse({
+      res,
+      status: 200,
+      message: "Collection status updated successfully",
+      data: {
+        bookingId,
+        status,
+      },
+    });
+  }
+);
+
 module.exports = {
   bookHomeServiceController,
+  updatePhleboLocationController,
   listPhleboHomeServiceBookingsController,
+  acceptHomeServiceBookingController,
+  getPhleboActiveBookingController,
+  updateHomeServiceBookingStatusController,
 };

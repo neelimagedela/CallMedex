@@ -1,411 +1,456 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { usePhlebo } from "../../context/PhleboContext";
-import { 
-  MapPin, 
-  Phone, 
-  CheckCircle, 
-  Navigation, 
-  FlaskConical, 
-  Camera, 
-  Lock, 
-  Building2, 
-  Upload, 
-  X 
+import {
+  MapPin,
+  Phone,
+  CheckCircle,
+  FlaskConical,
+  Upload,
 } from "lucide-react";
+import { phleboApi } from "./phlebo.api";
+
+const formatAmount = (value) => `₹${Number(value || 0).toFixed(2)}`;
+
+const formatDate = (value) => {
+  if (!value) return "Date not available";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value).slice(0, 10);
+  }
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const getTestName = (test) => {
+  return test.name || test.test_name || test.testName || "Test";
+};
+
+const getStatusLabel = (status) => {
+  switch (status) {
+    case "accepted":
+      return "Accepted";
+    case "sample_collected":
+      return "Sample Collected";
+    case "submitted_to_lab":
+      return "Submitted to Lab";
+    case "completed":
+      return "Completed";
+    case "cancelled":
+      return "Cancelled";
+    default:
+      return "Pending";
+  }
+};
 
 const ActiveTask = () => {
-  // Extracting navigation controls and shared operational state handlers from Context
- const {
-  setPage,
-  setActiveOrder,
-  completedTasks,
-  setCompletedTasks
-} = usePhlebo();
+  const { setPage, completedTasks, setCompletedTasks } = usePhlebo();
 
-  // Workflow pipeline tracking steps 
-  const [currentStep, setCurrentStep] = useState(1); 
-
-  // Image Upload Tracking States
+  const [booking, setBooking] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [currentStep, setCurrentStep] = useState(1);
   const [sampleImage, setSampleImage] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
 
-  // Patient OTP Verification States (6-digit split matrix array)
-  const [patientOtp, setPatientOtp] = useState(["", "", "", "", "", ""]);
+  const fetchActiveBooking = async () => {
+    try {
+      setLoading(true);
 
-  // Mock active patient order details payload
-  const [orderDetails] = useState({
-    id: "JOB-9921",
-    patientName: "K. Satish Narayana",
-    phone: "+91 98480 22334",
-    address: "Flat 402, Sri Sai Towers, Lawsons Bay Colony, Visakhapatnam",
-    prescribedTests: ["Complete Blood Count (CBC)", "HbA1c (Glycated Haemoglobin)"],
-    sampleType: "EDTA Whole Blood (Purple Top) & Fluoride Plasma (Grey Top)",
-    diagnosticCenter: "CallMedex Central Diagnostics Hub, Vizag"
-  });
+      const response = await phleboApi.getActiveBooking();
 
-  // Local file processing handler simulation
+      setBooking(response.data?.data || null);
+    } catch (error) {
+      console.error("Active collection error:", error);
+
+      alert(
+        error.response?.data?.message || "Unable to load active collection"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchActiveBooking();
+  }, []);
+
+  useEffect(() => {
+    if (!booking?.status) return;
+
+    if (booking.status === "accepted") {
+      setCurrentStep(1);
+    } else if (booking.status === "sample_collected") {
+      setCurrentStep(4);
+    } else if (booking.status === "submitted_to_lab") {
+      setCurrentStep(5);
+    }
+  }, [booking]);
+
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
+
     if (file) {
       setSampleImage(URL.createObjectURL(file));
     }
   };
 
-  // OTP field entry validation and focus management matrix shifts
-  const handleOtpChange = (value, index) => {
-    const cleanValue = value.replace(/\D/g, "");
-    const newOtp = [...patientOtp];
-    newOtp[index] = cleanValue.substring(cleanValue.length - 1);
-    setPatientOtp(newOtp);
+  const handleNextStep = async () => {
+    if (!booking) return;
 
-    if (cleanValue && index < 5) {
-      document.getElementById(`otp-${index + 1}`).focus();
-    }
-  };
-
-  const handleKeyDown = (e, index) => {
-    if (e.key === "Backspace" && !patientOtp[index] && index > 0) {
-      document.getElementById(`otp-${index - 1}`).focus();
-    }
-  };
-
-  const handleNextStep = () => {
-    // Step 2 Guard: Validate patient OTP confirmation before expanding collection panels
-    if (currentStep === 2) {
-      const compiledOtp = patientOtp.join("");
-      if (compiledOtp.length !== 6) {
-        alert("Please enter the complete 6-digit confirmation code provided by the patient upon arrival.");
+    try {
+      if (currentStep === 1) {
+        setCurrentStep(2);
         return;
       }
-    }
 
-    // Step 4 Guard: Force sample image attachment verification before lab route
-    if (currentStep === 4 && !sampleImage) {
-      alert("Please upload or capture an image of the collected samples to proceed.");
-      return;
-    }
+      if (currentStep === 2) {
+        setCurrentStep(3);
+        return;
+      }
 
-    if (currentStep < 5) {
-      setCurrentStep(currentStep + 1);
-    } else {
-  const completedJob = {
-    id: orderDetails.id,
-    patientName: orderDetails.patientName,
-    date: new Date().toLocaleDateString(),
-    amount: 50,
-    status: "Completed",
-    tests: orderDetails.prescribedTests
+      if (currentStep === 3) {
+        await phleboApi.updateStatus(booking.id, "sample_collected");
+
+        setBooking((prev) => ({
+          ...prev,
+          status: "sample_collected",
+        }));
+
+        setCurrentStep(4);
+        return;
+      }
+
+      if (currentStep === 4) {
+        if (!sampleImage) {
+          alert("Please upload sample proof before submitting to lab.");
+          return;
+        }
+
+        await phleboApi.updateStatus(booking.id, "submitted_to_lab");
+
+        setBooking((prev) => ({
+          ...prev,
+          status: "submitted_to_lab",
+        }));
+
+        setCurrentStep(5);
+        return;
+      }
+
+      await phleboApi.updateStatus(booking.id, "completed");
+
+      const completedJob = {
+        id: booking.publicBookingId,
+        patientName: booking.patientName,
+        date: new Date().toLocaleDateString("en-IN"),
+        amount: booking.totalAmount,
+        status: "Completed",
+        tests: booking.tests?.map(getTestName) || [],
+      };
+
+      if (setCompletedTasks) {
+        setCompletedTasks([...(completedTasks || []), completedJob]);
+      }
+
+      alert("Collection completed successfully.");
+
+      setPage("phlebo-completed");
+    } catch (error) {
+      console.error("Status update error:", error);
+
+      alert(
+        error.response?.data?.message ||
+          "Unable to update collection status. Please try again."
+      );
+    }
   };
 
-  setCompletedTasks((prev) => [...prev, completedJob]);
-
-  alert(
-    "All diagnostic samples delivered successfully to the diagnostic center."
-  );
-
-  if (setActiveOrder) {
-    setActiveOrder(null);
+  if (loading) {
+    return (
+      <div style={{ padding: "20px", color: "#64748b" }}>
+        Loading active collection...
+      </div>
+    );
   }
 
-  setPage("phlebo-completed");
-}
-  };
+  if (!booking) {
+    return (
+      <div
+        style={{
+          padding: "24px",
+          background: "#f8fafc",
+          borderRadius: "12px",
+          color: "#64748b",
+        }}
+      >
+        <h2 style={{ marginTop: 0 }}>No Active Collection</h2>
+
+        <p>Accept a nearby home-service request to start collection.</p>
+
+        <button
+          type="button"
+          onClick={() => setPage("phlebo-tasks")}
+          style={{
+            background: "#0f766e",
+            color: "#fff",
+            border: "none",
+            padding: "10px 18px",
+            borderRadius: "10px",
+            fontWeight: "700",
+            cursor: "pointer",
+          }}
+        >
+          Go to Requests
+        </button>
+      </div>
+    );
+  }
+
+  const steps = [
+    "Reached Patient",
+    "Verify Patient",
+    "Collect Sample",
+    "Upload Proof",
+    "Submit to Lab",
+  ];
 
   return (
-    <div style={{ maxWidth: "800px", margin: "0 auto", fontFamily: "inherit" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-        <h2 style={{ color: "#1e293b", margin: 0, fontWeight: "700" }}>Active Collection Run</h2>
-        <span style={{ background: "#eff6ff", color: "#1d4ed8", padding: "6px 14px", borderRadius: "20px", fontSize: "13px", fontWeight: "600" }}>
-          ID: {orderDetails.id}
+    <div style={{ maxWidth: "850px", margin: "0 auto", fontFamily: "inherit" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "24px",
+        }}
+      >
+        <div>
+          <h2 style={{ color: "#1e293b", margin: 0, fontWeight: "700" }}>
+            Active Collection
+          </h2>
+
+          <p style={{ margin: "6px 0 0", color: "#64748b" }}>
+            Current Status:{" "}
+            <strong style={{ color: "#0f766e" }}>
+              {getStatusLabel(booking.status)}
+            </strong>
+          </p>
+        </div>
+
+        <span
+          style={{
+            background: "#eff6ff",
+            color: "#1d4ed8",
+            padding: "6px 14px",
+            borderRadius: "20px",
+            fontSize: "13px",
+            fontWeight: "600",
+          }}
+        >
+          ID: {booking.publicBookingId}
         </span>
       </div>
 
-      {/* STEP PROGRESS MONITOR BAR */}
-      <div style={{ display: "flex", background: "#fff", padding: "20px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "24px" }}>
-        <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "space-between" }}>
-          
-          {/* Step 1 */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: currentStep >= 1 ? "#2563eb" : "#94a3b8", fontWeight: "600", fontSize: "12px" }}>
-            <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: currentStep >= 1 ? "#2563eb" : "#cbd5e1", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "11px" }}>1</span>
-            En-Route
-          </div>
-          <div style={{ width: "25px", height: "2px", background: currentStep >= 2 ? "#2563eb" : "#cbd5e1" }}></div>
-          
-          {/* Step 2 */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: currentStep >= 2 ? "#2563eb" : "#94a3b8", fontWeight: "600", fontSize: "12px" }}>
-            <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: currentStep >= 2 ? "#2563eb" : "#cbd5e1", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "11px" }}>2</span>
-            Verify OTP
-          </div>
-          <div style={{ width: "25px", height: "2px", background: currentStep >= 3 ? "#2563eb" : "#cbd5e1" }}></div>
-          
-          {/* Step 3 */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: currentStep >= 3 ? "#2563eb" : "#94a3b8", fontWeight: "600", fontSize: "12px" }}>
-            <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: currentStep >= 3 ? "#2563eb" : "#cbd5e1", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "11px" }}>3</span>
-            Collection
-          </div>
-          <div style={{ width: "25px", height: "2px", background: currentStep >= 4 ? "#2563eb" : "#cbd5e1" }}></div>
+      <div
+        style={{
+          display: "flex",
+          background: "#fff",
+          padding: "20px",
+          borderRadius: "12px",
+          border: "1px solid #e2e8f0",
+          marginBottom: "24px",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
+        {steps.map((step, index) => {
+          const stepNumber = index + 1;
+          const active = currentStep === stepNumber;
+          const done = currentStep > stepNumber;
 
-          {/* Step 4 */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: currentStep >= 4 ? "#2563eb" : "#94a3b8", fontWeight: "600", fontSize: "12px" }}>
-            <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: currentStep >= 4 ? "#2563eb" : "#cbd5e1", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "11px" }}>4</span>
-            Upload Proof
-          </div>
-          <div style={{ width: "25px", height: "2px", background: currentStep >= 5 ? "#2563eb" : "#cbd5e1" }}></div>
-
-          {/* Step 5 */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: currentStep >= 5 ? "#2563eb" : "#94a3b8", fontWeight: "600", fontSize: "12px" }}>
-            <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: currentStep >= 5 ? "#2563eb" : "#cbd5e1", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "11px" }}>5</span>
-            Lab Delivery
-          </div>
-
-        </div>
-      </div>
-
-      {/* CORE WORKFLOW ACTION BOX */}
-      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", marginBottom: "24px" }}>
-        
-        {/* STEP 1 CONTEXT: NAVIGATION ROUTING */}
-        {currentStep === 1 && (
-          <div>
-            <h4 style={{ margin: "0 0 16px 0", color: "#334155", display: "flex", alignItems: "center", gap: "8px" }}>
-              <Navigation size={18} style={{ color: "#2563eb" }} /> Transit Phase: Patient Coordination
-            </h4>
-            <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "20px" }}>
-              <p style={{ margin: "0 0 10px 0", fontSize: "15px", fontWeight: "600" }}>{orderDetails.patientName}</p>
-              <p style={{ margin: "0 0 12px 0", color: "#475569", fontSize: "14px", display: "flex", alignItems: "start", gap: "6px" }}>
-                <MapPin size={16} style={{ marginTop: "2px", flexShrink: 0, color: "#64748b" }} />
-                {orderDetails.address}
-              </p>
-             <div
-  style={{
-    display: "flex",
-    gap: "10px",
-    marginTop: "15px"
-  }}
->
-  <a
-    href={`tel:${orderDetails.phone}`}
-    style={{
-      flex: 1,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "6px",
-      background: "#2563eb",
-      color: "#fff",
-      padding: "10px",
-      borderRadius: "8px",
-      textDecoration: "none",
-      fontWeight: "600"
-    }}
-  >
-    <Phone size={16} />
-    Call Patient
-  </a>
-
-  <button
-    onClick={() =>
-      window.open(
-        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(orderDetails.address)}`,
-        "_blank"
-      )
-    }
-    style={{
-      flex: 1,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "6px",
-      background: "#059669",
-      color: "#fff",
-      border: "none",
-      borderRadius: "8px",
-      cursor: "pointer",
-      fontWeight: "600"
-    }}
-  >
-    <Navigation size={16} />
-    Navigate
-  </button>
-</div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 2 CONTEXT: PATIENT ARRIVAL OTP VALIDATION SECURE BLOCK */}
-        {currentStep === 2 && (
-          <div style={{ textAlign: "center", padding: "10px 0" }}>
-            <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "#fef3c7", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px auto" }}>
-              <Lock size={20} />
-            </div>
-            <h4 style={{ margin: "0 0 6px 0", color: "#1e293b", fontSize: "16px", fontWeight: "600" }}>Patient Identity Arrival Verification</h4>
-            <p style={{ fontSize: "13px", color: "#64748b", maxWidth: "440px", margin: "0 auto 20px auto", lineHeight: "1.4" }}>
-              Ask the patient for the 6-digit code sent to <strong style={{ color: "#334155" }}>{orderDetails.phone}</strong> to verify entry and check identity before extracting details.
-            </p>
-
-            <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginBottom: "20px" }}>
-              {patientOtp.map((digit, index) => (
-                <input
-                  key={index}
-                  id={`otp-${index}`}
-                  type="text"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleOtpChange(e.target.value, index)}
-                  onKeyDown={(e) => handleKeyDown(e, index)}
-                  style={{
-                    width: "45px",
-                    height: "45px",
-                    textAlign: "center",
-                    fontSize: "18px",
-                    fontWeight: "700",
-                    border: "2px solid #cbd5e1",
-                    borderRadius: "8px",
-                    color: "#1e293b"
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* STEP 3 CONTEXT: BLOOD DRAW & TESTING SELECTION */}
-        {currentStep === 3 && (
-          <div>
-            <h4 style={{ margin: "0 0 16px 0", color: "#334155", display: "flex", alignItems: "center", gap: "8px" }}>
-              <FlaskConical size={18} style={{ color: "#d97706" }} /> Collection Phase: Phlebotomy Process
-            </h4>
-            <div style={{ background: "#fff", padding: "16px", border: "1px dashed #cbd5e1", borderRadius: "8px", marginBottom: "20px" }}>
-              <p style={{ margin: "0 0 8px 0", fontSize: "13px", color: "#64748b", fontWeight: "600", textTransform: "uppercase" }}>Required Diagnostic Tests</p>
-              <ul style={{ margin: "0 0 16px 0", paddingLeft: "20px", color: "#334155", fontSize: "14px" }}>
-                {orderDetails.prescribedTests.map((test, index) => <li key={index} style={{ marginBottom: "6px" }}>{test}</li>)}
-              </ul>
-              <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
-                <strong>Vial Matrix Setup:</strong> {orderDetails.sampleType}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 4 CONTEXT: SAMPLE IMAGE UPLOADER */}
-        {currentStep === 4 && (
-          <div>
-            <h4 style={{ margin: "0 0 4px 0", color: "#334155", display: "flex", alignItems: "center", gap: "8px" }}>
-              <Camera size={18} style={{ color: "#7c3aed" }} /> Security Upload: Sample Chain-of-Custody Proof
-            </h4>
-            <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 16px 0" }}>Take or attach a clear picture showing barcode tags clearly placed on the filled tubes.</p>
-            
-            <div 
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={(e) => { e.preventDefault(); setIsDragging(false); const file = e.dataTransfer.files[0]; if(file) setSampleImage(URL.createObjectURL(file)); }}
+          return (
+            <div
+              key={step}
               style={{
-                border: isDragging ? "2px dashed #7c3aed" : "2px dashed #cbd5e1",
-                background: isDragging ? "#f5f3ff" : "#f8fafc",
+                flex: 1,
+                minWidth: "120px",
+                padding: "10px",
                 borderRadius: "10px",
-                padding: "26px",
+                background: active ? "#ecfcfc" : done ? "#f0fdf4" : "#f8fafc",
+                color: active ? "#0f766e" : done ? "#15803d" : "#64748b",
+                fontWeight: "700",
                 textAlign: "center",
-                cursor: "pointer",
-                position: "relative",
-                marginBottom: "20px",
-                transition: "all 0.2s"
+                fontSize: "13px",
               }}
             >
-              {!sampleImage ? (
-                <label style={{ cursor: "pointer", display: "block", margin: 0 }}>
-                  <Upload size={28} style={{ color: "#94a3b8", margin: "0 auto 10px auto" }} />
-                  <span style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#475569", marginBottom: "2px" }}>Click or drag to attach sample photo</span>
-                  <span style={{ fontSize: "11px", color: "#94a3b8" }}>Accepts PNG, JPG formats</span>
-                  <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
-                </label>
-              ) : (
-                <div style={{ position: "relative", display: "inline-block" }}>
-                  <img src={sampleImage} alt="Vial Collection Sheet" style={{ maxHeight: "160px", borderRadius: "6px" }} />
-                  <button 
-                    onClick={() => setSampleImage(null)}
-                    style={{ position: "absolute", top: "-8px", right: "-8px", background: "#ef4444", color: "#fff", border: "none", borderRadius: "50%", width: "22px", height: "22px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              )}
+              {done ? "✓ " : ""}
+              {step}
             </div>
-          </div>
-        )}
+          );
+        })}
+      </div>
 
-        {/* STEP 5 CONTEXT: DIAGNOSTIC LOGISTICS DELIVERY HUB */}
-        {currentStep === 5 && (
-          <div>
-            <h4 style={{ margin: "0 0 16px 0", color: "#334155", display: "flex", alignItems: "center", gap: "8px" }}>
-              <Building2 size={18} style={{ color: "#059669" }} /> Logistics Phase: Diagnostic Lab Gateway Dropoff
-            </h4>
-            <div style={{ background: "#f0fdf4", padding: "16px", borderRadius: "8px", border: "1px solid #bbf7d0", marginBottom: "20px" }}>
-              <span style={{ display: "inline-block", padding: "2px 6px", background: "#dcfce7", color: "#15803d", borderRadius: "4px", fontSize: "10px", fontWeight: "700", textTransform: "uppercase", marginBottom: "8px" }}>Target Lab Branch</span>
-              <p style={{ margin: "0 0 4px 0", fontSize: "15px", fontWeight: "700", color: "#166534" }}>{orderDetails.diagnosticCenter}</p>
-              <p style={{ margin: 0, fontSize: "13px", color: "#166534", opacity: 0.9 }}>
-                Deliver items safely to the secure inventory intake receiving room and confirm cold-chain integrity protocols.
-              </p>
-              <div
-  style={{
-    marginTop: "15px",
-    display: "flex",
-    gap: "10px"
-  }}
->
-  <button
-    onClick={() =>
-      window.open(
-        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(orderDetails.diagnosticCenter)}`,
-        "_blank"
-      )
-    }
-    style={{
-      padding: "10px 16px",
-      background: "#059669",
-      color: "#fff",
-      border: "none",
-      borderRadius: "8px",
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      gap: "6px"
-    }}
-  >
-    <Navigation size={16} />
-    Navigate to Lab
-  </button>
-</div>
-            </div>
-          </div>
-        )}
+      <div
+        style={{
+          background: "#fff",
+          padding: "24px",
+          borderRadius: "12px",
+          border: "1px solid #e2e8f0",
+          marginBottom: "20px",
+        }}
+      >
+        <h3 style={{ marginTop: 0 }}>Patient Details</h3>
 
-        {/* CONTROLLER ACTION INTERFACES MAIN ACTION BUTTON */}
-        <button
-          onClick={handleNextStep}
+        <p>
+          <strong>Name:</strong> {booking.patientName}
+        </p>
+
+        <p>
+          <strong>Age/Gender:</strong> {booking.patientAge} /{" "}
+          {booking.patientSex}
+        </p>
+
+        <p style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <Phone size={15} /> {booking.patientMobile}
+        </p>
+
+        <p style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <MapPin size={15} /> {booking.patientAddress}
+        </p>
+
+        <p>
+          <strong>Date:</strong> {formatDate(booking.collectionDate)}
+        </p>
+
+        <p>
+          <strong>Slot:</strong> {booking.timeSlot}
+        </p>
+
+        <p>
+          <strong>Total:</strong> {formatAmount(booking.totalAmount)}
+        </p>
+      </div>
+
+      <div
+        style={{
+          background: "#ecfcfc",
+          padding: "20px",
+          borderRadius: "12px",
+          border: "1px solid #99f6e4",
+          marginBottom: "20px",
+        }}
+      >
+        <h3
           style={{
-            width: "100%",
-            padding: "14px",
-            border: "none",
-            borderRadius: "8px",
-            background: currentStep === 5 ? "#059669" : "#2563eb",
-            color: "#fff",
-            fontWeight: "700",
-            fontSize: "15px",
-            cursor: "pointer",
+            marginTop: 0,
+            color: "#0f766e",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            gap: "8px"
+            gap: "8px",
           }}
         >
-          <CheckCircle size={18} />
-          {currentStep === 1 && "Arrived at Patient House"}
-          {currentStep === 2 && "Verify Patient Arrival OTP"}
-          {currentStep === 3 && "Samples Barcoded & Sealed"}
-          {currentStep === 4 && "Verify & Confirm Image Upload"}
-          {currentStep === 5 && "Mark Delivered at Diagnostic Center"}
-        </button>
+          <FlaskConical size={18} /> Tests to Collect
+        </h3>
+
+        {booking.tests?.length ? (
+          booking.tests.map((test, index) => (
+            <div
+              key={`${booking.id}-${index}`}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                padding: "8px 0",
+                borderBottom:
+                  index < booking.tests.length - 1
+                    ? "1px solid #ccfbf1"
+                    : "none",
+              }}
+            >
+              <span>{getTestName(test)}</span>
+              <strong>{formatAmount(test.price)}</strong>
+            </div>
+          ))
+        ) : (
+          <p>No test details available.</p>
+        )}
       </div>
+
+      <div
+        style={{
+          background: "#fff",
+          padding: "24px",
+          borderRadius: "12px",
+          border: "1px solid #e2e8f0",
+          marginBottom: "20px",
+        }}
+      >
+        <h3 style={{ marginTop: 0 }}>Sample Proof Upload</h3>
+
+        <label
+          style={{
+            display: "block",
+            border: "2px dashed #cbd5e1",
+            borderRadius: "12px",
+            padding: "24px",
+            textAlign: "center",
+            cursor: "pointer",
+          }}
+        >
+          <input type="file" hidden onChange={handleImageChange} />
+
+          {sampleImage ? (
+            <img
+              src={sampleImage}
+              alt="Sample proof"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "220px",
+                borderRadius: "10px",
+              }}
+            />
+          ) : (
+            <>
+              <Upload />
+              <p>Upload sample image after collection</p>
+            </>
+          )}
+        </label>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleNextStep}
+        style={{
+          background: "#0f766e",
+          color: "#fff",
+          border: "none",
+          padding: "13px 24px",
+          borderRadius: "12px",
+          fontWeight: "800",
+          cursor: "pointer",
+          width: "100%",
+        }}
+      >
+        {currentStep < 5 ? "Continue Collection →" : "Complete Collection"}
+      </button>
+
+      {currentStep >= 5 && (
+        <p
+          style={{
+            marginTop: "12px",
+            color: "#64748b",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+          }}
+        >
+          <CheckCircle size={16} /> Ready to complete collection.
+        </p>
+      )}
     </div>
   );
 };
