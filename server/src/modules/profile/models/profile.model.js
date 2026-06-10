@@ -1,5 +1,25 @@
 const db = require("../../../config/db");
 
+function formatDateOnly(value) {
+  if (!value) return "";
+
+  if (typeof value === "string") {
+    if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+      return value.slice(0, 10);
+    }
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 const getTableName = (role) => {
   switch (role) {
     case "patient":
@@ -48,24 +68,22 @@ const mapCamelToSnake = (data) => {
     idProof: "id_proof",
 
     // Phlebotomist
-    // Phlebotomist
-phleboType: "phlebo_type",
-qualification: "qualification",
-specialization: "specialization",
-certificationNumber: "certification_number",
-availableDays: "available_days",
-availableTime: "available_time",
+    phleboType: "phlebo_type",
+    qualification: "qualification",
+    specialization: "specialization",
+    certificationNumber: "certification_number",
+    availableDays: "available_days",
+    availableTime: "available_time",
+    morningStart: "morning_start",
+    morningEnd: "morning_end",
+    eveningStart: "evening_start",
+    eveningEnd: "evening_end",
+    homeCollection: "home_collection",
+    emergencyAvailability: "emergency_availability",
+    governmentIdType: "government_id_type",
+    aadhaarFront: "aadhaar_front",
+    phlebotomyCertificate: "phlebotomy_certificate",
 
-morningStart: "morning_start",
-morningEnd: "morning_end",
-eveningStart: "evening_start",
-eveningEnd: "evening_end",
-
-homeCollection: "home_collection",
-emergencyAvailability: "emergency_availability",
-governmentIdType: "government_id_type",
-aadhaarFront: "aadhaar_front",
-phlebotomyCertificate: "phlebotomy_certificate",
     // Organization
     institutionName: "institution_name",
     institutionType: "institution_type",
@@ -111,13 +129,7 @@ approvedBy: "approved_by",
       key === "district" ||
       key === "state" ||
       key === "pincode" ||
-      key === "country" ||
-
-      // Ignored because these columns do not exist in phlebo_profiles table
-      key === "morningStart" ||
-      key === "morningEnd" ||
-      key === "eveningStart" ||
-      key === "eveningEnd"
+      key === "country"
     ) {
       return;
     }
@@ -160,7 +172,6 @@ const upsertProfile = async ({ userId, role, ...profileData }) => {
 
   const columns = ["user_id", ...Object.keys(mappedData)];
   const values = [userId, ...Object.values(mappedData)];
-
   const placeholders = columns.map(() => "?").join(", ");
 
   const updates = Object.keys(mappedData)
@@ -268,7 +279,7 @@ const getPatientFullProfileByUserId = async (userId) => {
     email: row.email || "",
     phone: row.phone || "",
     gender: row.gender || "",
-    dob: row.dob ? String(row.dob).slice(0, 10) : "",
+    dob: formatDateOnly(row.dob),
     address: row.address || "",
     city: row.city || "",
     district: row.district || "",
@@ -530,20 +541,20 @@ const [diagnosticWalkinRows] = await db.execute(
   const [teleRows] = await db.execute(
     `
     SELECT
-    id,
-    receipt_id,
-    patient_name,
-    patient_mobile,
-    patient_email,
-    patient_address,
-    specialization,
-    appointment_date,
-    time_slot,
-    consultation_fee AS total_amount,
-    COALESCE(booking_status, 'pending') AS status,
-    created_at
-FROM tele_consultation_bookings
-WHERE user_id = ?
+      id,
+      receipt_id,
+      patient_name,
+      patient_mobile,
+      patient_email,
+      patient_address,
+      specialization,
+      appointment_date,
+      time_slot,
+      consultation_fee AS total_amount,
+      COALESCE(booking_status, 'pending') AS status,
+      created_at
+    FROM tele_consultation_bookings
+    WHERE user_id = ?
     `,
     [userId]
   );

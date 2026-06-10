@@ -260,6 +260,11 @@ function parseJsonArray(value) {
 function formatPatientProfile(profile) {
   const dob = formatDateForInput(profile.dob);
 
+  const medicalHistory =
+    profile.medicalHistory ||
+    profile.medical_history ||
+    [];
+
   return {
     name: profile.name || "",
     email: profile.email || "",
@@ -267,18 +272,33 @@ function formatPatientProfile(profile) {
     gender: profile.gender || "",
     dob,
     age: dob ? calculateAgeFromDob(dob) : "",
+
     address: profile.address || "",
     city: profile.city || "",
     district: profile.district || "",
     state: profile.state || "",
     pincode: profile.pincode || "",
     country: profile.country || "India",
-    bloodGroup: profile.blood_group || "",
+
+    bloodGroup:
+      profile.bloodGroup ||
+      profile.blood_group ||
+      "",
+
     height: profile.height || "",
     weight: profile.weight || "",
-    medicalHistory: parseJsonArray(profile.medical_history),
-    hasOtherCondition: Boolean(profile.has_other_condition),
-    otherCondition: profile.other_condition || "",
+
+    medicalHistory: parseJsonArray(medicalHistory),
+
+    hasOtherCondition: Boolean(
+      profile.hasOtherCondition ||
+      profile.has_other_condition
+    ),
+
+    otherCondition:
+      profile.otherCondition ||
+      profile.other_condition ||
+      "",
   };
 }
 

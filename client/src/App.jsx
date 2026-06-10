@@ -30,8 +30,16 @@ import WalkInClinic from "./components/consultation/WalkInClinic";
 import TeleConsultationPage from "./components/consultation/TeleConsultationPage";
 
 import ConsultationChoice from "./components/appointments/ConsultationChoice";
-
 import DiagnosticPackage from "./components/packages/DiagnosticPackage";
+
+import { PhleboProvider } from "./context/PhleboContext";
+import PhleboSidebar from "./components/Phlebo/Sidebar";
+import PhleboTopBar from "./components/Phlebo/TopBar";
+import PhleboProfile from "./pages/Phlebo/Profile";
+import PhleboWallet from "./pages/Phlebo/Wallet";
+import PhleboTasksList from "./pages/Phlebo/TasksList";
+import PhleboActiveTask from "./pages/Phlebo/ActiveTask";
+import PhleboCompletedTasks from "./pages/Phlebo/CompletedTasks";
 
 import { ToastProvider } from "./shared/toast.js";
 
@@ -49,14 +57,11 @@ import {
 } from "./components/home/sections";
 
 export default function App() {
-
   const [scrolled, setScrolled] = useState(false);
-
   const [step, setStep] = useState(1);
-
   const [page, setPage] = useState("home");
-const [selectedPackageData, setSelectedPackageData] =
-  useState(null);
+  const [selectedPackageData, setSelectedPackageData] = useState(null);
+
   const [isLoggedIn, setIsLoggedIn] = useState(
     Boolean(localStorage.getItem("accessToken"))
   );
@@ -69,110 +74,162 @@ const [selectedPackageData, setSelectedPackageData] =
     }
   });
 
-  useEffect(() => {
+  const phleboPages = [
+    "phlebo-profile",
+    "phlebo-wallet",
+    "phlebo-tasks",
+    "phlebo-active",
+    "phlebo-completed",
+  ];
 
+  const isPhleboPortal = phleboPages.includes(page);
+  const isInternalPortal = isPhleboPortal;
+
+  useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
 
     window.addEventListener("scroll", onScroll);
 
     return () => window.removeEventListener("scroll", onScroll);
-
   }, []);
 
   return (
-
     <ToastProvider>
-
       <style>{GLOBAL_CSS}</style>
 
-      <TopBar />
+      {!isInternalPortal && (
+        <>
+          <TopBar />
 
-      <Navbar
-        scrolled={scrolled}
-        setPage={setPage}
-        setStep={setStep}
-        isLoggedIn={isLoggedIn}
-        user={user}
-        setIsLoggedIn={setIsLoggedIn}
-        setUser={setUser}
-      />
+          <Navbar
+            scrolled={scrolled}
+            setPage={setPage}
+            setStep={setStep}
+            isLoggedIn={isLoggedIn}
+            user={user}
+            setIsLoggedIn={setIsLoggedIn}
+            setUser={setUser}
+          />
+        </>
+      )}
 
-      {page=== "home" && (
+      {isPhleboPortal && user?.role === "phlebo" && (
+        <PhleboProvider>
+          <div
+            style={{
+              display: "flex",
+              minHeight: "100vh",
+              background: "#f8fafc",
+            }}
+          >
+            <PhleboSidebar currentTab={page} setPage={setPage} />
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <PhleboTopBar setPage={setPage} />
+
+              <main style={{ padding: "28px" }}>
+                {page === "phlebo-profile" && <PhleboProfile />}
+
+                {page === "phlebo-wallet" && <PhleboWallet />}
+
+                {page === "phlebo-tasks" && (
+                  <PhleboTasksList setPage={setPage} />
+                )}
+
+                {page === "phlebo-active" && (
+                  <PhleboActiveTask setPage={setPage} />
+                )}
+
+                {page === "phlebo-completed" && <PhleboCompletedTasks />}
+              </main>
+            </div>
+          </div>
+        </PhleboProvider>
+      )}
+
+      {isPhleboPortal && user?.role !== "phlebo" && (
+        <div style={{ padding: "120px 40px", textAlign: "center" }}>
+          <h1>Access Denied</h1>
+
+          <p>Only phlebo accounts can access this dashboard.</p>
+
+          <button
+            className="btn btn-login"
+            onClick={() => setPage("home")}
+            style={{ marginTop: 20 }}
+          >
+            Go Home
+          </button>
+        </div>
+      )}
+
+      {!isInternalPortal && page === "home" && (
         <>
           <HeroSection setPage={setPage} />
-
           <SearchSection />
-
           <AboutSection />
-
           <SpecialistsSection />
 
-          <PackagesSection setPage={setPage} />
+          <PackagesSection
+            setPage={setPage}
+            setSelectedPackageData={setSelectedPackageData}
+          />
 
           <FeaturesSection />
-
           <ServicesSection setPage={setPage} />
-
           <MetricsSection />
-
           <AppointmentSection />
-
           <BranchesSection />
-
           <TestimonialsSection />
-
           <CTASection setPage={setPage} />
         </>
       )}
 
-      {page === "homeservices" && <HomeServices />}
+      {!isInternalPortal && page === "homeservices" && <HomeServices />}
 
-      {page === "cardiology" && <Cardiology />}
+      {!isInternalPortal && page === "cardiology" && <Cardiology />}
 
-      {page === "bodydiagnostics" && <BodyDiagnostics />}
+      {!isInternalPortal && page === "bodydiagnostics" && <BodyDiagnostics />}
 
-      {page=== "diagnostic-walkin-centers" && (
+      {!isInternalPortal && page === "diagnostic-walkin-centers" && (
         <DiagnosticWalkInCenters />
       )}
 
-      {page === "blog" && (
-        <BlogPage setPage={setPage} />
-      )}
+      {!isInternalPortal && page === "blog" && <BlogPage setPage={setPage} />}
 
-      {page=== "about" && (
+      {!isInternalPortal && page === "about" && (
         <AboutPage setPage={setPage} />
       )}
 
-      {page === "consultation-choice" && (
+      {!isInternalPortal && page === "consultation-choice" && (
         <ConsultationChoice setPage={setPage} />
       )}
 
-      {page=== "walkin-clinic" && (
+      {!isInternalPortal && page === "walkin-clinic" && (
         <WalkInClinic setPage={setPage} />
       )}
 
-      {page === "tele-consultation" && (
+      {!isInternalPortal && page === "tele-consultation" && (
         <TeleConsultationPage />
       )}
-{page === "diagnostic-package" && (
-  <DiagnosticPackage
-    selectedPackageData={selectedPackageData}
-  />
-)}
 
-      {page === "consultancy-home" && (
+      {!isInternalPortal && page === "diagnostic-package" && (
+        <DiagnosticPackage selectedPackageData={selectedPackageData} />
+      )}
+
+      {!isInternalPortal && page === "consultancy-home" && (
         <ConsultancyHome setPage={setPage} />
       )}
 
-      {page === "pharmacy-home-delivery" && (
+      {!isInternalPortal && page === "pharmacy-home-delivery" && (
         <PharmacyHomeDelivery setPage={setPage} />
       )}
 
-      {page === "pharmacy-dashboard" && (
+      {!isInternalPortal && page === "pharmacy-dashboard" && (
         <PharmacyDashboard setPage={setPage} />
       )}
 
-      {page === "login" && (
+      {!isInternalPortal && page === "login" && (
         <Login
           setPage={setPage}
           setIsLoggedIn={setIsLoggedIn}
@@ -180,25 +237,19 @@ const [selectedPackageData, setSelectedPackageData] =
         />
       )}
 
-      {page=== "register" && (
+      {!isInternalPortal && page === "register" && (
         <Register setPage={setPage} />
       )}
 
-      {page === "profile" && user?.role === "patient" && (
-        <PatientProfile
-          setPage={setPage}
-          setUser={setUser}
-        />
+      {!isInternalPortal && page === "profile" && user?.role === "patient" && (
+        <PatientProfile setPage={setPage} setUser={setUser} />
       )}
 
-      {page === "profile" && user?.role !== "patient" && (
+      {!isInternalPortal && page === "profile" && user?.role !== "patient" && (
         <div style={{ padding: "120px 40px", textAlign: "center" }}>
-
           <h1>Access Denied</h1>
 
-          <p>
-            Only patient accounts can access the patient profile page.
-          </p>
+          <p>Only patient accounts can access the patient profile page.</p>
 
           <button
             className="btn btn-login"
@@ -207,22 +258,18 @@ const [selectedPackageData, setSelectedPackageData] =
           >
             Go Home
           </button>
-
         </div>
       )}
 
-      {page === "bookings" && user?.role === "patient" && (
+      {!isInternalPortal && page === "bookings" && user?.role === "patient" && (
         <PatientBookings setPage={setPage} />
       )}
 
-      {page === "bookings" && user?.role !== "patient" && (
+      {!isInternalPortal && page === "bookings" && user?.role !== "patient" && (
         <div style={{ padding: "120px 40px", textAlign: "center" }}>
-
           <h1>Access Denied</h1>
 
-          <p>
-            Only patient accounts can view previous bookings.
-          </p>
+          <p>Only patient accounts can view previous bookings.</p>
 
           <button
             className="btn btn-login"
@@ -231,48 +278,38 @@ const [selectedPackageData, setSelectedPackageData] =
           >
             Go Home
           </button>
-
         </div>
       )}
 
-      {page === "reports" && (
+      {!isInternalPortal && page === "reports" && (
         <div style={{ padding: "40px", maxWidth: "1000px", margin: "auto" }}>
-
           <h1>Test Reports</h1>
 
-          <p>
-            Uploaded PDFs and medical reports will appear here.
-          </p>
-
+          <p>Uploaded PDFs and medical reports will appear here.</p>
         </div>
       )}
 
-      {page === "help" && (
+      {!isInternalPortal && page === "help" && (
         <div style={{ padding: "40px", maxWidth: "1000px", margin: "auto" }}>
-
           <h1>Help & Support</h1>
 
-          <p>
-            Support information and contact details.
-          </p>
-
+          <p>Support information and contact details.</p>
         </div>
       )}
 
-      <Footer />
+      {!isInternalPortal && <Footer />}
 
-      <div className="fab-wrap">
-
-        <button
-          className="fab fab-chat"
-          title="AI Chat"
-          onClick={() => alert("AI Assistant Coming Soon")}
-        >
-          💬
-        </button>
-
-      </div>
-
+      {!isInternalPortal && (
+        <div className="fab-wrap">
+          <button
+            className="fab fab-chat"
+            title="AI Chat"
+            onClick={() => alert("AI Assistant Coming Soon")}
+          >
+            💬
+          </button>
+        </div>
+      )}
     </ToastProvider>
   );
 }
