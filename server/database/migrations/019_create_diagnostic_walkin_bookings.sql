@@ -31,8 +31,8 @@ CREATE TABLE diagnostic_walkin_bookings (
       'cancelled'
     ) DEFAULT 'pending',
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,--updated at removed
-
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
     FOREIGN KEY (user_id)
       REFERENCES users(id)
       ON DELETE CASCADE
