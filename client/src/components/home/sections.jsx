@@ -68,7 +68,7 @@ export function SpecialistsSection() {
 }
 
 /* ─── Health Packages ───────────────────────────────────── */
-export function PackagesSection() {
+export function PackagesSection({ setPage }) {
   return (
     <section id="health-packages" className="sec">
       <div className="wrap">
@@ -90,9 +90,44 @@ export function PackagesSection() {
                   <span className="pkg-save">{discount(curr, orig)}% off</span>
                 </div>
                 <div className="pkg-tests"><strong>Includes: </strong>{p.tests}</div>
-                <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", borderRadius: 10 }}>
-                  Book Now
-                </button>
+          <button
+  className="btn btn-primary"
+  style={{
+    width: "100%",
+    justifyContent: "center",
+    borderRadius: 10
+  }}
+  onClick={() => {
+
+  localStorage.setItem(
+    "selectedPackage",
+    JSON.stringify(p)
+  );
+
+  const token =
+    localStorage.getItem("accessToken");
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+
+  if (!token) {
+
+    localStorage.setItem(
+      "redirectAfterLogin",
+      "diagnostic-package"
+    );
+
+    setPage("login");
+    return;
+  }
+
+  setPage("diagnostic-package");
+}}
+>
+  Book Now
+</button>
               </div>
             );
           })}

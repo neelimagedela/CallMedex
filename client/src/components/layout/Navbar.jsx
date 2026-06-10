@@ -53,21 +53,25 @@ export default function Navbar({
     }
 
     if (item.scroll) {
-      const section = document.getElementById(item.scroll);
+  setPage("home");
 
-      if (section) {
-        const offset = 120;
-        const y =
-          section.getBoundingClientRect().top + window.pageYOffset - offset;
+  setTimeout(() => {
+    const section = document.getElementById(item.scroll);
 
-        window.scrollTo({
-          top: y,
-          behavior: "smooth",
-        });
-      }
+    if (section) {
+      const offset = 120;
+      const y =
+        section.getBoundingClientRect().top + window.pageYOffset - offset;
 
-      return;
+      window.scrollTo({
+        top: y,
+        behavior: "smooth",
+      });
     }
+  }, 500);
+
+  return;
+}
 
     if (item.href) {
       window.open(item.href, "_blank", "noopener,noreferrer");

@@ -1,8 +1,6 @@
 CREATE TABLE IF NOT EXISTS clinic_appointments (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
-
   receipt_id VARCHAR(30) UNIQUE NULL,
-
   user_id BIGINT NULL,
 
   patient_name VARCHAR(150) NOT NULL,
@@ -19,7 +17,7 @@ CREATE TABLE IF NOT EXISTS clinic_appointments (
 
   consultation_fee DECIMAL(10,2) NOT NULL DEFAULT 700.00,
 
-  status ENUM('pending', 'confirmed', 'completed', 'cancelled')
+  status ENUM('pending','confirmed','completed','cancelled')
   NOT NULL DEFAULT 'pending',
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

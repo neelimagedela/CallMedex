@@ -1,33 +1,39 @@
-CREATE TABLE IF NOT EXISTS diagnostic_walkin_bookings (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE diagnostic_walkin_bookings (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
 
-  receipt_id VARCHAR(50) UNIQUE NOT NULL,
+    receipt_id VARCHAR(50) UNIQUE NOT NULL,
 
-  user_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
 
-  patient_name VARCHAR(150) NOT NULL,
-  patient_age INT NOT NULL,
-  patient_sex VARCHAR(20) NOT NULL,
-  patient_mobile VARCHAR(20) NOT NULL,
-  patient_email VARCHAR(120) NOT NULL,
-  patient_address TEXT NOT NULL,
+    patient_name VARCHAR(255) NOT NULL,
+    patient_age INT NOT NULL,
+    patient_sex VARCHAR(20) NOT NULL,
 
-  branch VARCHAR(100) NOT NULL,
+    patient_mobile VARCHAR(20) NOT NULL,
+    patient_email VARCHAR(255) NOT NULL,
 
-  tests JSON NOT NULL,
+    patient_address TEXT NOT NULL,
 
-  walkin_date DATE NOT NULL,
-  time_slot VARCHAR(50) NOT NULL,
+    branch VARCHAR(255) NOT NULL,
 
-  total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    tests JSON NOT NULL,
 
-  status ENUM('pending', 'confirmed', 'completed', 'cancelled') DEFAULT 'pending',
+    walkin_date DATE NOT NULL,
 
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    time_slot VARCHAR(50) NOT NULL,
 
-  CONSTRAINT fk_diagnostic_walkin_user
+    total_amount DECIMAL(10,2) NOT NULL,
+
+    status ENUM(
+      'pending',
+      'confirmed',
+      'completed',
+      'cancelled'
+    ) DEFAULT 'pending',
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,--updated at removed
+
     FOREIGN KEY (user_id)
-    REFERENCES users(id)
-    ON DELETE CASCADE
+      REFERENCES users(id)
+      ON DELETE CASCADE
 );

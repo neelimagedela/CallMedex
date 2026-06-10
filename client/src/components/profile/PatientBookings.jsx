@@ -19,9 +19,11 @@ export default function PatientBookings({ setPage }) {
   const [bookings, setBookings] = useState([]);
   const [active, setActive] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [diagnosticBookings, setDiagnosticBookings] = useState([]);
 
   useEffect(() => {
     loadBookings();
+    loadDiagnosticBookings();
   }, []);
 
   async function loadBookings() {
@@ -42,11 +44,24 @@ export default function PatientBookings({ setPage }) {
       setLoading(false);
     }
   }
+  async function loadDiagnosticBookings() {
+  try {
+const res = await api.get("/api/diagnostic-package/my-bookings");
+    if (res.data.success) {
+      setDiagnosticBookings(res.data.data || []);
+    }
+  } catch (err) {
+    toast.error("Could not load diagnostic bookings");
+  }
+}
 
-  const filtered = useMemo(() => {
-    if (active === "all") return bookings;
-    return bookings.filter((b) => b.bookingType === active);
-  }, [active, bookings]);
+const filtered = useMemo(() => {
+  const all = [...bookings, ...diagnosticBookings];
+
+  if (active === "all") return all;
+
+  return all.filter((b) => b.bookingType === active);
+}, [active, bookings, diagnosticBookings]);
 
   if (loading) {
     return (

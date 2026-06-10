@@ -437,48 +437,67 @@ const getAllPatientBookingsByUserId = async (userId) => {
     [userId]
   );
 
-  const [walkInCenterRows] = await db.execute(
-    `
-    SELECT
-      id,
-      receipt_id,
-      patient_name,
-      patient_mobile,
-      patient_email,
-      patient_address,
-      branch,
-      tests,
-      walkin_date AS appointment_date,
-      time_slot,
-      total_amount,
-      status,
-      created_at
-    FROM diagnostic_walkin_bookings
-    WHERE user_id = ?
-    `,
-    [userId]
-  );
-
+const [walkInCenterRows] = await db.execute(
+`
+SELECT
+  id,
+  receipt_id,
+  package_name,
+  patient_name,
+  patient_mobile,
+  patient_email,
+  patient_address,
+  appointment_date,
+  time_slot,
+  total_amount,
+  booking_status,
+  created_at
+FROM diagnostic_package_bookings
+WHERE user_id = ?
+`,
+[userId]
+);
+const [diagnosticWalkinRows] = await db.execute(
+  `
+  SELECT
+    id,
+    receipt_id,
+    patient_name,
+    patient_mobile,
+    patient_email,
+    patient_address,
+    branch,
+    tests,
+    walkin_date,
+    time_slot,
+    total_amount,
+    status,
+    created_at
+  FROM diagnostic_walkin_bookings
+  WHERE user_id = ?
+  `,
+  [userId]
+);
   const [clinicRows] = await db.execute(
-    `
-    SELECT
-      id,
-      receipt_id,
-      patient_name,
-      patient_mobile,
-      patient_email,
-      patient_address,
-      clinic_branch AS branch,
-      appointment_date,
-      time_slot,
-      consultation_fee AS total_amount,
-      status,
-      created_at
-    FROM clinic_appointments
-    WHERE user_id = ?
-    `,
-    [userId]
-  );
+  `
+  SELECT
+    id,
+    receipt_id,
+    patient_name,
+    patient_mobile,
+    patient_email,
+    patient_address,
+    branch,
+    appointment_date,
+    time_slot,
+    total_amount,
+    status,
+    created_at
+  FROM appointments
+  WHERE user_id = ?
+  `,
+  [userId]
+);
 
   const [consultationHomeRows] = await db.execute(
     `
@@ -668,27 +687,66 @@ WHERE user_id = ?
       createdAt: row.created_at,
     })),
 
-    ...walkInCenterRows.map((row) => ({
-      id: `walkin-center-${row.id}`,
-      receiptId: row.receipt_id,
-      bookingType: "walkin-center",
-      typeLabel: "Walk-in Center Test",
-      date: row.appointment_date,
-      timeSlot: row.time_slot,
-      patientName: row.patient_name,
-      patientMobile: row.patient_mobile,
-      patientEmail: row.patient_email,
-      locationLabel: "Branch",
-      locationValue: row.branch,
-      totalAmount: money(row.total_amount),
-      status: row.status || "pending",
-      detailTitle: "Selected Tests",
-      items: safeJsonArray(row.tests).map((item) => ({
-        name: item.name || item.test_name || "Test",
-        price: money(item.price),
-      })),
-      createdAt: row.created_at,
-    })),
+   ...walkInCenterRows.map((row) => ({
+  id: `walkin-center-${row.id}`,
+   receiptId: row.receipt_id,
+  bookingType: "walkin-center",
+  typeLabel: "Diagnostic Package",
+
+  date: row.appointment_date,
+  timeSlot: row.time_slot,
+
+  patientName: row.patient_name,
+  patientMobile: row.patient_mobile,
+  patientEmail: row.patient_email,
+
+  locationLabel: "Address",
+  locationValue: row.patient_address,
+
+  totalAmount: money(row.total_amount),
+
+  status: row.booking_status || "pending",
+
+  detailTitle: "Package",
+
+  items: [
+    {
+      name: row.package_name,
+      price: money(row.total_amount),
+    },
+  ],
+
+  createdAt: row.created_at,
+})),
+...diagnosticWalkinRows.map((row) => ({
+  id: `diagnostic-walkin-${row.id}`,
+  receiptId: row.receipt_id,
+  bookingType: "walkin-center",
+  typeLabel: "Walk-in Diagnostic Test",
+
+  date: row.walkin_date,
+  timeSlot: row.time_slot,
+
+  patientName: row.patient_name,
+  patientMobile: row.patient_mobile,
+  patientEmail: row.patient_email,
+
+  locationLabel: "Branch",
+  locationValue: row.branch,
+
+  totalAmount: money(row.total_amount),
+
+  status: row.status || "pending",
+
+  detailTitle: "Selected Tests",
+
+  items: safeJsonArray(row.tests).map((item) => ({
+    name: item.name || item.test_name || "Test",
+    price: money(item.price),
+  })),
+
+  createdAt: row.created_at,
+})),
 
     ...clinicRows.map((row) => ({
       id: `clinic-${row.id}`,

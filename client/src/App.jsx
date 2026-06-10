@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
-
 import AboutPage from "./components/about/AboutPage";
 import PatientBookings from "./components/profile/PatientBookings";
 import PatientProfile from "./components/profile/PatientProfile";
+import { useState, useEffect } from "react";
 
 import GLOBAL_CSS from "./styles/globalStyles";
 import "./styles/index.css";
@@ -20,24 +19,21 @@ import HomeServices from "./components/homeServices/HomeServices";
 import Cardiology from "./components/cardiology/Cardiology";
 import BodyDiagnostics from "./components/diagnostics/BodyDiagnostics";
 import BlogPage from "./components/blog/BlogPage";
+
 import PharmacyHomeDelivery from "./components/pharmacy/PharmacyHomeDelivery";
 import PharmacyDashboard from "./components/pharmacyDashboard/PharmacyDashboard";
+
 import ConsultancyHome from "./components/consultation/consultancyHome";
 import DiagnosticWalkInCenters from "./components/diagnostics/DiagnosticWalkInCenters";
 
 import WalkInClinic from "./components/consultation/WalkInClinic";
 import TeleConsultationPage from "./components/consultation/TeleConsultationPage";
+
 import ConsultationChoice from "./components/appointments/ConsultationChoice";
 
-import { ToastProvider } from "./shared/toast.js";
-import { PhleboProvider } from "./context/PhleboContext";
+import DiagnosticPackage from "./components/packages/DiagnosticPackage";
 
-import DashboardLayout from "./components/layout/DashboardLayout";
-import PhleboProfile from "./pages/Phlebo/Profile";
-import PhleboWallet from "./pages/Phlebo/Wallet";
-import PhleboTasks from "./pages/Phlebo/TasksList";
-import PhleboActiveTask from "./pages/Phlebo/ActiveTask";
-import CompletedTasks from "./pages/Phlebo/CompletedTasks";
+import { ToastProvider } from "./shared/toast.js";
 
 import {
   AboutSection,
@@ -53,10 +49,14 @@ import {
 } from "./components/home/sections";
 
 export default function App() {
-  const [scrolled, setScrolled] = useState(false);
-  const [step, setStep] = useState(1);
-  const [page, setPage] = useState("home");
 
+  const [scrolled, setScrolled] = useState(false);
+
+  const [step, setStep] = useState(1);
+
+  const [page, setPage] = useState("home");
+const [selectedPackageData, setSelectedPackageData] =
+  useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(
     Boolean(localStorage.getItem("accessToken"))
   );
@@ -70,37 +70,19 @@ export default function App() {
   });
 
   useEffect(() => {
+
     const onScroll = () => setScrolled(window.scrollY > 20);
 
     window.addEventListener("scroll", onScroll);
 
     return () => window.removeEventListener("scroll", onScroll);
+
   }, []);
 
-  /*
-    PHLEBO DASHBOARD ROUTE
-    This stays separate so phlebo dashboard does not show public navbar/footer.
-  */
-  if (page.startsWith("phlebo-")) {
-    return (
-      <ToastProvider>
-        <PhleboProvider setPage={setPage}>
-          <style>{GLOBAL_CSS}</style>
-
-          <DashboardLayout currentTab={page} setPage={setPage}>
-            {page === "phlebo-profile" && <PhleboProfile />}
-            {page === "phlebo-wallet" && <PhleboWallet />}
-            {page === "phlebo-tasks" && <PhleboTasks />}
-            {page === "phlebo-active" && <PhleboActiveTask />}
-            {page === "phlebo-completed" && <CompletedTasks />}
-          </DashboardLayout>
-        </PhleboProvider>
-      </ToastProvider>
-    );
-  }
-
   return (
+
     <ToastProvider>
+
       <style>{GLOBAL_CSS}</style>
 
       <TopBar />
@@ -115,19 +97,30 @@ export default function App() {
         setUser={setUser}
       />
 
-      {page === "home" && (
+      {page=== "home" && (
         <>
           <HeroSection setPage={setPage} />
+
           <SearchSection />
+
           <AboutSection />
+
           <SpecialistsSection />
-          <PackagesSection />
+
+          <PackagesSection setPage={setPage} />
+
           <FeaturesSection />
+
           <ServicesSection setPage={setPage} />
+
           <MetricsSection />
+
           <AppointmentSection />
+
           <BranchesSection />
+
           <TestimonialsSection />
+
           <CTASection setPage={setPage} />
         </>
       )}
@@ -138,21 +131,38 @@ export default function App() {
 
       {page === "bodydiagnostics" && <BodyDiagnostics />}
 
-      {page === "diagnostic-walkin-centers" && <DiagnosticWalkInCenters />}
+      {page=== "diagnostic-walkin-centers" && (
+        <DiagnosticWalkInCenters />
+      )}
 
-      {page === "blog" && <BlogPage setPage={setPage} />}
+      {page === "blog" && (
+        <BlogPage setPage={setPage} />
+      )}
 
-      {page === "about" && <AboutPage setPage={setPage} />}
+      {page=== "about" && (
+        <AboutPage setPage={setPage} />
+      )}
 
       {page === "consultation-choice" && (
         <ConsultationChoice setPage={setPage} />
       )}
 
-      {page === "walkin-clinic" && <WalkInClinic setPage={setPage} />}
+      {page=== "walkin-clinic" && (
+        <WalkInClinic setPage={setPage} />
+      )}
 
-      {page === "tele-consultation" && <TeleConsultationPage />}
+      {page === "tele-consultation" && (
+        <TeleConsultationPage />
+      )}
+{page === "diagnostic-package" && (
+  <DiagnosticPackage
+    selectedPackageData={selectedPackageData}
+  />
+)}
 
-      {page === "consultancy-home" && <ConsultancyHome setPage={setPage} />}
+      {page === "consultancy-home" && (
+        <ConsultancyHome setPage={setPage} />
+      )}
 
       {page === "pharmacy-home-delivery" && (
         <PharmacyHomeDelivery setPage={setPage} />
@@ -170,16 +180,25 @@ export default function App() {
         />
       )}
 
-      {page === "register" && <Register setPage={setPage} />}
+      {page=== "register" && (
+        <Register setPage={setPage} />
+      )}
 
       {page === "profile" && user?.role === "patient" && (
-        <PatientProfile setPage={setPage} setUser={setUser} />
+        <PatientProfile
+          setPage={setPage}
+          setUser={setUser}
+        />
       )}
 
       {page === "profile" && user?.role !== "patient" && (
         <div style={{ padding: "120px 40px", textAlign: "center" }}>
+
           <h1>Access Denied</h1>
-          <p>Only patient accounts can access the patient profile page.</p>
+
+          <p>
+            Only patient accounts can access the patient profile page.
+          </p>
 
           <button
             className="btn btn-login"
@@ -188,6 +207,7 @@ export default function App() {
           >
             Go Home
           </button>
+
         </div>
       )}
 
@@ -197,8 +217,12 @@ export default function App() {
 
       {page === "bookings" && user?.role !== "patient" && (
         <div style={{ padding: "120px 40px", textAlign: "center" }}>
+
           <h1>Access Denied</h1>
-          <p>Only patient accounts can view previous bookings.</p>
+
+          <p>
+            Only patient accounts can view previous bookings.
+          </p>
 
           <button
             className="btn btn-login"
@@ -207,26 +231,38 @@ export default function App() {
           >
             Go Home
           </button>
+
         </div>
       )}
 
       {page === "reports" && (
         <div style={{ padding: "40px", maxWidth: "1000px", margin: "auto" }}>
+
           <h1>Test Reports</h1>
-          <p>Uploaded PDFs and medical reports will appear here.</p>
+
+          <p>
+            Uploaded PDFs and medical reports will appear here.
+          </p>
+
         </div>
       )}
 
       {page === "help" && (
         <div style={{ padding: "40px", maxWidth: "1000px", margin: "auto" }}>
+
           <h1>Help & Support</h1>
-          <p>Support information and contact details.</p>
+
+          <p>
+            Support information and contact details.
+          </p>
+
         </div>
       )}
 
       <Footer />
 
       <div className="fab-wrap">
+
         <button
           className="fab fab-chat"
           title="AI Chat"
@@ -234,7 +270,9 @@ export default function App() {
         >
           💬
         </button>
+
       </div>
+
     </ToastProvider>
   );
 }

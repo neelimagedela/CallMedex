@@ -18,6 +18,7 @@
   "017_create_clinic_appointments.sql",
   "018_create_tele_consultation_bookings.sql",
   "019_create_diagnostic_walkin_bookings.sql",
+  "020_create_diagnostic_package_bookings.sql",
   "021_add_slot_columns_to_phlebo_profiles.sql",
   "022_add_gps_phlebo_home_service.sql"
 ]

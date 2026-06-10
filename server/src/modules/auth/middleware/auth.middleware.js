@@ -20,6 +20,7 @@ const authenticate = async (req, res, next) => {
       req.user = decoded;
       next();
     } catch (err) {
+      console.log("JWT ERROR:", err);
       throw new AppError("Invalid or expired access token", 401);
     }
   } catch (error) {
