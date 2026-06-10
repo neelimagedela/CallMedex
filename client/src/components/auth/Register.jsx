@@ -3,7 +3,7 @@ import "./Auth.css";
 
 import DoctorFields from "./roles/doctor/DoctorFields";
 import PatientFields from "./roles/patient/PatientFields";
-import AdminFields from "./roles/admin/AdminFields";
+import AdminFields from "./roles/staff/StaffFields.jsx";
 import PharmacyFields from "./roles/pharmacy/PharmacyFields";
 import OrganizationFields from "./roles/organization/OrganizationFields";
 import PhleboFields from "./roles/phlebo/PhleboFields";
@@ -40,7 +40,11 @@ const Register = ({ setPage }) => {
   const [userId, setUserId] = useState(null);
 
   const normalizedRole =
-    selectedRole === "phlebotomist" ? "phlebo" : selectedRole;
+  selectedRole === "phlebotomist"
+    ? "phlebo"
+    : selectedRole === "staff"
+    ? "staff"
+    : selectedRole;
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -123,13 +127,63 @@ const Register = ({ setPage }) => {
       return;
     }
 
+     if (selectedRole === "staff") {
+
+    if (!roleData.organizationName?.trim()) {
+      toast.warning("Organization Name is required.");
+      return;
+    }
+
+    if (!roleData.staffRole) {
+      toast.warning("Staff Role is required.");
+      return;
+    }
+
+    if (!roleData.department) {
+      toast.warning("Department is required.");
+      return;
+    }
+
+    if (
+      roleData.experience === "" ||
+      roleData.experience === null
+    ) {
+      toast.warning("Experience is required.");
+      return;
+    }
+
+    if (!roleData.alternatePhone) {
+      toast.warning("Alternate Phone is required.");
+      return;
+    }
+
+    if (!/^[6-9]\d{9}$/.test(roleData.alternatePhone)) {
+      toast.warning(
+        "Alternate Phone must be a valid 10-digit mobile number."
+      );
+      return;
+    }
+
+    if (!roleData.aadhaarUpload) {
+      toast.warning("Please upload Aadhaar.");
+      return;
+    }
+
+    if (!roleData.medicalDegreeUpload) {
+      toast.warning("Please upload Medical Degree.");
+      return;
+    }
+  }
+    
+   console.log("ROLE DATA:", roleData); 
     setLoading(true);
 
     try {
       const payload = {
-        ...formData,
-        role: normalizedRole,
-      };
+  ...formData,
+  role: normalizedRole,
+  ...roleData,
+};
 
       const response = await api.post("/auth/register", payload);
 
@@ -560,18 +614,18 @@ const Register = ({ setPage }) => {
               required
             >
               <option value="">Choose Role</option>
-              <option value="admin">Admin</option>
               <option value="doctor">Doctor</option>
               <option value="phlebotomist">Phlebotomist</option>
               <option value="patient">Patient</option>
               <option value="organization">Organization</option>
+              <option value="staff">Staff</option>
               <option value="pharmacy">Pharmacy</option>
             </select>
           </div>
 
           {selectedRole === "doctor" && <DoctorFields onChange={setRoleData} />}
           {selectedRole === "patient" && <PatientFields onChange={setRoleData} />}
-          {selectedRole === "admin" && <AdminFields onChange={setRoleData} />}
+          {selectedRole === "staff" && <AdminFields onChange={setRoleData} />}
           {selectedRole === "pharmacy" && <PharmacyFields onChange={setRoleData} />}
           {selectedRole === "organization" && (
             <OrganizationFields onChange={setRoleData} />
