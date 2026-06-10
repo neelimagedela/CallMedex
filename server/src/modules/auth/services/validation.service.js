@@ -32,7 +32,8 @@ const registerSchema = z.object({
         "diagnostic",
         "consultancy",
         "pharmacy",
-        "organization"
+        "organization",
+        "staff",
     ], { errorMap: () => ({ message: "Invalid role selected" }) }),
 
     gender: z

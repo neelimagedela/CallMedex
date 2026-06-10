@@ -175,7 +175,6 @@ const Register = ({ setPage }) => {
     }
   }
     
-   console.log("ROLE DATA:", roleData); 
     setLoading(true);
 
     try {

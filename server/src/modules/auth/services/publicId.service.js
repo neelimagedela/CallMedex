@@ -6,7 +6,8 @@ const rolePrefixes = {
     diagnostic: "DIA",
     consultancy: "CON",
     pharmacy: "PHM",
-    organization: "ORG"
+    organization: "ORG",
+    staff: "STF"
 };
 const generatePublicUserId = (role, internalId) => {
     const prefix = rolePrefixes[role];

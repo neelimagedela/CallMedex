@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS staff_profiles (
 
     aadhaar_upload VARCHAR(255) NULL,
 
-    medical_degree_upload VARCHAR(255) NULL,
+    medical_degree_upload VARCHAR(500) NULL,
 
     approval_status ENUM(
         'pending',

@@ -15,5 +15,6 @@ MODIFY COLUMN role ENUM(
     'diagnostic',
     'consultancy',
     'pharmacy',
-    'organization'
+    'organization',
+    'staff'
 ) NOT NULL;
