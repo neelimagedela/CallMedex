@@ -12,6 +12,8 @@ import HeroSection from "./components/home/Herosection";
 import SearchSection from "./components/home/Searchsection";
 import Footer from "./components/layout/Footer";
 
+import LabTechnicianDashboard from "./components/Staff/LabTechnicianDashboard";
+
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
 
@@ -82,8 +84,11 @@ export default function App() {
     "phlebo-completed",
   ];
 
+  const staffPages = ["lab-technician-dashboard"];
+
   const isPhleboPortal = phleboPages.includes(page);
-  const isInternalPortal = isPhleboPortal;
+  const isStaffPortal = staffPages.includes(page);
+  const isInternalPortal = isPhleboPortal || isStaffPortal;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -161,6 +166,10 @@ export default function App() {
             Go Home
           </button>
         </div>
+      )}
+
+      {isStaffPortal && page === "lab-technician-dashboard" && (
+        <LabTechnicianDashboard setPage={setPage} />
       )}
 
       {!isInternalPortal && page === "home" && (

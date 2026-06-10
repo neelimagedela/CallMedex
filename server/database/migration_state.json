@@ -20,5 +20,8 @@
   "019_create_diagnostic_walkin_bookings.sql",
   "020_create_diagnostic_package_bookings.sql",
   "021_add_slot_columns_to_phlebo_profiles.sql",
-  "022_add_gps_phlebo_home_service.sql"
+  "022_add_gps_phlebo_home_service.sql",
+  "023_add_staff_to_users_role.sql",
+  "024_modify_staff_upload_columns.sql",
+  "025_changing_status.sql"
 ]

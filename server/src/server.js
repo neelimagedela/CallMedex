@@ -8,7 +8,7 @@ const rateLimit = require("express-rate-limit");
 const path = require("path");
 
 const db = require("./config/db");
-
+const staffRoutes = require("./modules/staff/staff.routes");
 const authRoutes = require("./modules/auth/routes/auth.routes");
 const profileRoutes = require("./modules/profile/routes/profile.routes");
 const appointmentRoutes = require("./modules/appointment/routes/appointment.routes");
@@ -35,7 +35,7 @@ app.use(
 
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
-
+app.use("/api/staff", staffRoutes);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 25,

@@ -40,11 +40,11 @@ const Register = ({ setPage }) => {
   const [userId, setUserId] = useState(null);
 
   const normalizedRole =
-  selectedRole === "phlebotomist"
-    ? "phlebo"
-    : selectedRole === "staff"
-    ? "staff"
-    : selectedRole;
+    selectedRole === "phlebotomist"
+      ? "phlebo"
+      : selectedRole === "staff"
+      ? "staff"
+      : selectedRole;
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -127,62 +127,56 @@ const Register = ({ setPage }) => {
       return;
     }
 
-     if (selectedRole === "staff") {
+    if (selectedRole === "staff") {
+      if (!roleData.organizationName?.trim()) {
+        toast.warning("Organization Name is required.");
+        return;
+      }
 
-    if (!roleData.organizationName?.trim()) {
-      toast.warning("Organization Name is required.");
-      return;
+      if (!roleData.staffRole) {
+        toast.warning("Staff Role is required.");
+        return;
+      }
+
+      if (!roleData.department) {
+        toast.warning("Department is required.");
+        return;
+      }
+
+      if (roleData.experience === "" || roleData.experience === null) {
+        toast.warning("Experience is required.");
+        return;
+      }
+
+      if (!roleData.alternatePhone) {
+        toast.warning("Alternate Phone is required.");
+        return;
+      }
+
+      if (!/^[6-9]\d{9}$/.test(roleData.alternatePhone)) {
+        toast.warning("Alternate Phone must be a valid 10-digit mobile number.");
+        return;
+      }
+
+      if (!roleData.aadhaarUpload) {
+        toast.warning("Please upload Aadhaar.");
+        return;
+      }
+
+      if (!roleData.medicalDegreeUpload) {
+        toast.warning("Please upload Medical Degree.");
+        return;
+      }
     }
 
-    if (!roleData.staffRole) {
-      toast.warning("Staff Role is required.");
-      return;
-    }
-
-    if (!roleData.department) {
-      toast.warning("Department is required.");
-      return;
-    }
-
-    if (
-      roleData.experience === "" ||
-      roleData.experience === null
-    ) {
-      toast.warning("Experience is required.");
-      return;
-    }
-
-    if (!roleData.alternatePhone) {
-      toast.warning("Alternate Phone is required.");
-      return;
-    }
-
-    if (!/^[6-9]\d{9}$/.test(roleData.alternatePhone)) {
-      toast.warning(
-        "Alternate Phone must be a valid 10-digit mobile number."
-      );
-      return;
-    }
-
-    if (!roleData.aadhaarUpload) {
-      toast.warning("Please upload Aadhaar.");
-      return;
-    }
-
-    if (!roleData.medicalDegreeUpload) {
-      toast.warning("Please upload Medical Degree.");
-      return;
-    }
-  }
-    
     setLoading(true);
 
     try {
       const payload = {
-  ...formData,
-  role: normalizedRole,
-  ...roleData,
-};
+        ...formData,
+        role: normalizedRole,
+        ...roleData,
+      };
 
       const response = await api.post("/auth/register", payload);
 
@@ -210,10 +204,13 @@ const Register = ({ setPage }) => {
       } else if (status === 400) {
         toast.error(msg || "Some fields are invalid. Please review your details.");
       } else if (status === 429) {
-        toast.warning("Too many requests. Please wait a few minutes before trying again.");
+        toast.warning(
+          "Too many requests. Please wait a few minutes before trying again."
+        );
       } else {
         toast.error(
-          msg || "Unable to register right now. Please check your internet and try again."
+          msg ||
+            "Unable to register right now. Please check your internet and try again."
         );
       }
     } finally {
@@ -259,6 +256,21 @@ const Register = ({ setPage }) => {
         ...cleanedRoleData,
       });
 
+      const isLabTechnicianStaff =
+        normalizedRole === "staff" &&
+        roleData.staffRole === "Lab Technician" &&
+        roleData.organizationName?.trim();
+
+      if (isLabTechnicianStaff) {
+        toast.success("Lab Technician account created successfully!");
+
+        setTimeout(() => {
+          setPage("lab-technician-dashboard");
+        }, 800);
+
+        return;
+      }
+
       toast.success(
         "Your account has been created and verified successfully! You can now sign in."
       );
@@ -272,7 +284,8 @@ const Register = ({ setPage }) => {
 
       if (status === 400) {
         toast.error(
-          msg || "The OTP you entered is incorrect or has expired. Please request a new one."
+          msg ||
+            "The OTP you entered is incorrect or has expired. Please request a new one."
         );
       } else if (status === 401) {
         toast.error("Session expired. Please go back and start registration again.");
@@ -310,13 +323,13 @@ const Register = ({ setPage }) => {
     } catch (err) {
       console.log("RESEND OTP ERROR:", err.response?.data || err.message);
 
-        const msg =
-          err.response?.data?.message ||
-          err.response?.data?.error ||
-          err.message ||
-          "Could not resend OTP. Please try again.";
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Could not resend OTP. Please try again.";
 
-        toast.error(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -623,12 +636,21 @@ const Register = ({ setPage }) => {
           </div>
 
           {selectedRole === "doctor" && <DoctorFields onChange={setRoleData} />}
-          {selectedRole === "patient" && <PatientFields onChange={setRoleData} />}
+
+          {selectedRole === "patient" && (
+            <PatientFields onChange={setRoleData} />
+          )}
+
           {selectedRole === "staff" && <AdminFields onChange={setRoleData} />}
-          {selectedRole === "pharmacy" && <PharmacyFields onChange={setRoleData} />}
+
+          {selectedRole === "pharmacy" && (
+            <PharmacyFields onChange={setRoleData} />
+          )}
+
           {selectedRole === "organization" && (
             <OrganizationFields onChange={setRoleData} />
           )}
+
           {selectedRole === "phlebotomist" && (
             <PhleboFields onChange={setRoleData} />
           )}
