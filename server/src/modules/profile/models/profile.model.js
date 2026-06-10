@@ -18,8 +18,8 @@ const getTableName = (role) => {
     case "organization":
       return "organization_profiles";
 
-    case "admin":
-      return "admin_profiles";
+    case "staff":
+      return "staff_profiles";
 
     default:
       throw new Error(`Invalid role for onboarding: ${role}`);
@@ -83,18 +83,16 @@ phlebotomyCertificate: "phlebotomy_certificate",
     governmentLicense: "government_license",
     authorizedPersonIdProof: "authorized_person_id_proof",
 
-    // Admin
-    accessLevel: "access_level",
-    officeLocation: "office_location",
-    joiningDate: "joining_date",
-    officialEmail: "official_email",
-    alternatePhone: "alternate_phone",
-    securityQuestion: "security_question",
-    securityAnswer: "security_answer",
-    twoFAEnabled: "two_fa_enabled",
-    permissions: "permissions",
-    aadhaarUpload: "aadhaar_upload",
-    governmentIdProof: "government_id_proof",
+    // staff
+    organizationName: "organization_name",
+staffRole: "staff_role",
+department: "department",
+experience: "experience",
+alternatePhone: "alternate_phone",
+aadhaarUpload: "aadhaar_upload",
+medicalDegreeUpload: "medical_degree_upload",
+approvalStatus: "approval_status",
+approvedBy: "approved_by",
   };
 
   const mapped = {};

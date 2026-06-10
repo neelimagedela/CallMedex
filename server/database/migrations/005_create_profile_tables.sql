@@ -104,21 +104,40 @@ CREATE TABLE IF NOT EXISTS organization_profiles (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS admin_profiles (
+CREATE TABLE IF NOT EXISTS staff_profiles (
+
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
     user_id BIGINT UNIQUE NOT NULL,
-    access_level VARCHAR(100) NULL,
-    office_location VARCHAR(255) NULL,
-    joining_date DATE NULL,
-    official_email VARCHAR(255) NULL,
+
+    organization_name VARCHAR(255) NOT NULL,
+
+    staff_role VARCHAR(100) NOT NULL,
+
+    department VARCHAR(100) NOT NULL,
+
+    experience INT NOT NULL,
+
     alternate_phone VARCHAR(50) NULL,
-    security_question VARCHAR(255) NULL,
-    security_answer VARCHAR(255) NULL,
-    two_fa_enabled BOOLEAN DEFAULT FALSE,
-    permissions JSON NULL,
+
     aadhaar_upload VARCHAR(255) NULL,
-    government_id_proof VARCHAR(255) NULL,
+
+    medical_degree_upload VARCHAR(255) NULL,
+
+    approval_status ENUM(
+        'pending',
+        'approved',
+        'rejected'
+    ) DEFAULT 'pending',
+
+    approved_by BIGINT NULL,
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id)
+    REFERENCES users(id)
+    ON DELETE CASCADE
 );
