@@ -19,6 +19,7 @@ const {
   acceptHomeServiceBooking,
   getPhleboActiveBooking,
   updateHomeServiceBookingStatus,
+  getPhleboWalletSummary,
 } = require("../models/homeServiceBooking.model");
 
 function saveBase64Prescription(base64File) {
@@ -282,22 +283,33 @@ const getPhleboActiveBookingController = asyncHandler(async (req, res) => {
   });
 });
 
+// FIX: reads phleboNotes from req.body and passes it through to the model.
 const updateHomeServiceBookingStatusController = asyncHandler(async (req, res) => {
   if (req.user.role !== "phlebo") {
     throw new AppError("Only phlebos can update booking status", 403);
   }
 
   const bookingId = Number(req.params.bookingId);
-  const { status } = req.body;
-
   if (!Number.isInteger(bookingId) || bookingId <= 0) {
     throw new AppError("Invalid booking ID", 400);
   }
 
-  const updated = await updateHomeServiceBookingStatus(bookingId, req.user.id, status);
+  const { status, phleboNotes } = req.body;
+
+  if (!status) {
+    throw new AppError("Status is required", 400);
+  }
+
+  const updated = await updateHomeServiceBookingStatus(
+    bookingId,
+    req.user.id,
+    status,
+    phleboNotes || null
+  );
+
   if (!updated) {
     throw new AppError(
-      "Unable to update booking status. Booking may not be assigned to you.",
+      "Unable to update status. Booking not found or not assigned to this phlebo.",
       400
     );
   }
@@ -305,6 +317,21 @@ const updateHomeServiceBookingStatusController = asyncHandler(async (req, res) =
   return successResponse({
     res, status: 200,
     message: "Booking status updated successfully",
+  });
+});
+
+const getPhleboWalletController = asyncHandler(async (req, res) => {
+  if (req.user.role !== "phlebo") {
+    throw new AppError("Only phlebos can access wallet", 403);
+  }
+
+  const wallet = await getPhleboWalletSummary(req.user.id);
+
+  return successResponse({
+    res,
+    status: 200,
+    message: "Phlebo wallet retrieved successfully",
+    data: wallet,
   });
 });
 
@@ -319,4 +346,5 @@ module.exports = {
   acceptHomeServiceBookingController,
   getPhleboActiveBookingController,
   updateHomeServiceBookingStatusController,
+  getPhleboWalletController,
 };

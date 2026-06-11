@@ -1,163 +1,389 @@
-import React, { useState } from "react";
-import { usePhlebo } from "../../context/PhleboContext";
-import { Wallet, ArrowUpRight, TrendingUp, Award, Calendar } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import {
+  Wallet,
+  TrendingUp,
+  Award,
+  Calendar,
+  RefreshCcw,
+} from "lucide-react";
+import { api } from "../../shared/api";
+
+const formatDate = (date) => {
+  if (!date) return "—";
+
+  const parsed = new Date(date);
+
+  if (Number.isNaN(parsed.getTime())) return "—";
+
+  return parsed.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatAmount = (value) => {
+  return `₹${Number(value || 0).toFixed(2)}`;
+};
 
 const PhleboWallet = () => {
-  // Pulling the shared wallet state from our centralized context engine
-  const { walletBalance } = usePhlebo();
-
-  // Mock secondary financial analytics for dashboard metrics display
-  const [metrics] = useState({
-    incentivesEarned: 120,
-    pendingClearance: 75,
-    totalWithdrawals: 1450,
+  const [wallet, setWallet] = useState({
+    amountPerTask: 150,
+    completedTasks: 0,
+    walletBalance: 0,
+    transactions: [],
   });
 
-  // Historical collection transaction records ledger entries
-  const [transactions] = useState([
-    { id: "TXN-88219", type: "Payout", date: "June 01, 2026", taskRef: "JOB-9921", amount: 50, status: "Credited" },
-    { id: "TXN-87110", type: "Incentive", date: "May 31, 2026", taskRef: "Bonus Peak Hours", amount: 20, status: "Credited" },
-    { id: "TXN-86541", type: "Payout", date: "May 30, 2026", taskRef: "JOB-9812", amount: 50, status: "Credited" },
-    { id: "TXN-85400", type: "Withdrawal", date: "May 28, 2026", taskRef: "Bank Transfer", amount: 500, status: "Processed" },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const handleWithdrawalRequest = () => {
-    if (walletBalance <= 0) {
-      alert("Insufficient balance available for settlement extraction.");
-      return;
+  const loadWallet = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await api.get("/home-service/phlebo/wallet");
+
+      if (response.data.success) {
+        setWallet(response.data.data);
+      } else {
+        setError(response.data.message || "Could not load wallet.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not load wallet.");
+    } finally {
+      setLoading(false);
     }
-    alert(`Withdrawal request for ₹${walletBalance} submitted successfully to account ledger administration.`);
   };
 
+  useEffect(() => {
+    loadWallet();
+  }, []);
+
   return (
-    <div style={{ maxWidth: "1000px", margin: "0 auto", fontFamily: "inherit" }}>
-      <h2 style={{ marginBottom: "24px", color: "#1e293b", fontWeight: "700" }}>Earnings Wallet</h2>
-
-      {/* TOP SECTION: BALANCE DISPLAY & QUICK ANALYTICS */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 2fr", gap: "24px", marginBottom: "30px" }}>
-        
-        {/* MAIN CASH CARD BALANCE CONTAINER */}
-        <div style={{
-          background: "linear-gradient(135deg, #059669 0%, #065f46 100%)",
-          color: "#fff",
-          padding: "30px",
-          borderRadius: "16px",
-          boxShadow: "0 10px 15px -3px rgba(4, 120, 87, 0.2)",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "between",
-          position: "relative",
-          overflow: "hidden"
-        }}>
-          <div style={{ position: "absolute", right: "-20px", bottom: "-20px", opacity: 0.1, color: "#fff" }}>
-            <Wallet size={160} />
-          </div>
-          <div>
-            <span style={{ fontSize: "14px", textTransform: "uppercase", letterSpacing: "1px", opacity: 0.8 }}>Available Balance</span>
-            <h1 style={{ fontSize: "42px", margin: "8px 0 20px 0", fontWeight: "800" }}>₹{walletBalance}.00</h1>
-          </div>
-          <button 
-            onClick={handleWithdrawalRequest}
-            style={{
-              background: "#fff",
-              color: "#065f46",
-              border: "none",
-              padding: "12px 20px",
-              borderRadius: "8px",
-              fontWeight: "700",
-              fontSize: "14px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              transition: "transform 0.2s"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.02)"}
-            onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
-          >
-            <ArrowUpRight size={16} />
-            Withdraw to Bank
-          </button>
+    <div style={S.page}>
+      <div style={S.header}>
+        <div>
+          <p style={S.label}>Phlebo Wallet</p>
+          <h1 style={S.title}>Earnings Wallet</h1>
+          <p style={S.sub}>
+            Every completed home service collection adds ₹150 to your wallet.
+          </p>
         </div>
 
-        {/* METRICS METERS BREAKDOWN PANELS */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-          <div style={{ background: "#fff", padding: "20px", borderRadius: "12px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: "16px" }}>
-            <div style={{ background: "#dcfce7", color: "#16a34a", padding: "12px", borderRadius: "10px" }}><Award size={24} /></div>
-            <div>
-              <span style={{ display: "block", fontSize: "13px", color: "#64748b", fontWeight: "500" }}>Incentives Paid</span>
-              <span style={{ fontSize: "20px", fontWeight: "700", color: "#1e293b" }}>₹{metrics.incentivesEarned}</span>
-            </div>
-          </div>
-
-          <div style={{ background: "#fff", padding: "20px", borderRadius: "12px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: "16px" }}>
-            <div style={{ background: "#fef3c7", color: "#d97706", padding: "12px", borderRadius: "10px" }}><TrendingUp size={24} /></div>
-            <div>
-              <span style={{ display: "block", fontSize: "13px", color: "#64748b", fontWeight: "500" }}>In Review Balance</span>
-              <span style={{ fontSize: "20px", fontWeight: "700", color: "#1e293b" }}>₹{metrics.pendingClearance}</span>
-            </div>
-          </div>
-
-          <div style={{ background: "#fff", padding: "20px", borderRadius: "12px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: "16px", gridColumn: "span 2" }}>
-            <div style={{ background: "#f1f5f9", color: "#475569", padding: "12px", borderRadius: "10px" }}><Calendar size={24} /></div>
-            <div>
-              <span style={{ display: "block", fontSize: "13px", color: "#64748b", fontWeight: "500" }}>Lifetime Extracted Settlements</span>
-              <span style={{ fontSize: "20px", fontWeight: "700", color: "#1e293b" }}>₹{metrics.totalWithdrawals}.00</span>
-            </div>
-          </div>
-        </div>
-
+        <button type="button" style={S.refreshBtn} onClick={loadWallet}>
+          <RefreshCcw size={16} />
+          Refresh
+        </button>
       </div>
 
-      {/* BOTTOM SECTION: TRANSACTION LEDGER REGISTRY */}
-      <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "24px", boxShadow: "0 1px 3px 0 rgba(0,0,0,0.05)" }}>
-        <h3 style={{ margin: "0 0 16px 0", color: "#1e293b", fontWeight: "600" }}>Statement History</h3>
-        
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-            <thead>
-              <tr style={{ borderBottom: "2px solid #f1f5f9", color: "#64748b", fontSize: "13px" }}>
-                <th style={{ padding: "12px" }}>Transaction Reference</th>
-                <th style={{ padding: "12px" }}>Type</th>
-                <th style={{ padding: "12px" }}>Date</th>
-                <th style={{ padding: "12px" }}>Description Source</th>
-                <th style={{ padding: "12px" }}>Amount</th>
-                <th style={{ padding: "12px", textAlign: "right" }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((txn) => (
-                <tr key={txn.id} style={{ borderBottom: "1px solid #f1f5f9", fontSize: "14px", color: "#334155" }}>
-                  <td style={{ padding: "14px 12px", fontFamily: "monospace", color: "#475569" }}>{txn.id}</td>
-                  <td style={{ padding: "14px 12px" }}>
-                    <span style={{
-                      padding: "4px 8px",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontWeight: "600",
-                      background: txn.type === "Withdrawal" ? "#fee2e2" : "#dcfce7",
-                      color: txn.type === "Withdrawal" ? "#b91c1c" : "#16803d"
-                    }}>
-                      {txn.type}
-                    </span>
-                  </td>
-                  <td style={{ padding: "14px 12px", color: "#64748b" }}>{txn.date}</td>
-                  <td style={{ padding: "14px 12px", fontWeight: "500" }}>{txn.taskRef}</td>
-                  <td style={{ padding: "14px 12px", fontWeight: "700", color: txn.type === "Withdrawal" ? "#b91c1c" : "#059669" }}>
-                    {txn.type === "Withdrawal" ? "-" : "+"}₹{txn.amount}
-                  </td>
-                  <td style={{ padding: "14px 12px", textAlign: "right", color: "#2563eb", fontWeight: "600" }}>
-                    {txn.status}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {loading && (
+        <div style={S.empty}>
+          <p style={{ margin: 0 }}>Loading wallet...</p>
         </div>
-      </div>
+      )}
+
+      {!loading && error && (
+        <div
+          style={{
+            ...S.empty,
+            borderColor: "#fecaca",
+            background: "#fff5f5",
+          }}
+        >
+          <p style={{ color: "#991b1b", fontWeight: 800, margin: 0 }}>
+            {error}
+          </p>
+        </div>
+      )}
+
+      {!loading && !error && (
+        <>
+          <div style={S.cards}>
+            <div style={S.mainCard}>
+              <div style={S.iconBox}>
+                <Wallet size={30} />
+              </div>
+
+              <p style={S.mainCardLabel}>Available Balance</p>
+
+              <h2 style={S.balance}>
+                {formatAmount(wallet.walletBalance)}
+              </h2>
+
+              <p style={S.mainCardSub}>
+                {wallet.completedTasks || 0} completed task
+                {Number(wallet.completedTasks || 0) === 1 ? "" : "s"} ×{" "}
+                {formatAmount(wallet.amountPerTask || 150)}
+              </p>
+            </div>
+
+            <div style={S.smallCard}>
+              <TrendingUp size={24} color="#0f766e" />
+
+              <p style={S.cardLabel}>Completed Tasks</p>
+
+              <h3 style={S.smallValue}>{wallet.completedTasks || 0}</h3>
+            </div>
+
+            <div style={S.smallCard}>
+              <Award size={24} color="#0f766e" />
+
+              <p style={S.cardLabel}>Amount Per Task</p>
+
+              <h3 style={S.smallValue}>
+                {formatAmount(wallet.amountPerTask || 150)}
+              </h3>
+            </div>
+
+            <div style={S.smallCard}>
+              <Calendar size={24} color="#0f766e" />
+
+              <p style={S.cardLabel}>Credit Method</p>
+
+              <h3 style={S.smallValue}>Auto</h3>
+            </div>
+          </div>
+
+          <div style={S.section}>
+            <div style={S.sectionHeader}>
+              <div>
+                <h2 style={S.sectionTitle}>Wallet Transactions</h2>
+                <p style={S.sectionSub}>
+                  Credits are calculated from completed home service tasks.
+                </p>
+              </div>
+            </div>
+
+            {!wallet.transactions || wallet.transactions.length === 0 ? (
+              <div style={S.empty}>
+                <p style={{ margin: 0 }}>
+                  No completed tasks yet. Once lab marks a task completed,
+                  ₹150 will appear here.
+                </p>
+              </div>
+            ) : (
+              <div style={S.table}>
+                {wallet.transactions.map((txn) => (
+                  <div style={S.row} key={txn.id}>
+                    <div>
+                      <p style={S.txnTitle}>
+                        {txn.public_booking_id || `Booking #${txn.id}`}
+                      </p>
+
+                      <p style={S.txnSub}>
+                        {txn.patient_name || "Patient"} ·{" "}
+                        {txn.branch || "Branch"} ·{" "}
+                        {formatDate(txn.collection_date)}
+                      </p>
+
+                      <p style={S.txnSub}>
+                        Slot: {txn.time_slot || "—"} · Mobile:{" "}
+                        {txn.patient_mobile || "—"}
+                      </p>
+                    </div>
+
+                    <div style={S.credit}>
+                      + {formatAmount(txn.amount || 150)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
+};
+
+const S = {
+  page: {
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 16,
+    marginBottom: 22,
+  },
+
+  label: {
+    margin: "0 0 6px",
+    color: "#0f766e",
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+
+  title: {
+    margin: 0,
+    fontSize: 32,
+    color: "#0f172a",
+  },
+
+  sub: {
+    margin: "8px 0 0",
+    color: "#64748b",
+  },
+
+  refreshBtn: {
+    border: "none",
+    background: "#0f172a",
+    color: "#fff",
+    borderRadius: 12,
+    padding: "10px 16px",
+    fontWeight: 800,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  cards: {
+    display: "grid",
+    gridTemplateColumns: "2fr 1fr 1fr 1fr",
+    gap: 16,
+    marginBottom: 22,
+  },
+
+  mainCard: {
+    background: "linear-gradient(135deg,#0f172a,#0f766e)",
+    color: "#fff",
+    borderRadius: 22,
+    padding: 24,
+    boxShadow: "0 14px 30px rgba(15,23,42,.16)",
+  },
+
+  iconBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    background: "rgba(255,255,255,.15)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+
+  mainCardLabel: {
+    margin: 0,
+    color: "rgba(255,255,255,.8)",
+    fontSize: 12,
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+
+  balance: {
+    margin: "8px 0",
+    fontSize: 42,
+    lineHeight: 1,
+  },
+
+  mainCardSub: {
+    margin: 0,
+    color: "rgba(255,255,255,.82)",
+    fontSize: 14,
+  },
+
+  smallCard: {
+    background: "#fff",
+    border: "1px solid #e2e8f0",
+    borderRadius: 20,
+    padding: 20,
+    boxShadow: "0 8px 22px rgba(15,23,42,.06)",
+  },
+
+  cardLabel: {
+    margin: "12px 0 0",
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+
+  smallValue: {
+    margin: "10px 0 0",
+    fontSize: 28,
+    color: "#0f172a",
+  },
+
+  section: {
+    background: "#fff",
+    border: "1px solid #e2e8f0",
+    borderRadius: 22,
+    padding: 22,
+    boxShadow: "0 8px 22px rgba(15,23,42,.06)",
+  },
+
+  sectionHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+  },
+
+  sectionTitle: {
+    margin: 0,
+    color: "#0f172a",
+    fontSize: 22,
+  },
+
+  sectionSub: {
+    margin: "5px 0 0",
+    color: "#64748b",
+    fontSize: 14,
+  },
+
+  table: {
+    display: "grid",
+    gap: 10,
+  },
+
+  row: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: 16,
+    padding: "14px 16px",
+  },
+
+  txnTitle: {
+    margin: 0,
+    fontWeight: 900,
+    color: "#0f172a",
+  },
+
+  txnSub: {
+    margin: "4px 0 0",
+    color: "#64748b",
+    fontSize: 13,
+  },
+
+  credit: {
+    color: "#0f766e",
+    fontWeight: 900,
+    fontSize: 18,
+    whiteSpace: "nowrap",
+  },
+
+  empty: {
+    background: "#fff",
+    border: "1px dashed #cbd5e1",
+    borderRadius: 18,
+    padding: 28,
+    textAlign: "center",
+    color: "#64748b",
+  },
 };
 
 export default PhleboWallet;

@@ -174,7 +174,6 @@ const getCompletedBookingsForPhlebo = async (phleboUserId) => {
   return rows.map(normalizeBooking);
 };
 
-// NEW — rejected bookings for phlebo
 const getRejectedBookingsForPhlebo = async (phleboUserId) => {
   const [rows] = await db.execute(
     `SELECT * FROM home_service_bookings
@@ -186,7 +185,6 @@ const getRejectedBookingsForPhlebo = async (phleboUserId) => {
   return rows.map(normalizeBooking);
 };
 
-// NEW — phlebo resubmits after rejection
 const resubmitRejectedBooking = async (bookingId, phleboUserId) => {
   const [result] = await db.execute(
     `UPDATE home_service_bookings
@@ -207,7 +205,6 @@ const acceptHomeServiceBooking = async (bookingId, phleboUserId) => {
   return result.affectedRows > 0;
 };
 
-// FIXED — removed submitted_to_lab from active, phlebo's job ends at sample_collected
 const getPhleboActiveBooking = async (phleboUserId) => {
   const [rows] = await db.execute(
     `SELECT * FROM home_service_bookings
@@ -220,11 +217,17 @@ const getPhleboActiveBooking = async (phleboUserId) => {
   return rows[0] ? normalizeBooking(rows[0]) : null;
 };
 
-const updateHomeServiceBookingStatus = async (bookingId, phleboUserId, status) => {
+// FIX: expanded allowed statuses, added phleboNotes param, uses COALESCE to preserve
+// existing notes when none supplied, targets home_service_bookings.status only.
+const updateHomeServiceBookingStatus = async (bookingId, phleboUserId, status, phleboNotes) => {
   const allowedStatuses = [
     "accepted",
     "sample_collected",
     "submitted_to_lab",
+    "sample_rejected",
+    "processing",
+    "report_ready",
+    "completed",
     "cancelled",
   ];
 
@@ -232,11 +235,58 @@ const updateHomeServiceBookingStatus = async (bookingId, phleboUserId, status) =
 
   const [result] = await db.execute(
     `UPDATE home_service_bookings
-     SET status = ?, updated_at = CURRENT_TIMESTAMP
+     SET status = ?,
+         phlebo_notes = COALESCE(?, phlebo_notes),
+         updated_at = CURRENT_TIMESTAMP
      WHERE id = ? AND assigned_phlebo_id = ?`,
-    [status, bookingId, phleboUserId]
+    [status, phleboNotes || null, bookingId, phleboUserId]
   );
+
   return result.affectedRows > 0;
+};
+
+const getPhleboWalletSummary = async (phleboUserId) => {
+  const TASK_AMOUNT = 150;
+
+  const [summaryRows] = await db.execute(
+    `
+    SELECT
+      COUNT(*) AS completed_tasks,
+      COALESCE(COUNT(*) * ?, 0) AS wallet_balance
+    FROM home_service_bookings
+    WHERE assigned_phlebo_id = ?
+      AND status = 'completed'
+    `,
+    [TASK_AMOUNT, phleboUserId]
+  );
+
+  const [transactions] = await db.execute(
+    `
+    SELECT
+      id,
+      public_booking_id,
+      patient_name,
+      patient_mobile,
+      branch,
+      collection_date,
+      time_slot,
+      status,
+      updated_at,
+      ? AS amount
+    FROM home_service_bookings
+    WHERE assigned_phlebo_id = ?
+      AND status = 'completed'
+    ORDER BY updated_at DESC, collection_date DESC, created_at DESC
+    `,
+    [TASK_AMOUNT, phleboUserId]
+  );
+
+  return {
+    amountPerTask: TASK_AMOUNT,
+    completedTasks: Number(summaryRows[0]?.completed_tasks || 0),
+    walletBalance: Number(summaryRows[0]?.wallet_balance || 0),
+    transactions,
+  };
 };
 
 module.exports = {
@@ -250,4 +300,5 @@ module.exports = {
   acceptHomeServiceBooking,
   getPhleboActiveBooking,
   updateHomeServiceBookingStatus,
+  getPhleboWalletSummary,
 };

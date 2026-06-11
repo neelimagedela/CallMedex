@@ -15,6 +15,7 @@ const {
   acceptHomeServiceBookingController,
   getPhleboActiveBookingController,
   updateHomeServiceBookingStatusController,
+  getPhleboWalletController,
 } = require("../controllers/homeServiceBooking.controller");
 
 const { authenticate } = require("../../auth/middleware/auth.middleware");
@@ -39,6 +40,12 @@ router.get(
   "/phlebo/bookings/completed",
   authenticate,
   listCompletedPhleboBookingsController
+);
+
+router.get(
+  "/phlebo/wallet",
+  authenticate,
+  getPhleboWalletController
 );
 
 router.get(
