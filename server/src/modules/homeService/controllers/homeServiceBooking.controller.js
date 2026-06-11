@@ -6,9 +6,7 @@ const asyncHandler = require("../../../shared/utils/asyncHandler");
 const AppError = require("../../../shared/utils/AppError");
 const { successResponse } = require("../../../shared/utils/response");
 
-const {
-  getActiveHomeServiceTestsByIds,
-} = require("../models/homeService.model");
+const { getActiveHomeServiceTestsByIds } = require("../models/homeService.model");
 
 const {
   createHomeServiceBooking,
@@ -16,6 +14,8 @@ const {
   upsertPhleboLiveLocation,
   getPhleboHomeServiceBookings,
   getCompletedBookingsForPhlebo,
+  getRejectedBookingsForPhlebo,
+  resubmitRejectedBooking,
   acceptHomeServiceBooking,
   getPhleboActiveBooking,
   updateHomeServiceBookingStatus,
@@ -28,13 +28,10 @@ function saveBase64Prescription(base64File) {
     /^data:(image\/png|image\/jpeg|application\/pdf);base64,(.+)$/
   );
 
-  if (!matches) {
-    throw new AppError("Invalid prescription file format", 400);
-  }
+  if (!matches) throw new AppError("Invalid prescription file format", 400);
 
   const mimeType = matches[1];
   const base64Data = matches[2];
-
   const buffer = Buffer.from(base64Data, "base64");
 
   if (buffer.length > 5 * 1024 * 1024) {
@@ -42,22 +39,13 @@ function saveBase64Prescription(base64File) {
   }
 
   const extension =
-    mimeType === "image/png"
-      ? "png"
-      : mimeType === "image/jpeg"
-      ? "jpg"
-      : "pdf";
+    mimeType === "image/png" ? "png" : mimeType === "image/jpeg" ? "jpg" : "pdf";
 
-  const uploadDir = path.join(__dirname, "../../../../uploads");
-
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-  }
+  const uploadDir = path.join(process.cwd(), "uploads");
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
   const fileName = `${crypto.randomUUID()}.${extension}`;
-  const filePath = path.join(uploadDir, fileName);
-
-  fs.writeFileSync(filePath, buffer);
+  fs.writeFileSync(path.join(uploadDir, fileName), buffer);
 
   return `/uploads/${fileName}`;
 }
@@ -71,8 +59,7 @@ function isValidEmail(email) {
 }
 
 function isValidCoordinate(value) {
-  const num = Number(value);
-  return Number.isFinite(num);
+  return Number.isFinite(Number(value));
 }
 
 const bookHomeServiceController = asyncHandler(async (req, res) => {
@@ -83,37 +70,17 @@ const bookHomeServiceController = asyncHandler(async (req, res) => {
   }
 
   const {
-    patientName,
-    patientAge,
-    patientSex,
-    patientMobile,
-    patientEmail,
-    patientAddress,
-    patientLat,
-    patientLng,
-    branch,
-    tests,
-    collectionDate,
-    timeSlot,
-    prescription,
+    patientName, patientAge, patientSex, patientMobile, patientEmail,
+    patientAddress, patientLat, patientLng, branch, tests, collectionDate,
+    timeSlot, prescription,
   } = req.body;
 
-  if (
-    !patientName ||
-    !patientAge ||
-    !patientSex ||
-    !patientMobile ||
-    !patientEmail ||
-    !patientAddress ||
-    !branch ||
-    !collectionDate ||
-    !timeSlot
-  ) {
+  if (!patientName || !patientAge || !patientSex || !patientMobile ||
+      !patientEmail || !patientAddress || !branch || !collectionDate || !timeSlot) {
     throw new AppError("Missing required booking fields", 400);
   }
 
   const age = Number(patientAge);
-
   if (!Number.isInteger(age) || age < 1 || age > 120) {
     throw new AppError("Enter valid patient age", 400);
   }
@@ -122,21 +89,14 @@ const bookHomeServiceController = asyncHandler(async (req, res) => {
     throw new AppError("Invalid patient gender", 400);
   }
 
-  if (!isValidMobile(patientMobile)) {
-    throw new AppError("Invalid mobile number", 400);
-  }
-
-  if (!isValidEmail(patientEmail)) {
-    throw new AppError("Invalid email address", 400);
-  }
+  if (!isValidMobile(patientMobile)) throw new AppError("Invalid mobile number", 400);
+  if (!isValidEmail(patientEmail)) throw new AppError("Invalid email address", 400);
 
   if (!Array.isArray(tests) || tests.length === 0) {
     throw new AppError("Please select at least one test", 400);
   }
 
-  if (tests.length > 2) {
-    throw new AppError("Maximum 2 tests allowed per booking", 400);
-  }
+  if (tests.length > 2) throw new AppError("Maximum 2 tests allowed per booking", 400);
 
   if (!isValidCoordinate(patientLat) || !isValidCoordinate(patientLng)) {
     throw new AppError(
@@ -146,18 +106,13 @@ const bookHomeServiceController = asyncHandler(async (req, res) => {
   }
 
   const requestedTestIds = tests.map((test) => Number(test.id));
-
   const dbTests = await getActiveHomeServiceTestsByIds(requestedTestIds);
 
   if (dbTests.length !== requestedTestIds.length) {
     throw new AppError("One or more selected tests are invalid", 400);
   }
 
-  const totalAmount = dbTests.reduce(
-    (sum, test) => sum + Number(test.price || 0),
-    0
-  );
-
+  const totalAmount = dbTests.reduce((sum, test) => sum + Number(test.price || 0), 0);
   const prescriptionPath = saveBase64Prescription(prescription);
 
   const booking = await createHomeServiceBooking({
@@ -180,8 +135,7 @@ const bookHomeServiceController = asyncHandler(async (req, res) => {
   });
 
   return successResponse({
-    res,
-    status: 201,
+    res, status: 201,
     message: "Home service booking created successfully",
     data: booking,
   });
@@ -193,14 +147,10 @@ const getPhleboProfileController = asyncHandler(async (req, res) => {
   }
 
   const profile = await getPhleboProfileByUserId(req.user.id);
-
-  if (!profile) {
-    throw new AppError("Phlebo profile not found", 404);
-  }
+  if (!profile) throw new AppError("Phlebo profile not found", 404);
 
   return successResponse({
-    res,
-    status: 200,
+    res, status: 200,
     message: "Phlebo profile retrieved successfully",
     data: profile,
   });
@@ -225,8 +175,7 @@ const updatePhleboLocationController = asyncHandler(async (req, res) => {
   });
 
   return successResponse({
-    res,
-    status: 200,
+    res, status: 200,
     message: "Phlebo location updated successfully",
     data: location,
   });
@@ -240,8 +189,7 @@ const listPhleboHomeServiceBookingsController = asyncHandler(async (req, res) =>
   const bookings = await getPhleboHomeServiceBookings(req.user.id);
 
   return successResponse({
-    res,
-    status: 200,
+    res, status: 200,
     message: "Nearby and active home service bookings retrieved successfully",
     data: bookings,
   });
@@ -255,10 +203,47 @@ const listCompletedPhleboBookingsController = asyncHandler(async (req, res) => {
   const bookings = await getCompletedBookingsForPhlebo(req.user.id);
 
   return successResponse({
-    res,
-    status: 200,
+    res, status: 200,
     message: "Completed collections retrieved successfully",
     data: bookings,
+  });
+});
+
+const listRejectedPhleboBookingsController = asyncHandler(async (req, res) => {
+  if (req.user.role !== "phlebo") {
+    throw new AppError("Only phlebos can access rejected collections", 403);
+  }
+
+  const bookings = await getRejectedBookingsForPhlebo(req.user.id);
+
+  return successResponse({
+    res, status: 200,
+    message: "Rejected collections retrieved successfully",
+    data: bookings,
+  });
+});
+
+const resubmitRejectedBookingController = asyncHandler(async (req, res) => {
+  if (req.user.role !== "phlebo") {
+    throw new AppError("Only phlebos can resubmit collections", 403);
+  }
+
+  const bookingId = Number(req.params.bookingId);
+  if (!Number.isInteger(bookingId) || bookingId <= 0) {
+    throw new AppError("Invalid booking ID", 400);
+  }
+
+  const updated = await resubmitRejectedBooking(bookingId, req.user.id);
+  if (!updated) {
+    throw new AppError(
+      "Could not resubmit. Booking may not be rejected or not assigned to you.",
+      400
+    );
+  }
+
+  return successResponse({
+    res, status: 200,
+    message: "Booking resubmitted to lab successfully",
   });
 });
 
@@ -268,23 +253,17 @@ const acceptHomeServiceBookingController = asyncHandler(async (req, res) => {
   }
 
   const bookingId = Number(req.params.bookingId);
-
   if (!Number.isInteger(bookingId) || bookingId <= 0) {
     throw new AppError("Invalid booking ID", 400);
   }
 
   const accepted = await acceptHomeServiceBooking(bookingId, req.user.id);
-
   if (!accepted) {
-    throw new AppError(
-      "This booking is already accepted or no longer available",
-      409
-    );
+    throw new AppError("This booking is already accepted or no longer available", 409);
   }
 
   return successResponse({
-    res,
-    status: 200,
+    res, status: 200,
     message: "Home service booking accepted successfully",
   });
 });
@@ -297,46 +276,37 @@ const getPhleboActiveBookingController = asyncHandler(async (req, res) => {
   const booking = await getPhleboActiveBooking(req.user.id);
 
   return successResponse({
-    res,
-    status: 200,
+    res, status: 200,
     message: "Active booking retrieved successfully",
     data: booking,
   });
 });
 
-const updateHomeServiceBookingStatusController = asyncHandler(
-  async (req, res) => {
-    if (req.user.role !== "phlebo") {
-      throw new AppError("Only phlebos can update booking status", 403);
-    }
-
-    const bookingId = Number(req.params.bookingId);
-    const { status } = req.body;
-
-    if (!Number.isInteger(bookingId) || bookingId <= 0) {
-      throw new AppError("Invalid booking ID", 400);
-    }
-
-    const updated = await updateHomeServiceBookingStatus(
-      bookingId,
-      req.user.id,
-      status
-    );
-
-    if (!updated) {
-      throw new AppError(
-        "Unable to update booking status. Booking may not be assigned to you.",
-        400
-      );
-    }
-
-    return successResponse({
-      res,
-      status: 200,
-      message: "Booking status updated successfully",
-    });
+const updateHomeServiceBookingStatusController = asyncHandler(async (req, res) => {
+  if (req.user.role !== "phlebo") {
+    throw new AppError("Only phlebos can update booking status", 403);
   }
-);
+
+  const bookingId = Number(req.params.bookingId);
+  const { status } = req.body;
+
+  if (!Number.isInteger(bookingId) || bookingId <= 0) {
+    throw new AppError("Invalid booking ID", 400);
+  }
+
+  const updated = await updateHomeServiceBookingStatus(bookingId, req.user.id, status);
+  if (!updated) {
+    throw new AppError(
+      "Unable to update booking status. Booking may not be assigned to you.",
+      400
+    );
+  }
+
+  return successResponse({
+    res, status: 200,
+    message: "Booking status updated successfully",
+  });
+});
 
 module.exports = {
   bookHomeServiceController,
@@ -344,6 +314,8 @@ module.exports = {
   updatePhleboLocationController,
   listPhleboHomeServiceBookingsController,
   listCompletedPhleboBookingsController,
+  listRejectedPhleboBookingsController,
+  resubmitRejectedBookingController,
   acceptHomeServiceBookingController,
   getPhleboActiveBookingController,
   updateHomeServiceBookingStatusController,

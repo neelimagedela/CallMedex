@@ -23,5 +23,6 @@
   "022_add_gps_phlebo_home_service.sql",
   "023_add_staff_to_users_role.sql",
   "024_modify_staff_upload_columns.sql",
-  "025_changing_status.sql"
+  "025_changing_status.sql",
+  "026_home_service_status.sql"
 ]

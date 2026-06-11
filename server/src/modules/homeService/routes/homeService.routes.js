@@ -10,6 +10,8 @@ const {
   updatePhleboLocationController,
   listPhleboHomeServiceBookingsController,
   listCompletedPhleboBookingsController,
+  listRejectedPhleboBookingsController,
+  resubmitRejectedBookingController,
   acceptHomeServiceBookingController,
   getPhleboActiveBookingController,
   updateHomeServiceBookingStatusController,
@@ -23,17 +25,9 @@ router.get("/tests", listHomeServiceTestsController);
 
 router.post("/book", authenticate, bookHomeServiceController);
 
-router.get(
-  "/phlebo/profile",
-  authenticate,
-  getPhleboProfileController
-);
+router.get("/phlebo/profile", authenticate, getPhleboProfileController);
 
-router.post(
-  "/phlebo/location",
-  authenticate,
-  updatePhleboLocationController
-);
+router.post("/phlebo/location", authenticate, updatePhleboLocationController);
 
 router.get(
   "/phlebo/bookings",
@@ -45,6 +39,18 @@ router.get(
   "/phlebo/bookings/completed",
   authenticate,
   listCompletedPhleboBookingsController
+);
+
+router.get(
+  "/phlebo/bookings/rejected",
+  authenticate,
+  listRejectedPhleboBookingsController
+);
+
+router.patch(
+  "/phlebo/bookings/:bookingId/resubmit",
+  authenticate,
+  resubmitRejectedBookingController
 );
 
 router.patch(
