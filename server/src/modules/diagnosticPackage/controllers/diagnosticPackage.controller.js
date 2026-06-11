@@ -2,6 +2,8 @@ const asyncHandler = require("../../../shared/utils/asyncHandler");
 const db = require("../../../config/db");
 
 const bookDiagnosticPackage = asyncHandler(async (req, res) => {
+   console.log("BODY:", req.body);
+  console.log("USER:", req.user);
 
   const {
     packageName,
@@ -107,6 +109,7 @@ asyncHandler(async (req, res) => {
     ],
   }));
    
+console.log(formattedBookings);
   res.status(200).json({
     success: true,
     data: formattedBookings,

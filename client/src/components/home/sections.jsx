@@ -132,6 +132,11 @@ export function PackagesSection({ setPage }) {
             );
           })}
         </div>
+        <div style={{ textAlign: "center", marginTop: "2rem" }}>
+          <a className="btn btn-outline btn-lg" href={`${SITE.baseUrl}/health_packages.php`} target="_blank" rel="noreferrer">
+            View All Packages →
+          </a>
+        </div>
       </div>
     </section>
   );
