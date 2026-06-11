@@ -4,6 +4,7 @@ import "../../styles/index.css";
 import {
   getLabTechnicianDashboard,
   updateWalkinStatus,
+  updateScanStatus,
   updateHomeServiceStatus,
   uploadReport,
 } from "./staff.api";
@@ -26,6 +27,11 @@ const SOURCE_COLORS = {
     bg: "#f0fdf4",
     color: "#166534",
     border: "#bbf7d0",
+  },
+  "Scan Appointment": {
+    bg: "#fefce8",
+    color: "#854d0e",
+    border: "#fde68a",
   },
 };
 
@@ -82,7 +88,9 @@ const mapLabStatus = (status = "") => {
     return "samples";
   }
 
-  if (["sample_collected", "submitted_to_lab"].includes(value)) {
+  if (
+    ["sample_collected", "submitted_to_lab", "sample_received"].includes(value)
+  ) {
     return "sample_received";
   }
 
@@ -101,14 +109,6 @@ const mapLabStatus = (status = "") => {
   return "samples";
 };
 
-const getStatusColor = (status) => {
-  return STATUS_COLORS[String(status || "").toLowerCase()] || STATUS_COLORS.pending;
-};
-
-const getSourceColor = (source) => {
-  return SOURCE_COLORS[source] || SOURCE_COLORS["Diagnostic Walk-in"];
-};
-
 const getActionLabel = (booking) => {
   const status = String(booking.status || "").toLowerCase();
 
@@ -119,7 +119,10 @@ const getActionLabel = (booking) => {
     return null;
   }
 
-  if (booking.source === "Diagnostic Walk-in") {
+  if (
+    booking.source === "Diagnostic Walk-in" ||
+    booking.source === "Scan Appointment"
+  ) {
     if (status === "pending" || status === "confirmed") return "Accept Samples";
     if (status === "sample_received") return "Mark Reports Ready";
     if (status === "report_ready") return "Mark Completed";
@@ -133,10 +136,8 @@ export default function LabTechnicianDashboard({ setPage }) {
   const [branch, setBranch] = useState("");
   const [staffProfile, setStaffProfile] = useState(null);
   const [bookings, setBookings] = useState([]);
-
   const [activeTab, setActiveTab] = useState("samples");
   const [search, setSearch] = useState("");
-
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState("");
   const [uploading, setUploading] = useState("");
@@ -228,6 +229,8 @@ export default function LabTechnicianDashboard({ setPage }) {
 
       if (booking.source === "Home Service") {
         await updateHomeServiceStatus(booking.rawId, booking.status, action);
+      } else if (booking.source === "Scan Appointment") {
+        await updateScanStatus(booking.rawId, booking.status);
       } else {
         await updateWalkinStatus(booking.rawId, booking.status);
       }
@@ -248,7 +251,9 @@ export default function LabTechnicianDashboard({ setPage }) {
       return;
     }
 
-    setUploading(`${booking.source}-${booking.rawId}`);
+    const uploadKey = `${booking.source}-${booking.rawId}`;
+
+    setUploading(uploadKey);
 
     try {
       const reader = new FileReader();
@@ -256,7 +261,11 @@ export default function LabTechnicianDashboard({ setPage }) {
       reader.onload = async (event) => {
         try {
           const bookingType =
-            booking.source === "Home Service" ? "home_service" : "walkin";
+            booking.source === "Home Service"
+              ? "home_service"
+              : booking.source === "Scan Appointment"
+              ? "scan"
+              : "walkin";
 
           await uploadReport(
             booking.rawId,
@@ -289,10 +298,10 @@ export default function LabTechnicianDashboard({ setPage }) {
   if (loading) {
     return (
       <main className="lab-tech-page">
-        <div className="lab-empty-box">
-          <h3>Loading dashboard...</h3>
-          <p>Please wait while we load lab bookings.</p>
-        </div>
+        <section className="lab-tech-hero">
+          <h1>Loading Lab Technician Dashboard...</h1>
+          <p>Please wait while we fetch your branch samples.</p>
+        </section>
       </main>
     );
   }
@@ -300,14 +309,14 @@ export default function LabTechnicianDashboard({ setPage }) {
   if (error) {
     return (
       <main className="lab-tech-page">
-        <div className="lab-empty-box">
-          <h3>Unable to load dashboard</h3>
+        <section className="lab-tech-hero">
+          <h1>Lab Technician Dashboard</h1>
           <p>{error}</p>
 
-          <button className="lab-action-btn" onClick={loadDashboard}>
-            Try Again
+          <button className="lab-action-btn" onClick={handleLogout}>
+            Logout
           </button>
-        </div>
+        </section>
       </main>
     );
   }
@@ -315,57 +324,28 @@ export default function LabTechnicianDashboard({ setPage }) {
   return (
     <main className="lab-tech-page">
       <section className="lab-tech-hero">
-        <div className="lab-tech-hero-top">
-          <div>
-            <p className="lab-tech-eyebrow">Lab Technician Dashboard</p>
-            <h1>{branch || "Lab Branch"}</h1>
-            <p>
-              Manage home service samples and diagnostic walk-in reports for
-              your assigned branch.
-            </p>
-          </div>
-
-          <div className="lab-tech-header-actions">
-            <button onClick={loadDashboard}>Refresh</button>
-            <button className="lab-tech-logout" onClick={handleLogout}>
-              Logout
-            </button>
-          </div>
+        <div>
+          <span className="lab-tech-badge">Lab Technician Portal</span>
+          <h1>{branch || "Branch"} Lab Dashboard</h1>
+          <p>
+            Manage home service samples, diagnostic walk-in samples and scan
+            appointments from one dashboard.
+          </p>
         </div>
 
-        {staffProfile && (
-          <div className="lab-profile-box">
-            <div>
-              <p className="lab-profile-label">Logged-in Staff</p>
-              <h2>{staffProfile.name || "Lab Technician"}</h2>
-              <p>{staffProfile.email || "—"}</p>
-            </div>
-
-            <div className="lab-profile-grid">
-              <div>
-                <span>Branch</span>
-                <strong>{staffProfile.branch || branch || "—"}</strong>
-              </div>
-
-              <div>
-                <span>Role</span>
-                <strong>{staffProfile.role || "—"}</strong>
-              </div>
-
-              <div>
-                <span>Department</span>
-                <strong>{staffProfile.department || "—"}</strong>
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="lab-tech-profile-card">
+          <strong>{staffProfile?.name || "Lab Technician"}</strong>
+          <span>{staffProfile?.email || "—"}</span>
+          <span>{staffProfile?.phone || "—"}</span>
+          <button onClick={handleLogout}>Logout</button>
+        </div>
       </section>
 
-      <section className="lab-button-panel">
+      <section className="lab-tech-tabs">
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            className={`lab-main-btn ${activeTab === tab.key ? "active" : ""}`}
+            className={activeTab === tab.key ? "active" : ""}
             onClick={() => setActiveTab(tab.key)}
           >
             {tab.label}
@@ -374,35 +354,31 @@ export default function LabTechnicianDashboard({ setPage }) {
         ))}
       </section>
 
-      <div className="lab-search-box">
+      <section className="lab-tech-search">
         <input
           type="text"
+          placeholder="Search by receipt, patient, mobile, email, branch or status"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by patient name, mobile, booking ID, or email..."
         />
-
-        {search && (
-          <button onClick={() => setSearch("")}>
-            Clear
-          </button>
-        )}
-      </div>
+      </section>
 
       {visibleBookings.length === 0 ? (
-        <div className="lab-empty-box">
-          <h3>No bookings found</h3>
-          <p>
-            {search
-              ? "No booking matched your search."
-              : "There are no bookings in this tab right now."}
-          </p>
-        </div>
+        <section className="lab-empty-card">
+          <h2>No bookings found</h2>
+          <p>There are no records in this tab right now.</p>
+        </section>
       ) : (
-        <section className="lab-tech-list">
+        <section className="lab-booking-grid">
           {visibleBookings.map((booking) => {
-            const sourceColor = getSourceColor(booking.source);
-            const statusColor = getStatusColor(booking.status);
+            const sourceStyle =
+              SOURCE_COLORS[booking.source] || SOURCE_COLORS["Home Service"];
+
+            const statusKey = String(booking.status || "pending").toLowerCase();
+
+            const statusStyle =
+              STATUS_COLORS[statusKey] || STATUS_COLORS.pending;
+
             const actionLabel = getActionLabel(booking);
 
             const actionKey = `${booking.source}-${booking.rawId}-next`;
@@ -411,50 +387,39 @@ export default function LabTechnicianDashboard({ setPage }) {
 
             const canReject =
               booking.source === "Home Service" &&
-              String(booking.status).toLowerCase() === "submitted_to_lab";
+              statusKey === "submitted_to_lab";
 
-            const canUpload =
-              String(booking.status).toLowerCase() === "processing" ||
-              String(booking.status).toLowerCase() === "report_ready";
+            const canUpload = statusKey === "report_ready";
 
             return (
-              <article className="lab-tech-task-card" key={booking.id}>
-                <div className="lab-tech-task-top">
-                  <div>
-                    <div className="lab-tech-badges">
-                      <span
-                        style={{
-                          background: sourceColor.bg,
-                          color: sourceColor.color,
-                          border: `1px solid ${sourceColor.border}`,
-                        }}
-                      >
-                        {booking.source}
-                      </span>
+              <article className="lab-booking-card" key={booking.id}>
+                <div className="lab-booking-top">
+                  <span
+                    style={{
+                      background: sourceStyle.bg,
+                      color: sourceStyle.color,
+                      border: `1px solid ${sourceStyle.border}`,
+                    }}
+                  >
+                    {booking.source}
+                  </span>
 
-                      <span
-                        style={{
-                          background: statusColor.bg,
-                          color: statusColor.color,
-                        }}
-                      >
-                        {booking.status}
-                      </span>
-                    </div>
-
-                    <h3>{booking.patientName || "Patient"}</h3>
-
-                    <p>
-                      Ref: <strong>{booking.bookingId || "—"}</strong>
-                    </p>
-                  </div>
-
-                  <div className="lab-tech-amount">
-                    ₹{Number(booking.totalAmount || 0).toFixed(2)}
-                  </div>
+                  <small
+                    style={{
+                      background: statusStyle.bg,
+                      color: statusStyle.color,
+                    }}
+                  >
+                    {statusKey.replaceAll("_", " ")}
+                  </small>
                 </div>
 
-                <div className="lab-tech-details-grid">
+                <div className="lab-booking-title">
+                  <h2>{booking.patientName || "Patient"}</h2>
+                  <p>{booking.bookingId || "—"}</p>
+                </div>
+
+                <div className="lab-booking-info">
                   <div>
                     <span>Mobile</span>
                     <strong>{booking.mobile || "—"}</strong>
@@ -479,6 +444,11 @@ export default function LabTechnicianDashboard({ setPage }) {
                     <span>Created</span>
                     <strong>{fmtDatetime(booking.createdAt)}</strong>
                   </div>
+
+                  <div>
+                    <span>Total</span>
+                    <strong>₹{booking.totalAmount || 0}</strong>
+                  </div>
                 </div>
 
                 <div className="lab-email-box">
@@ -494,7 +464,7 @@ export default function LabTechnicianDashboard({ setPage }) {
                 </div>
 
                 <div className="lab-tech-tests">
-                  <span>Tests</span>
+                  <span>Tests / Scans</span>
 
                   <div>
                     {(booking.tests || []).length > 0 ? (

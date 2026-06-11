@@ -1,6 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+
 const asyncHandler = require("../../shared/utils/asyncHandler");
 const staffModel = require("./staff.model");
 
@@ -11,7 +12,9 @@ const mapLabStatus = (status = "") => {
     return "samples";
   }
 
-  if (["sample_collected", "submitted_to_lab"].includes(v)) {
+  if (
+    ["sample_collected", "submitted_to_lab", "sample_received"].includes(v)
+  ) {
     return "sample_received";
   }
 
@@ -31,6 +34,13 @@ const mapLabStatus = (status = "") => {
 };
 
 const WALKIN_NEXT = {
+  pending: "sample_received",
+  confirmed: "sample_received",
+  sample_received: "report_ready",
+  report_ready: "completed",
+};
+
+const SCAN_NEXT = {
   pending: "sample_received",
   confirmed: "sample_received",
   sample_received: "report_ready",
@@ -146,6 +156,44 @@ const updateWalkinStatusController = asyncHandler(async (req, res) => {
   });
 });
 
+const updateScanStatusController = asyncHandler(async (req, res) => {
+  const auth = await getAuthenticatedStaff(req, res);
+  if (!auth) return;
+
+  const { id, currentStatus } = req.body;
+
+  if (!id || !currentStatus) {
+    return res.status(400).json({
+      success: false,
+      message: "id and currentStatus are required.",
+    });
+  }
+
+  const nextStatus = SCAN_NEXT[String(currentStatus).toLowerCase()];
+
+  if (!nextStatus) {
+    return res.status(400).json({
+      success: false,
+      message: `No next status for: ${currentStatus}`,
+    });
+  }
+
+  const updated = await staffModel.updateScanStatus(id, nextStatus);
+
+  if (!updated) {
+    return res.status(404).json({
+      success: false,
+      message: "Scan booking not found.",
+    });
+  }
+
+  return res.json({
+    success: true,
+    message: `Status updated to ${nextStatus}`,
+    newStatus: nextStatus,
+  });
+});
+
 const updateHomeServiceStatusController = asyncHandler(async (req, res) => {
   const auth = await getAuthenticatedStaff(req, res);
   if (!auth) return;
@@ -206,25 +254,26 @@ const uploadReportController = asyncHandler(async (req, res) => {
     });
   }
 
-  if (!["home_service", "walkin"].includes(bookingType)) {
+  if (!["home_service", "walkin", "scan"].includes(bookingType)) {
     return res.status(400).json({
       success: false,
-      message: "bookingType must be home_service or walkin.",
+      message: "bookingType must be home_service, walkin or scan.",
     });
   }
 
   const match = fileBase64.match(/^data:([^;]+);base64,(.+)$/);
+  const mimeType = match ? match[1] : "application/pdf";
   const base64Data = match ? match[2] : fileBase64;
 
+  if (mimeType !== "application/pdf") {
+    return res.status(400).json({
+      success: false,
+      message: "Only PDF reports are allowed.",
+    });
+  }
+
   const filename = `report_${crypto.randomUUID()}.pdf`;
-
-  /*
-    This saves to:
-    D:\callmedex\CallMedex\uploads\reports
-
-    because your existing report file was found there.
-  */
-  const uploadDir = path.join(__dirname, "../../../../uploads/reports");
+  const uploadDir = path.join(process.cwd(), "uploads", "reports");
 
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
@@ -275,6 +324,7 @@ const getReportsForUserController = asyncHandler(async (req, res) => {
 module.exports = {
   getLabTechnicianDashboard,
   updateWalkinStatusController,
+  updateScanStatusController,
   updateHomeServiceStatusController,
   uploadReportController,
   getReportsForUserController,
