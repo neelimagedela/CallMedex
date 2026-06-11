@@ -25,6 +25,7 @@ const diagnosticPackageRoutes = require("./modules/diagnosticPackage/routes/diag
 const errorMiddleware = require("./shared/middleware/error.middleware");
 
 const app = express();
+const mouRoutes = require("./modules/mou/mou.routes");
 
 app.use(
   helmet({
@@ -35,7 +36,9 @@ app.use(
 
 app.use(
   cors({
-    origin: true,
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
@@ -43,6 +46,7 @@ app.use(
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 app.use(cookieParser());
+
 
 /* =========================
    UPLOADS / REPORT PDF FIX
@@ -125,6 +129,7 @@ app.get("/debug/uploads", (req, res) => {
    RATE LIMIT
    ========================= */
 
+app.use("/mou", mouRoutes);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 25,

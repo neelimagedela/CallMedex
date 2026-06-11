@@ -38,7 +38,30 @@ const Register = ({ setPage }) => {
   const [showOtpScreen, setShowOtpScreen] = useState(false);
   const [otp, setOtp] = useState("");
   const [userId, setUserId] = useState(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [mouViewed, setMouViewed] = useState(false);
 
+    const getMouFile = () => {
+  if (selectedRole === "doctor") {
+    return "/doctor-mou.pdf";
+  }
+
+  if (selectedRole === "organization") {
+    return "/organization_mou.pdf";
+  }
+
+   if (selectedRole === "phlebotomist") {
+  if (roleData.phleboType === "fullTime") {
+    return "/phlebo-fulltime.pdf";
+  }
+
+  if (roleData.phleboType === "partTime") {
+    return "/phlebo-parttime.pdf";
+  }
+}
+
+  return null;
+};
   const normalizedRole =
     selectedRole === "phlebotomist"
       ? "phlebo"
@@ -98,6 +121,26 @@ const Register = ({ setPage }) => {
 
     return processed;
   };
+  const getMouId = (role) => {
+  if (role === "doctor") return 1;
+  if (role === "organization") return 2;
+  if (role === "phlebotomist") return 3; 
+  if (role === "staff") return 4;
+  if (role === "pharmacy") return 5;
+  return null;
+};
+const acceptMou = async (userId, role) => {
+  try {
+
+    const res = await api.post("/mou/accept", {
+  user_id: userId,
+  user_name: formData.name,
+  role: normalizedRole
+});
+  } catch (err) {
+    console.log("❌ FRONTEND ERROR:", err.response?.data || err.message);
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -116,6 +159,10 @@ const Register = ({ setPage }) => {
       toast.warning("Password must be at least 8 characters long.");
       return;
     }
+    if ( selectedRole !== "patient" && !acceptedTerms) {
+  toast.warning("Please read and accept the MOU before registration.");
+  return;
+}
 
     if (!/^[6-9]\d{9}$/.test(formData.phone)) {
       toast.error("Please enter a valid 10-digit mobile number.");
@@ -255,6 +302,7 @@ const Register = ({ setPage }) => {
         role: normalizedRole,
         ...cleanedRoleData,
       });
+      await acceptMou(userId, normalizedRole);
 
       const isLabTechnicianStaff =
         normalizedRole === "staff" &&
@@ -613,16 +661,15 @@ const Register = ({ setPage }) => {
               </div>
             </div>
           </div>
-
-          <div className="form-group">
-            <label>Select Role</label>
-
+           <div className="form-group">
             <select
               value={selectedRole}
-              onChange={(e) => {
-                setSelectedRole(e.target.value);
-                setRoleData({});
-              }}
+             onChange={(e) => {
+            setSelectedRole(e.target.value);
+            setRoleData({});
+            setAcceptedTerms(false);
+            setMouViewed(false);
+            }}
               required
             >
               <option value="">Choose Role</option>
@@ -654,12 +701,61 @@ const Register = ({ setPage }) => {
           {selectedRole === "phlebotomist" && (
             <PhleboFields onChange={setRoleData} />
           )}
+          {selectedRole &&
+          selectedRole !== "patient"  && (
+  <div className="mou-section">
 
-          <button type="submit" className="auth-btn" disabled={loading}>
-            {loading ? "Registering..." : "Create Account"}
-          </button>
+   <button
+  type="button"
+  className="mou-btn"
+  onClick={() => {
+    const mouFile = getMouFile();
+
+    if (!mouFile) {
+      toast.warning("Please complete role details first.");
+      return;
+    }
+
+    window.open(mouFile, "_blank");
+    setMouViewed(true);
+  }}
+>
+  View {selectedRole} MOU
+</button>
+    
+<div style={{ marginTop: "10px" }}>
+  <label>
+    <input
+      type="checkbox"
+      checked={acceptedTerms}
+      disabled={!mouViewed}
+      onChange={(e) => setAcceptedTerms(e.target.checked)}
+    />
+    {" "}I have read and accepted the MOU
+  </label>
+  {selectedRole &&
+  selectedRole !== "patient" &&
+  !mouViewed && (
+    <p style={{ color: "red", fontSize: "12px" }}>
+      Please view the MOU before accepting.
+    </p>
+)}
+</div>
+
+  </div>
+)}
+
+         <button
+  type="submit"
+  className="auth-btn"
+  disabled={loading ||  (selectedRole !== "patient" && !acceptedTerms)}
+>
+  {loading ? "Registering..." : "Create Account"}
+</button>
         </form>
+           
 
+     
         <p className="switch-auth">
           Already have an account?{" "}
           <span onClick={() => setPage("login")}>Sign In</span>
