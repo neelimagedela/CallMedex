@@ -1,42 +1,48 @@
 const db = require("../../../config/db");
 
 const createUser = async(userData) => {
-
+ console.log(userData);
     const [result] = await db.execute(
         `
         INSERT INTO users
-        (
-            name,
-            phone,
-            email,
-            password_hash,
-            role,
-            gender,
-            dob,
-            address,
-            city,
-            district,
-            state,
-            pincode,
-            country
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+(
+name,
+phone,
+email,
+password_hash,
+role,
+branch,
+approval_status,
+gender,
+dob,
+address,
+city,
+district,
+state,
+pincode,
+country
+)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
-            userData.name,
-            userData.phone,
-            userData.email,
-            userData.password_hash,
-            userData.role,
-            userData.gender || null,
-            userData.dob || null,
-            userData.address || null,
-            userData.city || null,
-            userData.district || null,
-            userData.state || null,
-            userData.pincode || null,
-            userData.country || null
-        ]
+    userData.name,
+    userData.phone,
+    userData.email,
+    userData.password_hash,
+    userData.role,
+
+    userData.branch || null,
+    userData.approval_status || "pending",
+
+    userData.gender || null,
+    userData.dob || null,
+    userData.address || null,
+    userData.city || null,
+    userData.district || null,
+    userData.state || null,
+    userData.pincode || null,
+    userData.country || null
+]
     );
 
     return {

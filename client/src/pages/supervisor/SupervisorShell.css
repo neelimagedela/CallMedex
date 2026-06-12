@@ -1,0 +1,31 @@
+/* client/src/pages/supervisor/SupervisorShell.css */
+
+.sv-shell {
+  display: flex;
+  min-height: 100vh;
+
+  background: linear-gradient(
+    135deg,
+    #eef6ff 0%,
+    #f0fafb 60%,
+    #f8fafc 100%
+  );
+
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.sv-shell-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+
+  background: linear-gradient(
+    135deg,
+    #eef6ff 0%,
+    #f0fafb 60%,
+    #f8fafc 100%
+  );
+}

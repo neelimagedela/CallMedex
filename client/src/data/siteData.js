@@ -182,7 +182,7 @@ export const APPOINTMENT_SERVICES = [
 ];
 
 export const BRANCHES = [
-  { name: "Akkayyapalem Branch", hours: "Mon–Sat: 8 AM – 9 PM",   phone: "+91-891-2225001", services: "Lab · Pharmacy · OPD · Radiology" },
+  { name: "Akkayapalem Branch", hours: "Mon–Sat: 8 AM – 9 PM",   phone: "+91-891-2225001", services: "Lab · Pharmacy · OPD · Radiology" },
   { name: "KGH Branch",          hours: "Mon–Sun: 24 Hours",       phone: "+91-891-2225002", services: "Emergency · ICU · Blood Bank · Lab" },
   { name: "Madurawada Branch",   hours: "Mon–Sat: 9 AM – 8 PM",   phone: "+91-891-2225003", services: "Diagnostics · Pharmacy · OPD" },
 ];

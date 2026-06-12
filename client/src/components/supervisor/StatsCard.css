@@ -1,0 +1,60 @@
+/* client/src/components/supervisor/StatsCard.css */
+
+.sv-stats-card {
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+
+  border-radius: 20px;
+
+  padding: 22px;
+
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  box-shadow: 0 8px 24px rgba(10, 37, 64, 0.08);
+
+  transition: all 0.25s ease;
+}
+
+.sv-stats-card:hover {
+  transform: translateY(-4px);
+
+  box-shadow: 0 14px 34px rgba(10, 37, 64, 0.12);
+}
+
+.sv-stats-icon {
+  width: 54px;
+  height: 54px;
+
+  border-radius: 16px;
+
+  background: color-mix(
+    in srgb,
+    var(--card-color) 12%,
+    white
+  );
+
+  display: grid;
+  place-items: center;
+
+  font-size: 24px;
+}
+
+.sv-stats-value {
+  font-size: 30px;
+  font-weight: 800;
+
+  color: var(--card-color);
+
+  line-height: 1;
+}
+
+.sv-stats-label {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 600;
+
+  margin-top: 5px;
+}

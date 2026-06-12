@@ -10,12 +10,10 @@ const PhleboProfessionalSection = ({
       <h2 className="section-title">
         Professional Details
       </h2>
-
+ 
       <p className="section-subtitle">
         Add qualification and professional experience
       </p>
-
-      <div className="form-grid-2">
 
         <div className="form-group">
           <label>Qualification</label>
@@ -82,8 +80,6 @@ const PhleboProfessionalSection = ({
         </div>
 
       </div>
-
-    </div>
   );
 };
 

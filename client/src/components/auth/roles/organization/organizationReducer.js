@@ -1,4 +1,5 @@
 export const initialState = {
+  organizationName: "",
   institutionName: "",
   institutionType: "",
   registrationNumber: "",
@@ -24,6 +25,6 @@ export const initialState = {
 export function organizationReducer(state, action) {
   return {
     ...state,
-    [action.name]: action.value,
+    [action.field || action.name]: action.value,
   };
 }

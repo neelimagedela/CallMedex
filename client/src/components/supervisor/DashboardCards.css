@@ -1,0 +1,6 @@
+/* client/src/components/supervisor/DashboardCards.css */
+.sv-dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}

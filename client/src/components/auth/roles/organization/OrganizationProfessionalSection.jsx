@@ -19,17 +19,22 @@ export default function OrganizationProfessionalSection({
         <div className="form-group">
           <label>Organization Name</label>
 
-          <input
-            type="text"
-            placeholder="Enter institution name"
-            value={organizationForm.institutionName}
-            onChange={(e) =>
-              dispatch({
-                name: "institutionName",
-                value: e.target.value,
-              })
-            }
-          />
+          <select
+  name="organizationName"
+  value={organizationForm.organizationName }
+  onChange={(e) =>
+  dispatch({
+    type: "UPDATE_FIELD",
+    field: "organizationName",
+    value: e.target.value,
+  })
+}
+>
+  <option value="">Select Organization</option>
+  <option value="Akkayapalem">Akkayapalem</option>
+  <option value="Madhurawada">Madhurawada</option>
+  <option value="KGH">KGH</option>
+</select>
         </div>
 
         <div className="form-group">

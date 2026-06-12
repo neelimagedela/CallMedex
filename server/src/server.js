@@ -20,8 +20,10 @@ const consultancyHomeRoutes = require("./modules/consultancyHome/routes/consulta
 const walkInCentersRoutes = require("./modules/walkInCenters/routes/walkInCenters.routes");
 const clinicRoutes = require("./modules/clinic/routes/clinic.routes");
 const teleConsultationRoutes = require("./modules/teleConsultation/routes/teleConsultation.routes");
-const diagnosticPackageRoutes = require("./modules/diagnosticPackage/routes/diagnosticPackage.routes");
-
+const diagnosticPackageRoutes = require(
+  "./modules/diagnosticPackage/routes/diagnosticPackage.routes"
+);
+const supervisorRoutes = require("./modules/supervisor/supervisor.routes");
 const errorMiddleware = require("./shared/middleware/error.middleware");
 
 const app = express();
@@ -179,6 +181,7 @@ app.use("/walk-in-centers", walkInCentersRoutes);
 app.use("/clinic", clinicRoutes);
 app.use("/api/tele-consultation", teleConsultationRoutes);
 app.use("/api/diagnostic-package", diagnosticPackageRoutes);
+app.use("/api/supervisor", supervisorRoutes);
 
 /* =========================
    ERROR HANDLER

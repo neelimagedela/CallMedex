@@ -79,169 +79,186 @@ export default function Navbar({
   };
 
   return (
-    <nav className={`nav-outer${scrolled ? " scrolled" : ""}`}>
-      <div className="nav-inner">
-        {/* LOGO */}
-        <a
-          className="nav-logo"
-          href={SITE.baseUrl}
-          onClick={(e) => {
-            e.preventDefault();
-            setPage("home");
-          }}
-        >
-          <img src={logo} alt="CallMedex Logo" />
-        </a>
+  <nav className={`nav-outer${scrolled ? " scrolled" : ""}`}>
+    <div className="nav-inner">
+      {/* LOGO */}
+      <a
+        className="nav-logo"
+        href={SITE.baseUrl}
+        onClick={(e) => {
+          e.preventDefault();
+          setPage("home");
+        }}
+      >
+        <img src={logo} alt="CallMedex Logo" />
+      </a>
 
-        {/* MENU */}
-        <div className="nav-menu">
-          {NAV.map((item, i) =>
-            item.solo ? (
-              <div className="nav-item" key={i}>
-                <button className="nav-link" onClick={() => handleMenuClick(item)}>
-                  {item.label}
-                </button>
-              </div>
-            ) : (
-              <div className="nav-item" key={i}>
-                <button className="nav-link" type="button">
-                  {item.label}
-                  <ChevDown />
-                </button>
-
-                <div className="nav-drop">
-                  {item.items?.map((d, j) => (
-                    <button
-                      className="drop-item"
-                      key={j}
-                      type="button"
-                      onClick={() => handleMenuClick(d)}
-                    >
-                      {d.ico && <span className="drop-icon">{d.ico}</span>}
-
-                      <span>{d.label || d.text}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )
-          )}
-
-          {/* LOGIN / ROLE BUTTONS */}
-          {!isLoggedIn && !loggedInUser ? (
-            <button className="btn btn-login" onClick={() => setPage("login")}>
-              🔐 Login
-            </button>
-          ) : isPharmacy ? (
-            <>
+      {/* MENU */}
+      <div className="nav-menu">
+        {NAV.map((item, i) =>
+          item.solo ? (
+            <div className="nav-item" key={i}>
               <button
-                type="button"
-                className="pharmacy-dashboard-nav-btn"
-                onClick={() => setPage("pharmacy-dashboard")}
+                className="nav-link"
+                onClick={() => handleMenuClick(item)}
               >
-                <span className="pharmacy-dashboard-nav-icon">🏥</span>
-                Dashboard
+                {item.label}
               </button>
-
-              <button className="btn btn-login" onClick={handleLogout}>
-                Logout
-              </button>
-            </>
-          ) : isPatient ? (
-            <div style={{ position: "relative" }}>
-              <button
-                className="btn btn-login"
-                onClick={() => setShowProfile((prev) => !prev)}
-              >
-                👤 Profile
-              </button>
-
-              {showProfile && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "55px",
-                    right: 0,
-                    width: "280px",
-                    background: "#fff",
-                    borderRadius: "12px",
-                    boxShadow: "0 8px 25px rgba(0,0,0,0.12)",
-                    padding: "15px",
-                    zIndex: 9999,
-                  }}
-                >
-                  <h4>{loggedInUser?.name || "User"}</h4>
-
-                  <hr />
-
-                  <button
-                    className="drop-item"
-                    onClick={() => {
-                      setShowProfile(false);
-                      setPage("profile");
-                    }}
-                  >
-                    Edit Profile
-                  </button>
-
-                  <button
-                    className="drop-item"
-                    onClick={() => {
-                      setShowProfile(false);
-                      setPage("bookings");
-                    }}
-                  >
-                    Previous Bookings
-                  </button>
-
-                  <button
-                    className="drop-item"
-                    onClick={() => {
-                      setShowProfile(false);
-                      setPage("reports");
-                    }}
-                  >
-                    Test Reports
-                  </button>
-
-                  <button
-                    className="drop-item"
-                    onClick={() => {
-                      setShowProfile(false);
-                      setPage("help");
-                    }}
-                  >
-                    Help & Support
-                  </button>
-
-                  <hr />
-
-                  <button className="drop-item" onClick={handleLogout}>
-                    Logout
-                  </button>
-                </div>
-              )}
             </div>
           ) : (
+            <div className="nav-item" key={i}>
+              <button className="nav-link" type="button">
+                {item.label}
+                <ChevDown />
+              </button>
+
+              <div className="nav-drop">
+                {item.items?.map((d, j) => (
+                  <button
+                    className="drop-item"
+                    key={j}
+                    type="button"
+                    onClick={() => handleMenuClick(d)}
+                  >
+                    {d.ico && <span className="drop-icon">{d.ico}</span>}
+                    <span>{d.label || d.text}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        )}
+      </div>
+
+      {/* RIGHT SIDE ACTIONS */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          marginLeft: "auto",
+        }}
+      >
+        {/* LOGIN / ROLE BUTTONS */}
+        {!isLoggedIn && !loggedInUser ? (
+          <button
+            className="btn btn-login"
+            onClick={() => setPage("login")}
+          >
+            🔐 Login
+          </button>
+        ) : isPharmacy ? (
+          <>
+            <button
+              type="button"
+              className="pharmacy-dashboard-nav-btn"
+              onClick={() => setPage("pharmacy-dashboard")}
+            >
+              <span className="pharmacy-dashboard-nav-icon">🏥</span>
+              Dashboard
+            </button>
+
             <button className="btn btn-login" onClick={handleLogout}>
               Logout
             </button>
-          )}
-
-          {/* BOOK APPOINTMENT - HIDE FOR PHARMACY */}
-          {!isPharmacy && (
+          </>
+        ) : isPatient ? (
+          <div style={{ position: "relative" }}>
             <button
-  className="btn btn-book"
-  onClick={() => setPage("consultation-choice")}
-  style={{ marginLeft: "12px" }}
->
-  Book
-  <br />
-  Appointment
-</button>
-          )}
-        </div>
+              className="btn btn-login"
+              onClick={() => setShowProfile((prev) => !prev)}
+            >
+              👤 Profile
+            </button>
+
+            {showProfile && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "55px",
+                  right: 0,
+                  width: "280px",
+                  background: "#fff",
+                  borderRadius: "12px",
+                  boxShadow: "0 8px 25px rgba(0,0,0,0.12)",
+                  padding: "15px",
+                  zIndex: 9999,
+                }}
+              >
+                <h4>{loggedInUser?.name || "User"}</h4>
+
+                <hr />
+
+                <button
+                  className="drop-item"
+                  onClick={() => {
+                    setShowProfile(false);
+                    setPage("profile");
+                  }}
+                >
+                  Edit Profile
+                </button>
+
+                <button
+                  className="drop-item"
+                  onClick={() => {
+                    setShowProfile(false);
+                    setPage("bookings");
+                  }}
+                >
+                  Previous Bookings
+                </button>
+
+                <button
+                  className="drop-item"
+                  onClick={() => {
+                    setShowProfile(false);
+                    setPage("reports");
+                  }}
+                >
+                  Test Reports
+                </button>
+
+                <button
+                  className="drop-item"
+                  onClick={() => {
+                    setShowProfile(false);
+                    setPage("help");
+                  }}
+                >
+                  Help & Support
+                </button>
+
+                <hr />
+
+                <button
+                  className="drop-item"
+                  onClick={handleLogout}
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button className="btn btn-login" onClick={handleLogout}>
+            Logout
+          </button>
+        )}
+
+        {/* BOOK APPOINTMENT */}
+        {!isPharmacy && (
+          <button
+            className="btn btn-book"
+            onClick={() => setPage("consultation-choice")}
+          >
+            Book
+            <br />
+            Appointment
+          </button>
+        )}
       </div>
-    </nav>
-  );
+    </div>
+  </nav>
+);
 }

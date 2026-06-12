@@ -31,7 +31,21 @@ body{font-family:var(--font);background:var(--c5);color:var(--c1);-webkit-font-s
 /* ── NAVBAR ── */
 .nav-outer{width:100%;position:sticky;top:0;z-index:999;background:rgba(255,255,255,.97);backdrop-filter:blur(18px);border-bottom:1px solid #e8edf3;transition:.3s ease;}
 .nav-outer.scrolled{box-shadow:0 8px 30px rgba(0,0,0,0.06);}
-.nav-menu{display:flex;align-items:center;gap:2px;flex:1;justify-content:flex-start;margin-left:30px;}
+.nav-menu{
+  display:flex;
+  align-items:center;
+  gap:2px;
+  flex:1;
+  justify-content:flex-start;
+  margin-left:30px;
+}
+
+.nav-actions{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-left:auto;
+}
 .nav-inner{
   width:100%;
   max-width:1600px;

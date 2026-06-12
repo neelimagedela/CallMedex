@@ -1,0 +1,187 @@
+/* client/src/pages/supervisor/SupervisorPages.css */
+
+.sv-page {
+  padding: 40px;
+  max-width: 1400px;
+  min-height: calc(100vh - 40px);
+}
+
+.sv-page-header {
+  margin-bottom: 32px;
+}
+
+.sv-page-title {
+  font-size: 34px;
+  font-weight: 800;
+  color: #0a2540;
+  margin-bottom: 8px;
+}
+
+.sv-page-sub {
+  font-size: 15px;
+  color: #64748b;
+}
+
+.sv-loading {
+  padding: 60px;
+  text-align: center;
+  color: #64748b;
+}
+
+.sv-error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.sv-search-bar {
+  margin-bottom: 24px;
+}
+
+.sv-search-input {
+  width: 100%;
+  max-width: 420px;
+
+  padding: 12px 18px;
+
+  border: 1px solid #dbe4ee;
+
+  border-radius: 12px;
+
+  background: white;
+
+  font-size: 14px;
+}
+
+.sv-search-input:focus {
+  outline: none;
+  border-color: #1b6ca8;
+}
+
+.sv-profile-card {
+  background: white;
+
+  border: 1px solid #e2e8f0;
+
+  border-radius: 24px;
+
+  padding: 32px;
+
+  max-width: 720px;
+
+  box-shadow: 0 8px 24px rgba(10, 37, 64, 0.08);
+}
+
+.sv-btn-primary {
+  background: #1b6ca8;
+  color: white;
+
+  border: none;
+
+  padding: 12px 22px;
+
+  border-radius: 12px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.sv-btn-primary:hover {
+  background: #15598b;
+}
+
+.sv-btn-ghost {
+  background: white;
+
+  color: #1b6ca8;
+
+  border: 1px solid #1b6ca8;
+
+  padding: 12px 22px;
+
+  border-radius: 12px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.sv-btn-ghost:hover {
+  background: #eef6ff;
+}
+
+.sv-reports-grid {
+  display: grid;
+
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(240px, 1fr)
+  );
+
+  gap: 18px;
+}
+.sv-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  padding: 16px 0;
+
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.sv-profile-row:last-of-type {
+  border-bottom: none;
+}
+
+.sv-profile-label {
+  width: 220px;
+  flex-shrink: 0;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  color: #64748b;
+
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sv-profile-value {
+  flex: 1;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  color: #0a2540;
+}
+
+.sv-profile-input {
+  flex: 1;
+
+  padding: 10px 14px;
+
+  border: 1px solid #dbe4ee;
+
+  border-radius: 10px;
+
+  font-size: 14px;
+
+  background: white;
+}
+
+.sv-profile-input:focus {
+  outline: none;
+  border-color: #1b6ca8;
+}
+
+.sv-profile-actions {
+  display: flex;
+  gap: 12px;
+
+  margin-top: 24px;
+}

@@ -89,38 +89,42 @@ const Register = ({ setPage }) => {
     });
 
   const processRoleData = async (data) => {
-    const processed = { ...data };
+  const processed = { ...data };
 
-    for (const key in processed) {
-      if (processed[key] instanceof File) {
-        try {
-          processed[key] = await fileToBase64(processed[key]);
-        } catch (err) {
-          console.error(`Failed to convert file for ${key}:`, err);
-        }
-      }
-
-      if (Array.isArray(processed[key])) {
-        const convertedArray = [];
-
-        for (const item of processed[key]) {
-          if (item instanceof File) {
-            try {
-              convertedArray.push(await fileToBase64(item));
-            } catch (err) {
-              console.error(`Failed to convert file array item for ${key}:`, err);
-            }
-          } else {
-            convertedArray.push(item);
-          }
-        }
-
-        processed[key] = convertedArray;
-      }
+  for (const key in processed) {
+    if (
+      processed[key] instanceof File &&
+      key !== "medicalDegreeUpload" &&
+      key !== "aadhaarUpload"
+    ) {
+      processed[key] = await fileToBase64(processed[key]);
     }
 
-    return processed;
-  };
+    if (Array.isArray(processed[key])) {
+      const convertedArray = [];
+
+      for (const item of processed[key]) {
+        if (item instanceof File) {
+          try {
+            convertedArray.push(await fileToBase64(item));
+          } catch (err) {
+            console.error(
+              `Failed to convert file array item for ${key}:`,
+              err
+            );
+          }
+        } else {
+          convertedArray.push(item);
+        }
+      }
+
+      processed[key] = convertedArray;
+    }
+  }
+
+  return processed;
+};
+
   const getMouId = (role) => {
   if (role === "doctor") return 1;
   if (role === "organization") return 2;
@@ -129,16 +133,19 @@ const Register = ({ setPage }) => {
   if (role === "pharmacy") return 5;
   return null;
 };
-const acceptMou = async (userId, role) => {
+   
+   const acceptMou = async (userId, role) => {
   try {
-
-    const res = await api.post("/mou/accept", {
-  user_id: userId,
-  user_name: formData.name,
-  role: normalizedRole
-});
+    await api.post("/mou/accept", {
+      user_id: userId,
+      user_name: formData.name,
+      role: normalizedRole,
+    });
   } catch (err) {
-    console.log("❌ FRONTEND ERROR:", err.response?.data || err.message);
+    console.log(
+      "❌ FRONTEND ERROR:",
+      err.response?.data || err.message
+    );
   }
 };
 

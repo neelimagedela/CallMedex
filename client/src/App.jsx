@@ -46,6 +46,7 @@ import PhleboCompletedTasks from "./pages/Phlebo/CompletedTasks";
 import RejectedTasks from "./pages/Phlebo/RejectedTasks";
 
 import { ToastProvider } from "./shared/toast.js";
+import SupervisorShell from "./pages/supervisor/SupervisorShell";
 
 import {
   AboutSection, SpecialistsSection, PackagesSection, FeaturesSection,
@@ -86,6 +87,21 @@ export default function App() {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  console.log("USER:", user);
+console.log("ROLE:", user?.role);
+if (
+  user?.role === "organization" ||
+  user?.role === "supervisor"
+) {
+  return (
+    <SupervisorShell
+      user={user}
+      setPage={setPage}
+      setIsLoggedIn={setIsLoggedIn}
+      setUser={setUser}
+    />
+  );
+}
 
   return (
     <ToastProvider>
@@ -100,40 +116,44 @@ export default function App() {
         </>
       )}
 
-      {isPhleboPortal && user?.role === "phlebo" && (
-        <PhleboProvider setPage={setPage}>
-          <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc" }}>
-            <PhleboSidebar currentTab={page} setPage={setPage} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <PhleboTopBar setPage={setPage} />
-              <main style={{ padding: "28px" }}>
-                {page === "phlebo-profile"   && <PhleboProfile />}
-                {page === "phlebo-wallet"    && <PhleboWallet />}
-                {page === "phlebo-tasks"     && <PhleboTasksList />}
-                {page === "phlebo-active"    && <PhleboActiveTask />}
-                {page === "phlebo-completed" && <PhleboCompletedTasks />}
-                {page === "phlebo-rejected"  && <RejectedTasks />}
-              </main>
-            </div>
-          </div>
-        </PhleboProvider>
-      )}
+{isPhleboPortal && user?.role === "phlebo" && (
+  <PhleboProvider setPage={setPage}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc" }}>
+      <PhleboSidebar currentTab={page} setPage={setPage} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <PhleboTopBar setPage={setPage} />
+        <main style={{ padding: "28px" }}>
+          {page === "phlebo-profile" && <PhleboProfile />}
+          {page === "phlebo-wallet" && <PhleboWallet />}
+          {page === "phlebo-tasks" && <PhleboTasksList />}
+          {page === "phlebo-active" && <PhleboActiveTask />}
+          {page === "phlebo-completed" && <PhleboCompletedTasks />}
+          {page === "phlebo-rejected" && <RejectedTasks />}
+        </main>
+      </div>
+    </div>
+  </PhleboProvider>
+)}
 
-      {isPhleboPortal && user?.role !== "phlebo" && (
-        <div style={{ padding: "120px 40px", textAlign: "center" }}>
-          <h1>Access Denied</h1>
-          <p>Only phlebo accounts can access this dashboard.</p>
-          <button className="btn btn-login" onClick={() => setPage("home")} style={{ marginTop: 20 }}>
-            Go Home
-          </button>
-        </div>
-      )}
+{isPhleboPortal && user?.role !== "phlebo" && (
+  <div style={{ padding: "120px 40px", textAlign: "center" }}>
+    <h1>Access Denied</h1>
+    <p>Only phlebo accounts can access this dashboard.</p>
+    <button
+      className="btn btn-login"
+      onClick={() => setPage("home")}
+      style={{ marginTop: 20 }}
+    >
+      Go Home
+    </button>
+  </div>
+)}
 
-      {isStaffPortal && page === "lab-technician-dashboard" && (
-        <LabTechnicianDashboard setPage={setPage} />
-      )}
+{isStaffPortal && page === "lab-technician-dashboard" && (
+  <LabTechnicianDashboard setPage={setPage} />
+)}
 
-      {!isInternalPortal && page === "home" && (
+{!isInternalPortal && page === "home" && (
         <>
           <HeroSection setPage={setPage} />
           <SearchSection />

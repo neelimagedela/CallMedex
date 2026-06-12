@@ -40,7 +40,6 @@ const getTableName = (role) => {
 
     case "staff":
       return "staff_profiles";
-
     default:
       throw new Error(`Invalid role for onboarding: ${role}`);
   }
@@ -86,20 +85,22 @@ const mapCamelToSnake = (data) => {
 
     // Organization
     institutionName: "institution_name",
-    institutionType: "institution_type",
-    licenseNumber: "license_number",
-    establishmentYear: "establishment_year",
-    ownershipType: "ownership_type",
-    altPhone: "alt_phone",
-    emergencyPhone: "emergency_phone",
-    headOfInstitution: "head_of_institution",
-    totalDepartments: "total_departments",
-    totalStaff: "total_staff",
-    totalBranches: "total_branches",
-    status: "status",
-    registrationCertificate: "registration_certificate",
-    governmentLicense: "government_license",
-    authorizedPersonIdProof: "authorized_person_id_proof",
+institutionType: "institution_type",
+registrationCertificate:"registration_certificate",
+registrationNumber: "registration_number",   // ADD THIS
+licenseNumber: "license_number",
+establishmentYear: "establishment_year",
+governmentLicense: "government_license",
+authorizedPersonIdProof: "authorized_person_id_proof",
+ownershipType: "ownership_type",
+altPhone: "alt_phone",
+emergencyPhone: "emergency_phone",
+headOfInstitution: "head_of_institution",
+totalDepartments: "total_departments",
+totalStaff: "total_staff",
+totalBranches: "total_branches",
+operatingHours: "operating_hours",           // ADD THIS
+status: "status",
 
     // staff
     organizationName: "organization_name",
@@ -153,8 +154,15 @@ approvedBy: "approved_by",
 const upsertProfile = async ({ userId, role, ...profileData }) => {
   const tableName = getTableName(role);
   const mappedData = mapCamelToSnake(profileData);
-
+console.log("PROFILE DATA:", profileData);
+console.log(
+  "medicalDegreeUpload length:",
+  profileData.medicalDegreeUpload?.length
+);
   if (Object.keys(mappedData).length === 0) {
+    console.log("ROLE:", role);
+console.log("PROFILE DATA:", profileData);
+console.log("MAPPED DATA:", mappedData);
     await db.execute(
       `
       UPDATE users

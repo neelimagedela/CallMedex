@@ -218,7 +218,7 @@ async function updateHomeServiceStatus(id, newStatus) {
   if (!allowed.includes(newStatus)) {
     throw new Error(`Invalid status: ${newStatus}`);
   }
-
+console.log("STATUS BEING SAVED:", newStatus);
   const [result] = await db.execute(
     `
     UPDATE home_service_bookings
