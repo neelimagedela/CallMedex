@@ -248,6 +248,7 @@ const resubmitRejectedBookingController = asyncHandler(async (req, res) => {
   });
 });
 
+// FIXED: handles the result object from acceptHomeServiceBooking correctly.
 const acceptHomeServiceBookingController = asyncHandler(async (req, res) => {
   if (req.user.role !== "phlebo") {
     throw new AppError("Only phlebos can accept home service bookings", 403);
@@ -258,14 +259,31 @@ const acceptHomeServiceBookingController = asyncHandler(async (req, res) => {
     throw new AppError("Invalid booking ID", 400);
   }
 
-  const accepted = await acceptHomeServiceBooking(bookingId, req.user.id);
-  if (!accepted) {
-    throw new AppError("This booking is already accepted or no longer available", 409);
+  const result = await acceptHomeServiceBooking(bookingId, req.user.id);
+
+  if (!result.accepted) {
+    if (result.reason === "not_found") {
+      throw new AppError("Booking not found", 404);
+    }
+
+    if (result.reason === "accepted_by_another") {
+      throw new AppError("This booking is already accepted by another phlebo", 409);
+    }
+
+    if (result.reason === "not_pending") {
+      throw new AppError("This booking is no longer pending", 409);
+    }
+
+    // race_condition — another phlebo grabbed it between SELECT and UPDATE
+    throw new AppError("Unable to accept this booking. Please refresh and try again.", 409);
   }
 
   return successResponse({
-    res, status: 200,
-    message: "Home service booking accepted successfully",
+    res,
+    status: 200,
+    message: result.alreadyAssignedToMe
+      ? "This booking is already in your active collection"
+      : "Home service booking accepted successfully",
   });
 });
 
@@ -283,7 +301,6 @@ const getPhleboActiveBookingController = asyncHandler(async (req, res) => {
   });
 });
 
-// FIX: reads phleboNotes from req.body and passes it through to the model.
 const updateHomeServiceBookingStatusController = asyncHandler(async (req, res) => {
   if (req.user.role !== "phlebo") {
     throw new AppError("Only phlebos can update booking status", 403);

@@ -73,6 +73,7 @@ const TasksList = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [locationReady, setLocationReady] = useState(false);
+  const [accepting, setAccepting] = useState(null);
 
   const fetchRequests = async () => {
     try {
@@ -84,6 +85,7 @@ const TasksList = () => {
       const response = await phleboApi.getBookings();
       const data = response.data?.data || [];
 
+      // Only show unassigned pending bookings in the job requests list.
       const pending = data.filter(
         (booking) => booking.status === "pending" && !booking.assignedPhleboId
       );
@@ -107,19 +109,33 @@ const TasksList = () => {
   }, []);
 
   const handleAccept = async (job) => {
+    // Use the numeric DB id, not publicBookingId.
+    const bookingId = job.id;
+
+    if (accepting === bookingId) return;
+    setAccepting(bookingId);
+
     try {
-      await phleboApi.acceptBooking(job.id);
+      const res = await phleboApi.acceptBooking(bookingId);
+      const message = res.data?.message || "Collection accepted successfully.";
 
-      alert("Collection accepted successfully.");
-
+      // Both a fresh accept and "already in your active collection" go to active page.
+      alert(message);
       setPage("phlebo-active");
     } catch (error) {
-      alert(
-        error.response?.data?.message ||
-          "This request may already be accepted by another phlebo."
-      );
+      const serverMessage = error.response?.data?.message;
 
+      if (error.response?.status === 409) {
+        // Could be accepted_by_another, not_pending, or race_condition.
+        alert(serverMessage || "This booking is no longer available.");
+      } else {
+        alert(serverMessage || "Unable to accept this booking. Please try again.");
+      }
+
+      // Refresh the list so the stale booking disappears.
       fetchRequests();
+    } finally {
+      setAccepting(null);
     }
   };
 
@@ -275,19 +291,22 @@ const TasksList = () => {
                     gap: "6px",
                   }}
                 >
-                  <Phone size={14} /> {job.patientMobile}
+                  <Phone size={14} />
+                  {job.patientMobile}
                 </p>
 
                 <p
                   style={{
-                    margin: "0",
-                    color: "#64748b",
+                    margin: 0,
                     display: "flex",
                     alignItems: "flex-start",
                     gap: "6px",
+                    color: "#475569",
+                    fontSize: "14px",
                   }}
                 >
-                  <MapPin size={14} /> {job.patientAddress}
+                  <MapPin size={14} style={{ marginTop: "2px", flexShrink: 0 }} />
+                  {job.patientAddress}
                 </p>
               </div>
 
@@ -308,45 +327,46 @@ const TasksList = () => {
                   <strong>Branch:</strong> {job.branch}
                 </p>
 
-                <p style={{ margin: "0 0 6px" }}>
+                <p style={{ margin: 0 }}>
                   <strong>Amount:</strong> {formatAmount(job.totalAmount)}
                 </p>
               </div>
             </div>
 
+            {/* Tests */}
             <div
               style={{
-                background: "#ecfcfc",
-                padding: "14px",
+                background: "#f0fdf4",
                 borderRadius: "10px",
+                padding: "14px",
+                border: "1px solid #bbf7d0",
                 marginBottom: "18px",
               }}
             >
               <p
                 style={{
                   margin: "0 0 8px",
-                  fontWeight: "700",
-                  color: "#0f766e",
+                  fontWeight: 700,
                   display: "flex",
                   alignItems: "center",
-                  gap: "6px",
+                  gap: "8px",
+                  color: "#15803d",
                 }}
               >
                 <FlaskConical size={16} /> Home Service Tests
               </p>
 
               {job.tests?.length ? (
-                job.tests.map((test, index) => (
+                job.tests.map((test, i) => (
                   <div
-                    key={`${job.id}-${index}`}
+                    key={i}
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
                       padding: "6px 0",
                       borderBottom:
-                        index < job.tests.length - 1
-                          ? "1px solid #ccfbf1"
-                          : "none",
+                        i < job.tests.length - 1 ? "1px solid #d1fae5" : "none",
+                      fontSize: "15px",
                     }}
                   >
                     <span>{getTestName(test)}</span>
@@ -354,40 +374,42 @@ const TasksList = () => {
                   </div>
                 ))
               ) : (
-                <p style={{ margin: 0, color: "#64748b" }}>
-                  No test details available.
-                </p>
+                <p style={{ color: "#64748b", margin: 0 }}>No test details.</p>
               )}
             </div>
 
-            <div style={{ display: "flex", gap: "12px" }}>
+            {/* Actions */}
+            <div style={{ display: "flex", gap: "10px" }}>
               <button
                 type="button"
+                disabled={accepting === job.id}
                 onClick={() => handleAccept(job)}
                 style={{
-                  background: "#16a34a",
+                  background: accepting === job.id ? "#94a3b8" : "#0f766e",
                   color: "#fff",
                   border: "none",
-                  padding: "10px 18px",
+                  padding: "10px 20px",
                   borderRadius: "10px",
                   fontWeight: "700",
-                  cursor: "pointer",
+                  cursor: accepting === job.id ? "not-allowed" : "pointer",
+                  fontSize: "14px",
                 }}
               >
-                Accept Collection
+                {accepting === job.id ? "Accepting..." : "Accept Collection"}
               </button>
 
               <button
                 type="button"
                 onClick={() => handleHide(job.id)}
                 style={{
-                  background: "#fee2e2",
-                  color: "#b91c1c",
-                  border: "none",
-                  padding: "10px 18px",
+                  background: "#fff",
+                  color: "#ef4444",
+                  border: "1px solid #fca5a5",
+                  padding: "10px 20px",
                   borderRadius: "10px",
                   fontWeight: "700",
                   cursor: "pointer",
+                  fontSize: "14px",
                 }}
               >
                 Hide

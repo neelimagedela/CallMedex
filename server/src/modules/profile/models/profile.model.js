@@ -498,13 +498,13 @@ const [diagnosticWalkinRows] = await db.execute(
     patient_mobile,
     patient_email,
     patient_address,
-    branch,
+    clinic_branch AS branch,
     appointment_date,
     time_slot,
-    total_amount,
+    consultation_fee AS total_amount,
     status,
     created_at
-  FROM appointments
+  FROM clinic_appointments
   WHERE user_id = ?
   `,
   [userId]

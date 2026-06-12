@@ -101,7 +101,7 @@ export default function App() {
       )}
 
       {isPhleboPortal && user?.role === "phlebo" && (
-        <PhleboProvider>
+        <PhleboProvider setPage={setPage}>
           <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc" }}>
             <PhleboSidebar currentTab={page} setPage={setPage} />
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -109,8 +109,8 @@ export default function App() {
               <main style={{ padding: "28px" }}>
                 {page === "phlebo-profile"   && <PhleboProfile />}
                 {page === "phlebo-wallet"    && <PhleboWallet />}
-                {page === "phlebo-tasks"     && <PhleboTasksList setPage={setPage} />}
-                {page === "phlebo-active"    && <PhleboActiveTask setPage={setPage} />}
+                {page === "phlebo-tasks"     && <PhleboTasksList />}
+                {page === "phlebo-active"    && <PhleboActiveTask />}
                 {page === "phlebo-completed" && <PhleboCompletedTasks />}
                 {page === "phlebo-rejected"  && <RejectedTasks />}
               </main>
