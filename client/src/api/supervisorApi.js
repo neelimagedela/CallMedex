@@ -27,8 +27,8 @@ export const supervisorApi = {
       headers: getAuthHeaders(),
     }).then(handleResponse),
 
-  getStaff: () =>
-    fetch(`${BASE_URL}/api/supervisor/staff`, {
+  getStaff: (search = "") =>
+    fetch(`${BASE_URL}/api/supervisor/staff?search=${encodeURIComponent(search)}`, {
       headers: getAuthHeaders(),
     }).then(handleResponse),
 
@@ -44,9 +44,24 @@ export const supervisorApi = {
       headers: getAuthHeaders(),
     }).then(handleResponse),
 
-  getPatients: () =>
-    fetch(`${BASE_URL}/api/supervisor/patients`, {
+  getPatients: (search = "") =>
+    fetch(`${BASE_URL}/api/supervisor/patients?search=${encodeURIComponent(search)}`, {
       headers: getAuthHeaders(),
+    }).then(handleResponse),
+
+  getPhlebos: (status = "", search = "") =>
+    fetch(
+      `${BASE_URL}/api/supervisor/phlebos?status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}`,
+      {
+        headers: getAuthHeaders(),
+      }
+    ).then(handleResponse),
+
+  updatePhleboBookingStatus: (bookingId, status) =>
+    fetch(`${BASE_URL}/api/supervisor/phlebo-bookings/${bookingId}/status`, {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ status }),
     }).then(handleResponse),
 
   getProfile: () =>

@@ -10,12 +10,14 @@ const {
   getOrgProfile,
   updateOrgProfile,
   getReports,
+  getPhlebos,
+  updatePhleboBookingStatus,
 } = require("./supervisor.controller");
 
 const router = express.Router();
 
-// All supervisor routes require a valid JWT AND the "supervisor" role
-router.use(authenticate, authorize(["organization", "supervisor"]));
+// All supervisor routes require a valid JWT AND the "organization" role
+router.use(authenticate, authorize(["organization"]));
 
 router.get("/dashboard", getDashboard);
 
@@ -24,6 +26,9 @@ router.put("/staff/:id/approve", approveStaffHandler);
 router.put("/staff/:id/reject", rejectStaffHandler);
 
 router.get("/patients", getPatients);
+
+router.get("/phlebos", getPhlebos);
+router.patch("/phlebo-bookings/:bookingId/status", updatePhleboBookingStatus);
 
 router.get("/profile", getOrgProfile);
 router.put("/profile", updateOrgProfile);

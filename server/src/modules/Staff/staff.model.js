@@ -290,9 +290,9 @@ async function getReportsForUser(userId) {
     LEFT JOIN appointments a
       ON br.booking_type = 'scan'
       AND br.booking_id = a.id
-    WHERE h.user_id = ?
-       OR d.user_id = ?
-       OR a.user_id = ?
+    WHERE (br.booking_type = 'home_service' AND h.user_id = ? AND h.status = 'completed')
+       OR (br.booking_type = 'walkin' AND d.user_id = ? AND d.status = 'completed')
+       OR (br.booking_type = 'scan' AND a.user_id = ? AND a.status = 'completed')
     ORDER BY br.uploaded_at DESC
     `,
     [userId, userId, userId]

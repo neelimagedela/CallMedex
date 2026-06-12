@@ -128,7 +128,9 @@ for (const p of phleboRows) {
  * Staff list filtered by organization_name (= supervisor's branch).
  * Joins users table for name and email; returns safe fields only.
  */
-const getStaffList = async (branch) => {
+const getStaffList = async (branch, search = "") => {
+  const normalizedBranch = branch === "Akkayyapalem" ? "Akkayapalem" : branch;
+  const term = `%${search}%`;
   const [rows] = await db.execute(
     `SELECT
        sp.id,
@@ -137,12 +139,29 @@ const getStaffList = async (branch) => {
        sp.staff_role AS role,
        sp.department,
        sp.approval_status,
-       sp.created_at
+       sp.created_at,
+       (
+         SELECT COUNT(*) FROM booking_reports br
+         LEFT JOIN home_service_bookings h ON br.booking_type = 'home_service' AND br.booking_id = h.id
+         LEFT JOIN diagnostic_walkin_bookings d ON br.booking_type = 'walkin' AND br.booking_id = d.id
+         LEFT JOIN appointments a ON br.booking_type = 'scan' AND br.booking_id = a.id
+         WHERE br.uploaded_by = u.id
+           AND COALESCE(h.status, d.status, a.status) = 'completed'
+       ) AS completedTaskCount,
+       (
+         SELECT COUNT(*) FROM booking_reports WHERE uploaded_by = u.id
+       ) AS reportCount,
+       COALESCE(
+         (SELECT MAX(uploaded_at) FROM booking_reports WHERE uploaded_by = u.id),
+         sp.updated_at,
+         u.updated_at
+       ) AS lastActivity
      FROM staff_profiles sp
      JOIN users u ON u.id = sp.user_id
      WHERE sp.organization_name = ?
-     ORDER BY sp.created_at DESC`,
-    [branch]
+       AND (? = '' OR u.name LIKE ? OR u.email LIKE ? OR sp.staff_role LIKE ? OR sp.department LIKE ?)
+     ORDER BY lastActivity DESC`,
+    [normalizedBranch, search, term, term, term, term]
   );
   return rows;
 };
@@ -178,70 +197,113 @@ const verifyStaffBelongsToBranch = async (staffProfileId, branch) => {
 /**
  * Patients & Appointments — union of appointments + home_service_bookings filtered by branch.
  */
-const getPatientsAndAppointments = async (branch) => {
-  if (branch === "Akkayyapalem") {
-    branch = "Akkayapalem";
-  }
+const getPatientsAndAppointments = async (branch, search = "") => {
+  const normalizedBranch = branch === "Akkayyapalem" ? "Akkayapalem" : branch;
+  const term = `%${search}%`;
 
-  console.log("SUPERVISOR BRANCH:", branch);
+  const hQuery = `
+    SELECT
+      patient_name AS patientName,
+      patient_email AS patientEmail,
+      patient_mobile AS patientMobile,
+      'home_service' AS bookingType,
+      public_booking_id AS bookingId,
+      collection_date AS date,
+      time_slot AS timeSlot,
+      patient_address AS branchAddress,
+      status,
+      created_at AS createdAt
+    FROM home_service_bookings
+    WHERE branch = ?
+      AND (? = '' OR patient_name LIKE ? OR patient_email LIKE ? OR patient_mobile LIKE ? OR public_booking_id LIKE ?)
+  `;
 
-  const [apptRows] = await db.execute(
-    `SELECT
-       patient_name AS patientName,
-       scans AS service,
-       appointment_date AS date,
-       status,
-       'scan_appointment' AS type,
-       receipt_id AS receiptId
-     FROM appointments
-     WHERE branch = ?`,
-    [branch]
-  );
+  const aQuery = `
+    SELECT
+      patient_name AS patientName,
+      patient_email AS patientEmail,
+      patient_mobile AS patientMobile,
+      'scan_appointment' AS bookingType,
+      receipt_id AS bookingId,
+      appointment_date AS date,
+      time_slot AS timeSlot,
+      branch AS branchAddress,
+      status,
+      created_at AS createdAt
+    FROM appointments
+    WHERE branch = ?
+      AND (? = '' OR patient_name LIKE ? OR patient_email LIKE ? OR patient_mobile LIKE ? OR receipt_id LIKE ?)
+  `;
 
-  console.log("APPOINTMENT ROWS:", apptRows);
+  const wQuery = `
+    SELECT
+      patient_name AS patientName,
+      patient_email AS patientEmail,
+      patient_mobile AS patientMobile,
+      'walkin_center' AS bookingType,
+      receipt_id AS bookingId,
+      walkin_date AS date,
+      time_slot AS timeSlot,
+      branch AS branchAddress,
+      status,
+      created_at AS createdAt
+    FROM diagnostic_walkin_bookings
+    WHERE branch = ?
+      AND (? = '' OR patient_name LIKE ? OR patient_email LIKE ? OR patient_mobile LIKE ? OR receipt_id LIKE ?)
+  `;
 
-  const [homeRows] = await db.execute(
-    `SELECT
-       patient_name AS patientName,
-       tests AS service,
-       collection_date AS date,
-       status,
-       'home_service' AS type,
-       public_booking_id AS receiptId
-     FROM home_service_bookings
-     WHERE branch = ?
-     ORDER BY collection_date DESC`,
-    [branch]
-  );
+  const dpQuery = `
+    SELECT
+      dp.patient_name AS patientName,
+      dp.patient_email AS patientEmail,
+      dp.patient_mobile AS patientMobile,
+      'diagnostic_package' AS bookingType,
+      dp.receipt_id AS bookingId,
+      dp.appointment_date AS date,
+      dp.time_slot AS timeSlot,
+      dp.patient_address AS branchAddress,
+      dp.booking_status AS status,
+      dp.created_at AS createdAt
+    FROM diagnostic_package_bookings dp
+    JOIN users u ON dp.user_id = u.id
+    WHERE u.branch = ?
+      AND (? = '' OR dp.patient_name LIKE ? OR dp.patient_email LIKE ? OR dp.patient_mobile LIKE ? OR dp.receipt_id LIKE ?)
+  `;
 
-  console.log("HOME ROWS:", homeRows);
+  const cQuery = `
+    SELECT
+      patient_name AS patientName,
+      patient_email AS patientEmail,
+      patient_mobile AS patientMobile,
+      'clinic_appointment' AS bookingType,
+      receipt_id AS bookingId,
+      appointment_date AS date,
+      time_slot AS timeSlot,
+      clinic_branch AS branchAddress,
+      status,
+      created_at AS createdAt
+    FROM clinic_appointments
+    WHERE clinic_branch = ?
+      AND (? = '' OR patient_name LIKE ? OR patient_email LIKE ? OR patient_mobile LIKE ? OR receipt_id LIKE ?)
+  `;
 
-const [walkinRows] = await db.execute(
-  `SELECT
-     patient_name AS patientName,
-     tests AS service,
-     walkin_date AS date,
-     status,
-     'walkin_center' AS type,
-     receipt_id AS receiptId
-   FROM diagnostic_walkin_bookings
-   WHERE branch = ?`,
-  [branch]
-);
+  const [hRows, aRows, wRows, dpRows, cRows] = await Promise.all([
+    db.execute(hQuery, [normalizedBranch, search, term, term, term, term]),
+    db.execute(aQuery, [normalizedBranch, search, term, term, term, term]),
+    db.execute(wQuery, [normalizedBranch, search, term, term, term, term]),
+    db.execute(dpQuery, [normalizedBranch, search, term, term, term, term]),
+    db.execute(cQuery, [normalizedBranch, search, term, term, term, term]),
+  ]);
 
-console.log("WALKIN ROWS:", walkinRows);
+  const all = [
+    ...hRows[0],
+    ...aRows[0],
+    ...wRows[0],
+    ...dpRows[0],
+    ...cRows[0]
+  ];
 
-const all = [
-  ...apptRows,
-  ...homeRows,
-  ...walkinRows
-].sort(
-  (a, b) => new Date(b.date) - new Date(a.date)
-);
-
-  console.log("FINAL DATA:", all);
-
-  return all;
+  return all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 };
 
 /**
@@ -327,6 +389,57 @@ const getReportCounts = async (branch) => {
   };
 };
 
+const getPhleboList = async (branch, search = "") => {
+  const normalizedBranch = branch === "Akkayyapalem" ? "Akkayapalem" : branch;
+  const term = `%${search}%`;
+  const [rows] = await db.execute(
+    `SELECT
+       pp.id AS profileId,
+       u.id AS userId,
+       u.name,
+       u.email,
+       pp.updated_at AS lastUpdated,
+       (SELECT COUNT(*) FROM home_service_bookings WHERE assigned_phlebo_id = u.id AND branch = ?) AS assignedCount,
+       (SELECT COUNT(*) FROM home_service_bookings WHERE assigned_phlebo_id = u.id AND status = 'completed' AND branch = ?) AS completedCount
+     FROM phlebo_profiles pp
+     JOIN users u ON u.id = pp.user_id
+     WHERE (? = '' OR u.name LIKE ? OR u.email LIKE ?)`,
+    [normalizedBranch, normalizedBranch, search, term, term]
+  );
+  return rows;
+};
+
+const getTodayPhleboBookings = async (branch) => {
+  const normalizedBranch = branch === "Akkayyapalem" ? "Akkayapalem" : branch;
+  const [rows] = await db.execute(
+    `SELECT
+       assigned_phlebo_id AS phleboId,
+       time_slot AS timeSlot
+     FROM home_service_bookings
+     WHERE collection_date = CURDATE()
+       AND assigned_phlebo_id IS NOT NULL
+       AND branch = ?`,
+    [normalizedBranch]
+  );
+  return rows;
+};
+
+const getHomeServiceBooking = async (bookingId) => {
+  const [rows] = await db.execute(
+    `SELECT * FROM home_service_bookings WHERE id = ? OR public_booking_id = ? LIMIT 1`,
+    [bookingId, bookingId]
+  );
+  return rows[0] || null;
+};
+
+const updateHomeServiceBookingStatus = async (id, status) => {
+  const [result] = await db.execute(
+    `UPDATE home_service_bookings SET status = ?, updated_at = NOW() WHERE id = ?`,
+    [status, id]
+  );
+  return result.affectedRows > 0;
+};
+
 module.exports = {
   getSupervisorBranch,
   getDashboardSummary,
@@ -337,4 +450,8 @@ module.exports = {
   getOrganizationProfile,
   updateOrganizationProfile,
   getReportCounts,
+  getPhleboList,
+  getTodayPhleboBookings,
+  getHomeServiceBooking,
+  updateHomeServiceBookingStatus,
 };

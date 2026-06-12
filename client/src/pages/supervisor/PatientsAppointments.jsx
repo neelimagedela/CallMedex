@@ -4,26 +4,44 @@ import { supervisorApi } from "../../api/supervisorApi";
 import PatientTable from "../../components/supervisor/PatientTable";
 import "./SupervisorPages.css";
 
-export default function PatientsAppointments() {
+export default function PatientsAppointments({ initialSearch }) {
   const [patients, setPatients] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);
-  const [search,   setSearch]   = useState("");
+  const [search,   setSearch]   = useState(initialSearch || "");
 
+  // Update search state if parent initialSearch changes
   useEffect(() => {
+    setSearch(initialSearch || "");
+  }, [initialSearch]);
+
+  const loadPatients = (searchTerm) => {
+    setLoading(true);
+    setError(null);
     supervisorApi
-      .getPatients()
+      .getPatients(searchTerm)
       .then(setPatients)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  };
 
-  const filtered = search.trim()
-    ? patients.filter((p) =>
-        p.patientName?.toLowerCase().includes(search.toLowerCase()) ||
-        p.receiptId?.toLowerCase().includes(search.toLowerCase())
-      )
-    : patients;
+  // Debounced load on search input changes
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      loadPatients(search);
+    }, 250);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  const handleStatusChange = async (bookingId, newStatus) => {
+    try {
+      await supervisorApi.updatePhleboBookingStatus(bookingId, newStatus);
+      // Reload current search list to reflect DB changes
+      loadPatients(search);
+    } catch (err) {
+      alert(err.message || "Failed to update booking status.");
+    }
+  };
 
   return (
     <div className="sv-page">
@@ -35,7 +53,7 @@ export default function PatientsAppointments() {
       <div className="sv-search-bar">
         <input
           type="text"
-          placeholder="Search by patient name or receipt ID…"
+          placeholder="Search by patient name, email, mobile, or booking ID…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="sv-search-input"
@@ -44,7 +62,7 @@ export default function PatientsAppointments() {
 
       {error && <div className="sv-error">{error}</div>}
 
-      <PatientTable patients={filtered} loading={loading} />
+      <PatientTable patients={patients} loading={loading} onStatusChange={handleStatusChange} />
     </div>
   );
 }

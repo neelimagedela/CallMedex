@@ -84,7 +84,7 @@ uploadRoots.forEach((root) => {
 });
 
 // Manual route for both Home Service and Diagnostic Walk-in report PDFs
-app.get("/uploads/reports/:filename", (req, res) => {
+app.get("/uploads/reports/:filename", async (req, res, next) => {
   const filename = req.params.filename;
 
   if (!filename || filename.includes("..") || !filename.endsWith(".pdf")) {
@@ -94,21 +94,91 @@ app.get("/uploads/reports/:filename", (req, res) => {
     });
   }
 
-  for (const root of uploadRoots) {
-    const filePath = path.join(root, "reports", filename);
+  try {
+    // Check patient report access rule: must exist in booking_reports and status must be completed
+    const [reports] = await db.query(
+      `SELECT id, booking_id, booking_type FROM booking_reports WHERE report_pdf LIKE ? LIMIT 1`,
+      [`%${filename}`]
+    );
 
-    if (fs.existsSync(filePath)) {
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", "inline");
-      return res.sendFile(filePath);
+    let isCompleted = false;
+    if (reports.length > 0) {
+      const report = reports[0];
+      let bookingStatus = "";
+
+      if (report.booking_type === "home_service") {
+        const [rows] = await db.query(
+          `SELECT status FROM home_service_bookings WHERE id = ? LIMIT 1`,
+          [report.booking_id]
+        );
+        bookingStatus = rows[0]?.status || "";
+      } else if (report.booking_type === "walkin") {
+        const [rows] = await db.query(
+          `SELECT status FROM diagnostic_walkin_bookings WHERE id = ? LIMIT 1`,
+          [report.booking_id]
+        );
+        bookingStatus = rows[0]?.status || "";
+      } else if (report.booking_type === "scan") {
+        const [rows] = await db.query(
+          `SELECT status FROM appointments WHERE id = ? LIMIT 1`,
+          [report.booking_id]
+        );
+        bookingStatus = rows[0]?.status || "";
+      }
+
+      if (bookingStatus === "completed") {
+        isCompleted = true;
+      }
     }
-  }
 
-  return res.status(404).json({
-    success: false,
-    message: "Report PDF file not found on server.",
-    searchedIn: uploadRoots.map((root) => path.join(root, "reports", filename)),
-  });
+    if (!isCompleted) {
+      // Enforce auth check on backend
+      let token = null;
+      if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+        token = req.headers.authorization.split(" ")[1];
+      } else if (req.cookies && req.cookies.accessToken) {
+        token = req.cookies.accessToken;
+      }
+
+      let allowed = false;
+      if (token) {
+        try {
+          const { verifyAccessToken } = require("./modules/auth/services/token.service");
+          const decoded = verifyAccessToken(token);
+          if (["staff", "organization", "admin", "supervisor"].includes(decoded.role)) {
+            allowed = true;
+          }
+        } catch (err) {
+          // invalid token
+        }
+      }
+
+      if (!allowed) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. Report is not completed yet or you do not have permission to view it.",
+        });
+      }
+    }
+
+    for (const root of uploadRoots) {
+      const filePath = path.join(root, "reports", filename);
+
+      if (fs.existsSync(filePath)) {
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", "inline");
+        return res.sendFile(filePath);
+      }
+    }
+
+    return res.status(404).json({
+      success: false,
+      message: "Report PDF file not found on server.",
+      searchedIn: uploadRoots.map((root) => path.join(root, "reports", filename)),
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Debug route. You can remove this later.
