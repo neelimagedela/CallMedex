@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import jsPDF from "jspdf";
 import axios from "axios";
+import "./DiagnosticPackage.css";
 
 const packages = [
   {
@@ -28,8 +29,7 @@ const packages = [
   {
     name: "Anaemia Package",
     price: 1499,
-    tests:
-      "CBP, ESR, Iron, TIBC, Transferrin, % Iron Saturation",
+    tests: "CBP, ESR, Iron, TIBC, Transferrin, % Iron Saturation",
   },
   {
     name: "Cardiac Screening Package",
@@ -75,8 +75,7 @@ const packages = [
   {
     name: "Fever Profile — Basic",
     price: 899,
-    tests:
-      "Complete Blood Count, ESR, QBC, Widal, CRP, Urine Routine",
+    tests: "Complete Blood Count, ESR, QBC, Widal, CRP, Urine Routine",
   },
   {
     name: "Fever Profile — Complete",
@@ -87,8 +86,7 @@ const packages = [
   {
     name: "Hepatitis Screening Package",
     price: 1600,
-    tests:
-      "HBsAg, Hepatitis A, HCV, Amylase, Lipase",
+    tests: "HBsAg, Hepatitis A, HCV, Amylase, Lipase",
   },
 ];
 
@@ -100,30 +98,29 @@ const slots = [
   "3 PM - 4 PM",
 ];
 
-  const DiagnosticPackage = ({ selectedPackageData }) => {
+const getInitialPackage = () => {
+  const storedPackage = localStorage.getItem("selectedPackage");
 
-const storedPackage = localStorage.getItem("selectedPackage");
+  if (!storedPackage) return packages[0];
 
-let selectedFromCard = packages[0];
+  try {
+    const saved = JSON.parse(storedPackage);
 
-if (storedPackage) {
-  const saved = JSON.parse(storedPackage);
+    return (
+      packages.find(
+        (pkg) =>
+          pkg.name.trim().toLowerCase() === saved.name.trim().toLowerCase()
+      ) || packages[0]
+    );
+  } catch {
+    return packages[0];
+  }
+};
 
-  console.log("Saved Package:", saved.name);
-console.log("Available Packages:", packages);
-
-  selectedFromCard =
-    packages.find(
-      (pkg) =>
-        pkg.name.trim().toLowerCase() ===
-        saved.name.trim().toLowerCase()
-    ) || packages[0];
-}
-const [selectedPackage, setSelectedPackage] =
-  useState(selectedFromCard);
-const [bookingSuccess, setBookingSuccess] = useState(false);
-
-const [bookingId, setBookingId] = useState("");
+const DiagnosticPackage = () => {
+  const [selectedPackage, setSelectedPackage] = useState(getInitialPackage);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [bookingId, setBookingId] = useState("");
 
   const [formData, setFormData] = useState({
     patientName: "",
@@ -135,12 +132,31 @@ const [bookingId, setBookingId] = useState("");
   });
 
   const [appointmentDate, setAppointmentDate] = useState("");
-const [timeSlot, setTimeSlot] = useState("");
+  const [timeSlot, setTimeSlot] = useState("");
 
-const today = new Date().toISOString().split("T")[0];
+  const todayDate = new Date().toISOString().split("T")[0];
+
+  const convertSlotStartTo24Hour = (slot) => {
+  const start = slot.split("-")[0].trim();
+  const [hourText, meridian] = start.split(" ");
+
+  let hour = Number(hourText);
+
+  if (meridian === "PM" && hour !== 12) {
+    hour += 12;
+  }
+
+  if (meridian === "AM" && hour === 12) {
+    hour = 0;
+  }
+
+  return hour;
+};
 
 const isSlotExpired = (slot) => {
   if (!appointmentDate) return false;
+
+  const now = new Date();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -148,479 +164,393 @@ const isSlotExpired = (slot) => {
   const selectedDate = new Date(appointmentDate);
   selectedDate.setHours(0, 0, 0, 0);
 
-  // Past date 
-  if (selectedDate < today) {
-    return true;
-  }
+  if (selectedDate < today) return true;
 
-  // Future date -
-  if (selectedDate > today) {
-    return false;
-  }
-  const currentHour = new Date().getHours();
-  const slotHour = parseInt(slot.split(" ")[0]);
+  if (selectedDate > today) return false;
 
-  return currentHour >= slotHour;
+  const currentHour = now.getHours();
+  const slotStartHour = convertSlotStartTo24Hour(slot);
+
+  return currentHour >= slotStartHour;
 };
-  const handlePackageChange = (e) => {
-    const pkg = packages.find(
-      (item) => item.name === e.target.value
-    );
 
-    setSelectedPackage(pkg);
+   
+
+  const handlePackageChange = (e) => {
+    const pkg = packages.find((item) => item.name === e.target.value);
+    setSelectedPackage(pkg || packages[0]);
   };
 
   const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value,
-    });
+    }));
   };
 
-const handleDownload = () => {
-  const doc = new jsPDF();
+  const handleDownload = () => {
+    const doc = new jsPDF();
 
-  // Header
-  doc.setFillColor(0, 102, 204);
-  doc.rect(0, 0, 210, 25, "F");
+    doc.setFillColor(0, 102, 204);
+    doc.rect(0, 0, 210, 25, "F");
 
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
-  doc.text("CALLMEDEX", 20, 17);
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.text("CALLMEDEX", 20, 17);
 
-  doc.setFontSize(10);
-  doc.text("Diagnostic Package Receipt", 140, 17);
+    doc.setFontSize(10);
+    doc.text("Diagnostic Package Receipt", 140, 17);
 
-  // Reset Text Color
-  doc.setTextColor(0, 0, 0);
+    doc.setTextColor(0, 0, 0);
+    doc.setDrawColor(0, 102, 204);
+    doc.line(20, 32, 190, 32);
 
-  // Divider
-  doc.setDrawColor(0, 102, 204);
-  doc.line(20, 32, 190, 32);
+    let y = 45;
 
-  let y = 45;
+    doc.setFontSize(12);
+    doc.text(`Booking ID : ${bookingId}`, 20, y);
+    y += 12;
 
-  doc.setFontSize(12);
+    doc.text(`Patient Name : ${formData.patientName}`, 20, y);
+    y += 12;
 
-  doc.text(`Booking ID : ${bookingId}`, 20, y);
-  y += 12;
+    doc.text(`Age : ${formData.patientAge}`, 20, y);
+    y += 12;
 
-  doc.text(`Patient Name : ${formData.patientName}`, 20, y);
-  y += 12;
+    doc.text(`Gender : ${formData.patientGender}`, 20, y);
+    y += 12;
 
-  doc.text(`Age : ${formData.patientAge}`, 20, y);
-  y += 12;
+    doc.text(`Mobile : ${formData.patientMobile}`, 20, y);
+    y += 12;
 
-  doc.text(`Gender : ${formData.patientGender}`, 20, y);
-  y += 12;
+    doc.text(`Email : ${formData.patientEmail}`, 20, y);
+    y += 12;
 
-  doc.text(`Mobile : ${formData.patientMobile}`, 20, y);
-  y += 12;
+    doc.text(`Package : ${selectedPackage.name}`, 20, y);
+    y += 12;
 
-  doc.text(`Email : ${formData.patientEmail}`, 20, y);
-  y += 12;
+    doc.text(`Amount : Rs. ${selectedPackage.price}`, 20, y);
+    y += 12;
 
-  doc.text(`Package : ${selectedPackage.name}`, 20, y);
-  y += 12;
+    doc.text(`Appointment Date : ${appointmentDate}`, 20, y);
+    y += 12;
 
-  doc.text(`Amount : ₹${selectedPackage.price}`, 20, y);
-  y += 12;
+    doc.text(`Time Slot : ${timeSlot}`, 20, y);
+    y += 18;
 
-  doc.text(`Appointment Date : ${appointmentDate}`, 20, y);
-  y += 12;
+    doc.setFontSize(14);
+    doc.text("Tests Included", 20, y);
+    y += 10;
 
-  doc.text(`Time Slot : ${timeSlot}`, 20, y);
-  y += 18;
+    doc.setFontSize(11);
 
-  doc.setFontSize(14);
-  doc.text("Tests Included", 20, y);
+    const lines = doc.splitTextToSize(selectedPackage.tests, 160);
+    doc.text(lines, 20, y);
 
-  y += 10;
+    y += lines.length * 7 + 20;
 
-  doc.setFontSize(11);
+    doc.setDrawColor(200);
+    doc.line(20, y, 190, y);
+    y += 15;
 
-  const lines = doc.splitTextToSize(
-    selectedPackage.tests,
-    160
-  );
+    doc.setTextColor(0, 128, 0);
+    doc.text("Thank you for choosing CALLMEDEX.", 20, y);
+    y += 10;
 
-  doc.text(lines, 20, y);
+    doc.text("Please arrive 15 minutes before your appointment.", 20, y);
 
-  y += lines.length * 7 + 20;
+    doc.save(`${bookingId}.pdf`);
+  };
 
-  doc.setDrawColor(200);
-  doc.line(20, y, 190, y);
-
-  y += 15;
-
-  doc.setTextColor(0, 128, 0);
-
-  doc.text(
-    "Thank you for choosing CALLMEDEX.",
-    20,
-    y
-  );
-
-  y += 10;
-
-  doc.text(
-    "Please arrive 15 minutes before your appointment.",
-    20,
-    y
-  );
-
-  doc.save(`${bookingId}.pdf`);
-};
   const handleBooking = async () => {
+    if (
+      !formData.patientName ||
+      !formData.patientAge ||
+      !formData.patientGender ||
+      !formData.patientMobile ||
+      !appointmentDate ||
+      !timeSlot
+    ) {
+      alert("Please fill all required fields");
+      return;
+    }
 
-  if (
-    !formData.patientName ||
-    !formData.patientAge ||
-    !formData.patientGender ||
-    !formData.patientMobile ||
-    !appointmentDate ||
-    !timeSlot
-  ) {
-    alert("Please fill all required fields");
-    return;
-  }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(appointmentDate);
+    selectedDate.setHours(0, 0, 0, 0);
 
-  const selectedDate = new Date(appointmentDate);
+    if (selectedDate < today) {
+      alert("Past dates are not allowed");
+      return;
+    }
 
-  if (selectedDate < today) {
-    alert("Past dates are not allowed");
-    return;
-  }
+    const bookingData = {
+      packageName: selectedPackage.name,
+      packagePrice: selectedPackage.price,
+      patientName: formData.patientName,
+      patientAge: formData.patientAge,
+      patientGender: formData.patientGender,
+      patientMobile: formData.patientMobile,
+      patientEmail: formData.patientEmail,
+      patientAddress: formData.patientAddress,
+      appointmentDate,
+      timeSlot,
+    };
 
-  const bookingData = {
-    packageName: selectedPackage.name,
-    packagePrice: selectedPackage.price,
+    try {
+      const token = localStorage.getItem("accessToken");
 
-    patientName: formData.patientName,
-    patientAge: formData.patientAge,
-    patientGender: formData.patientGender,
-    patientMobile: formData.patientMobile,
-    patientEmail: formData.patientEmail,
-    patientAddress: formData.patientAddress,
+      const response = await axios.post(
+        "http://localhost:5000/api/diagnostic-package/book",
+        bookingData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    appointmentDate,
-    timeSlot,
+      const generatedId =
+        response?.data?.data?.receiptId ||
+        response?.data?.receiptId ||
+        response?.data?.bookingId ||
+        `CMDX${Math.floor(Math.random() * 1000000)}`;
+
+      setBookingId(generatedId);
+      setBookingSuccess(true);
+    } catch (error) {
+      alert(error?.response?.data?.message || "Failed to book package");
+    }
   };
 
-  console.log("Booking Data:", bookingData);
+  if (bookingSuccess) {
+    return (
+      <div className="diagnostic-page">
+        <div className="booking-success-card">
+          <div className="success-top">
+            <h1>Booking Confirmed</h1>
+            <h2>CALLMEDEX DIAGNOSTIC CENTER</h2>
+            <hr />
+          </div>
 
-  try {
+          <p className="success-row">
+            <strong>Booking ID:</strong> {bookingId}
+          </p>
 
-   const token = localStorage.getItem("accessToken");
+          <p className="success-row">
+            <strong>Patient Name:</strong> {formData.patientName}
+          </p>
 
-    const response = await axios.post(
-      "http://localhost:5000/api/diagnostic-package/book",
-      bookingData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+          <p className="success-row">
+            <strong>Package:</strong> {selectedPackage.name}
+          </p>
 
-    console.log("Booking Success:", response.data);
+          <p className="success-row">
+            <strong>Amount:</strong> ₹{selectedPackage.price}
+          </p>
 
-    const generatedId =
-      "CMDX" + Math.floor(Math.random() * 1000000);
+          <p className="success-row">
+            <strong>Appointment Date:</strong> {appointmentDate}
+          </p>
 
-    setBookingId(generatedId);
-    setBookingSuccess(true);
+          <p className="success-row">
+            <strong>Time Slot:</strong> {timeSlot}
+          </p>
 
-  } catch (error) {
-
-    console.error("Booking Error:", error);
-
-    alert(
-      error?.response?.data?.message ||
-      "Failed to book package"
+          <div className="success-actions">
+            <button onClick={handleDownload} className="download-receipt-btn">
+              Download PDF Receipt
+            </button>
+          </div>
+        </div>
+      </div>
     );
   }
-};
-      
-  if (bookingSuccess) {
+
   return (
     <div className="diagnostic-page">
-      <div
-        style={{
-          maxWidth: "800px",
-          margin: "40px auto",
-          background: "#fff",
-          padding: "30px",
-          borderRadius: "20px",
-        }}
-      >
-        <div
-  style={{
-    borderTop: "6px solid #16a34a",
-    padding: "30px"
-  }}
->
-  <h1
-    style={{
-      color: "#16a34a",
-      marginBottom: "20px"
-    }}
-  >
-    Booking Confirmed ✓
-  </h1>
-
-  <h2>  CALLMEDEX DIAGNOSTIC CENTER </h2>
-
-  <hr />
-</div>
-
-       <p style={{ marginBottom: "12px" }}>
-  <strong>Booking ID:</strong> {bookingId}
-</p>
-
-<p style={{ marginBottom: "12px" }}>
-  <strong>Patient Name:</strong> {formData.patientName}
-</p>
-
-<p style={{ marginBottom: "12px" }}>
-  <strong>Package:</strong> {selectedPackage.name}
-</p>
-    <p style={{ marginBottom: "12px" }}>
-  <strong>Amount:</strong> ₹{selectedPackage.price}
-</p>
-
-<p style={{ marginBottom: "12px" }}>
-  <strong>Appointment Date:</strong> {appointmentDate}
-</p>
-
-<p style={{ marginBottom: "12px" }}>
-  <strong>Time Slot:</strong> {timeSlot}
-</p>
-
-        <div style={{ textAlign: "center", marginTop: "30px" }}>
-  <button
-    onClick={handleDownload}
-    style={{
-      background: "linear-gradient(135deg, #2563eb, #0ea5e9)",
-      color: "#fff",
-      border: "none",
-      padding: "14px 32px",
-      borderRadius: "12px",
-      fontSize: "15px",
-      fontWeight: "600",
-      cursor: "pointer",
-      boxShadow: "0 8px 20px rgba(37,99,235,0.25)",
-      transition: "0.3s"
-    }}
-  >
-    📄 Download PDF Receipt
-  </button>
-</div>
+      <div className="diagnostic-header">
+        <h1>Diagnostic Package Booking</h1>
+        <p>Complete all sections to confirm your diagnostic package booking</p>
       </div>
-    </div>
-  );
-}
-  return (
-  <div className="diagnostic-page">
 
-    <div className="diagnostic-header">
-      <h1>🧪 Diagnostic Package Booking</h1>
+      <div className="booking-form">
+        <div className="form-section">
+          <div className="section-header">
+            <div className="step-badge">1</div>
 
-      <p>
-             Complete all sections to confirm your diagnostic package booking
-      </p>
-    </div>
+            <div>
+              <h2>Patient Information</h2>
+              <p>Personal and contact details</p>
+            </div>
+          </div>
 
-    <div className="booking-form">
+          <div className="form-grid">
+            <input
+              type="text"
+              name="patientName"
+              placeholder="Full Name"
+              value={formData.patientName}
+              onChange={handleInputChange}
+            />
 
-      <div className="form-section">
+            <input
+              type="number"
+              name="patientAge"
+              placeholder="Age"
+              value={formData.patientAge}
+              onChange={handleInputChange}
+            />
 
-  <div className="section-header">
-    <div className="step-badge">1</div>
+            <select
+              name="patientGender"
+              value={formData.patientGender}
+              onChange={handleInputChange}
+            >
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
 
-    <div>
-      <h2>Patient Information</h2>
-      <p>Personal & contact details</p>
-    </div>
-  </div>
+            <input
+              type="text"
+              name="patientMobile"
+              placeholder="Mobile Number"
+              value={formData.patientMobile}
+              onChange={handleInputChange}
+            />
 
-  <div className="form-grid">
-          <input
-            type="text"
-            name="patientName"
-            placeholder="Full Name"
-            onChange={handleInputChange}
-          />
+            <input
+              type="email"
+              name="patientEmail"
+              placeholder="Email"
+              value={formData.patientEmail}
+              onChange={handleInputChange}
+            />
 
-          <input
-            type="number"
-            name="patientAge"
-            placeholder="Age"
-            onChange={handleInputChange}
-          />
+            <input
+              type="text"
+              name="patientAddress"
+              placeholder="Address"
+              value={formData.patientAddress}
+              onChange={handleInputChange}
+            />
+          </div>
+        </div>
+
+        <div className="form-section">
+          <div className="section-header">
+            <div className="step-badge purple">2</div>
+
+            <div>
+              <h2>Select Package</h2>
+              <p>Choose your preferred diagnostic package</p>
+            </div>
+          </div>
 
           <select
-            name="patientGender"
-            onChange={handleInputChange}
+            className="package-dropdown"
+            value={selectedPackage.name}
+            onChange={handlePackageChange}
           >
-            <option value="">Select Gender</option>
-            <option>Male</option>
-            <option>Female</option>
-            <option>Other</option>
+            {packages.map((pkg) => (
+              <option key={pkg.name} value={pkg.name}>
+                {pkg.name}
+              </option>
+            ))}
           </select>
 
+          <div className="selected-package">
+            <h2>{selectedPackage.name}</h2>
+            <h1>₹{selectedPackage.price}</h1>
+
+            <p>
+              <strong>Tests Included:</strong>
+            </p>
+
+            <p>{selectedPackage.tests}</p>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <div className="section-header">
+            <div className="step-badge blue">3</div>
+
+            <div>
+              <h2>Date and Time Slot</h2>
+              <p>Pick your preferred appointment</p>
+            </div>
+          </div>
+
           <input
-            type="text"
-            name="patientMobile"
-            placeholder="Mobile Number"
-            onChange={handleInputChange}
+            type="date"
+            className="date-input"
+            min={todayDate}
+            value={appointmentDate}
+            onChange={(e) => {
+              setAppointmentDate(e.target.value);
+              setTimeSlot("");
+            }}
           />
 
-          <input
-            type="email"
-            name="patientEmail"
-            placeholder="Email"
-            onChange={handleInputChange}
-          />
-
-         <input
-            type="text"
-            name="patientAddress"
-            placeholder="Address"
-            onChange={handleInputChange}
-          />
+          <div className="slots">
+            {slots.map((slot) => (
+              <button
+                key={slot}
+                type="button"
+                disabled={isSlotExpired(slot)}
+                onClick={() => setTimeSlot(slot)}
+                className={`slot-btn ${timeSlot === slot ? "active" : ""}`}
+              >
+                {slot}
+              </button>
+            ))}
+          </div>
         </div>
-</div>
-<div className="form-section"> 
-        <div className="section-header">
-  <div className="step-badge purple">2</div>
 
-  <div>
-    <h2>Select Package</h2>
-    <p>Choose your preferred diagnostic package</p>
-  </div>
-</div>
+        <div className="form-section">
+          <div className="section-header">
+            <div className="step-badge green">4</div>
 
-        <select
-          className="package-dropdown"
-          value={selectedPackage.name}
-          onChange={handlePackageChange}
-        >
-          {packages.map((pkg, index) => (
-            <option key={index} value={pkg.name}>
-              {pkg.name}
-            </option>
-          ))}
-        </select>
+            <div>
+              <h2>Appointment Summary</h2>
+              <p>Review your appointment</p>
+            </div>
+          </div>
 
-        <div className="selected-package">
-          <h2>{selectedPackage.name}</h2>
+          <div className="summary">
+            <p>
+              <strong>Patient:</strong> {formData.patientName || "-"}
+            </p>
 
-          <h1>₹{selectedPackage.price}</h1>
+            <p>
+              <strong>Package:</strong> {selectedPackage.name}
+            </p>
 
-          <p style={{ marginTop: "10px" }}>
-            <strong>Tests Included:</strong>
-          </p>
+            <p>
+              <strong>Tests:</strong> {selectedPackage.tests}
+            </p>
 
-          <p>{selectedPackage.tests}</p>
+            <p>
+              <strong>Date:</strong> {appointmentDate || "-"}
+            </p>
+
+            <p>
+              <strong>Time Slot:</strong> {timeSlot || "-"}
+            </p>
+
+            <p>
+              <strong>Amount:</strong> ₹{selectedPackage.price}
+            </p>
+          </div>
         </div>
-</div>
-<div className="form-section">
-        <div className="section-header">
-  <div className="step-badge blue">3</div>
 
-  <div>
-    <h2>Date & Time Slot</h2>
-    <p>Pick your preferred appointment</p>
-  </div>
-</div>
-
-     <input
-       type="date"
-       className="date-input"
-       min={new Date().toISOString().split("T")[0]}
-       value={appointmentDate}
-       onChange={(e) => setAppointmentDate(e.target.value)}
-    />
-
-        <div className="slots">
-         {slots.map((slot) => (
-  <button
-    key={slot}
-    type="button"
-    disabled={isSlotExpired(slot)}
-    onClick={() => setTimeSlot(slot)}
-              style={{
-                background:
-                  timeSlot === slot
-                    ? "#0066ff"
-                    : "#e8eefc",
-                color:
-                  timeSlot === slot
-                    ? "#fff"
-                    : "#000",
-                    opacity: isSlotExpired(slot) ? 0.4 : 1,
-                    cursor: isSlotExpired(slot) ? "not-allowed" : "pointer",
-              }}
-            >
-              {slot}
-            </button>
-          ))}
-        </div>
-</div>
-         <div className="form-section">
-        <div className="section-header">
-  <div className="step-badge green">4</div>
-
-  <div>
-    <h2>Appointment Summary</h2>
-    <p>Review your appointment</p>
-  </div>
-</div>
-
-        <div className="summary">
-          <p>
-            <strong>Patient:</strong>{" "}
-            {formData.patientName || "-"}
-          </p>
-
-          <p>
-            <strong>Package:</strong>{" "}
-            {selectedPackage.name}
-          </p>
-
-          <p>
-            <strong>Tests:</strong>{" "}
-            {selectedPackage.tests}
-          </p>
-
-          <p>
-            <strong>Date:</strong>{" "}
-            {appointmentDate || "-"}
-          </p>
-
-          <p>
-            <strong>Time Slot:</strong>{" "}
-            {timeSlot || "-"}
-          </p>
-
-          <p>
-            <strong>Amount:</strong> ₹
-            {selectedPackage.price}
-          </p>
-        </div>
-</div>
-        <button
-          className="main-book-btn"
-          onClick={handleBooking}
-        >
+        <button className="main-book-btn" onClick={handleBooking}>
           Book Diagnostic Package
         </button>
-       
-
       </div>
     </div>
   );
