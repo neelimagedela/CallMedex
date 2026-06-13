@@ -1,5 +1,4 @@
 export const initialState = {
-  organizationName: "",
   institutionName: "",
   institutionType: "",
   registrationNumber: "",

@@ -212,6 +212,7 @@ const getPatientsAndAppointments = async (branch, search = "") => {
       time_slot AS timeSlot,
       patient_address AS branchAddress,
       status,
+      tests AS service,
       created_at AS createdAt
     FROM home_service_bookings
     WHERE branch = ?
@@ -229,6 +230,7 @@ const getPatientsAndAppointments = async (branch, search = "") => {
       time_slot AS timeSlot,
       branch AS branchAddress,
       status,
+      scans AS service,
       created_at AS createdAt
     FROM appointments
     WHERE branch = ?
@@ -246,6 +248,7 @@ const getPatientsAndAppointments = async (branch, search = "") => {
       time_slot AS timeSlot,
       branch AS branchAddress,
       status,
+      tests AS service,
       created_at AS createdAt
     FROM diagnostic_walkin_bookings
     WHERE branch = ?
@@ -263,6 +266,7 @@ const getPatientsAndAppointments = async (branch, search = "") => {
       dp.time_slot AS timeSlot,
       dp.patient_address AS branchAddress,
       dp.booking_status AS status,
+      dp.package_name AS service,
       dp.created_at AS createdAt
     FROM diagnostic_package_bookings dp
     JOIN users u ON dp.user_id = u.id
@@ -281,6 +285,7 @@ const getPatientsAndAppointments = async (branch, search = "") => {
       time_slot AS timeSlot,
       clinic_branch AS branchAddress,
       status,
+      'Doctor Consultation' AS service,
       created_at AS createdAt
     FROM clinic_appointments
     WHERE clinic_branch = ?
@@ -390,7 +395,6 @@ const getReportCounts = async (branch) => {
 };
 
 const getPhleboList = async (branch, search = "") => {
-  const normalizedBranch = branch === "Akkayyapalem" ? "Akkayapalem" : branch;
   const term = `%${search}%`;
   const [rows] = await db.execute(
     `SELECT
@@ -398,13 +402,23 @@ const getPhleboList = async (branch, search = "") => {
        u.id AS userId,
        u.name,
        u.email,
+       u.phone,
+       pp.phlebo_type,
+       pp.available_days,
+       pp.morning_start,
+       pp.morning_end,
+       pp.evening_start,
+       pp.evening_end,
+       pp.qualification,
+       pp.certification_number,
+       pp.created_at,
        pp.updated_at AS lastUpdated,
-       (SELECT COUNT(*) FROM home_service_bookings WHERE assigned_phlebo_id = u.id AND branch = ?) AS assignedCount,
-       (SELECT COUNT(*) FROM home_service_bookings WHERE assigned_phlebo_id = u.id AND status = 'completed' AND branch = ?) AS completedCount
+       (SELECT COUNT(*) FROM home_service_bookings WHERE assigned_phlebo_id = u.id) AS assignedCount,
+       (SELECT COUNT(*) FROM home_service_bookings WHERE assigned_phlebo_id = u.id AND status = 'completed') AS completedCount
      FROM phlebo_profiles pp
      JOIN users u ON u.id = pp.user_id
-     WHERE (? = '' OR u.name LIKE ? OR u.email LIKE ?)`,
-    [normalizedBranch, normalizedBranch, search, term, term]
+     WHERE (? = '' OR u.name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?)`,
+    [search, term, term, term]
   );
   return rows;
 };
@@ -440,6 +454,26 @@ const updateHomeServiceBookingStatus = async (id, status) => {
   return result.affectedRows > 0;
 };
 
+const getActiveBookingsForPhlebos = async () => {
+  const [rows] = await db.execute(
+    `SELECT
+       id,
+       public_booking_id AS publicBookingId,
+       assigned_phlebo_id AS phleboId,
+       patient_name AS patientName,
+       patient_mobile AS patientMobile,
+       patient_address AS patientAddress,
+       status,
+       collection_date AS collectionDate,
+       time_slot AS timeSlot,
+       updated_at AS updatedAt
+     FROM home_service_bookings
+     WHERE assigned_phlebo_id IS NOT NULL
+       AND status IN ('assigned', 'accepted', 'sample_collected', 'submitted_to_lab', 'received_by_lab', 'report_ready')`
+  );
+  return rows;
+};
+
 module.exports = {
   getSupervisorBranch,
   getDashboardSummary,
@@ -454,4 +488,5 @@ module.exports = {
   getTodayPhleboBookings,
   getHomeServiceBooking,
   updateHomeServiceBookingStatus,
+  getActiveBookingsForPhlebos,
 };

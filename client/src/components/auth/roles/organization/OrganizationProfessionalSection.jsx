@@ -20,12 +20,12 @@ export default function OrganizationProfessionalSection({
           <label>Organization Name</label>
 
           <select
-  name="organizationName"
-  value={organizationForm.organizationName }
+  name="institutionName"
+  value={organizationForm.institutionName }
   onChange={(e) =>
   dispatch({
     type: "UPDATE_FIELD",
-    field: "organizationName",
+    field: "institutionName",
     value: e.target.value,
   })
 }

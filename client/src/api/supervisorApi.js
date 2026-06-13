@@ -80,4 +80,9 @@ export const supervisorApi = {
     fetch(`${BASE_URL}/api/supervisor/reports`, {
       headers: getAuthHeaders(),
     }).then(handleResponse),
+
+  getPhleboWallet: (phleboUserId) =>
+    fetch(`${BASE_URL}/api/supervisor/phlebos/${phleboUserId}/wallet`, {
+      headers: getAuthHeaders(),
+    }).then(handleResponse),
 };

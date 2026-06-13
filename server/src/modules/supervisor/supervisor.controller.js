@@ -10,6 +10,7 @@ const {
   patchOrganizationProfile,
   fetchReports,
   fetchPhleboList,
+  fetchPhleboWallet,
   fetchHomeServiceBooking,
   patchHomeServiceBookingStatus,
 } = require("./supervisor.service");
@@ -54,6 +55,13 @@ const getPhlebos = asyncHandler(async (req, res) => {
   const search = req.query.search || "";
   const data = await fetchPhleboList(req.user.id, status, search);
   return successResponse({ res, message: "Phlebotomists list fetched", data });
+});
+
+// GET /api/supervisor/phlebos/:phleboUserId/wallet
+const getPhlebosWallet = asyncHandler(async (req, res) => {
+  const { phleboUserId } = req.params;
+  const data = await fetchPhleboWallet(req.user.id, Number(phleboUserId));
+  return successResponse({ res, message: "Phlebo wallet retrieved successfully", data });
 });
 
 // PATCH /api/supervisor/phlebo-bookings/:bookingId/status
@@ -111,5 +119,6 @@ module.exports = {
   updateOrgProfile,
   getReports,
   getPhlebos,
+  getPhlebosWallet,
   updatePhleboBookingStatus,
 };

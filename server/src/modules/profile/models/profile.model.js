@@ -153,6 +153,20 @@ approvedBy: "approved_by",
 
 const upsertProfile = async ({ userId, role, ...profileData }) => {
   const tableName = getTableName(role);
+
+  // Failsafe normalization for organization
+  if (role === "organization") {
+    if (profileData.organizationName) {
+      if (!profileData.institutionName) {
+        profileData.institutionName = profileData.organizationName;
+      }
+      delete profileData.organizationName;
+    }
+    if (profileData.organization_name) {
+      delete profileData.organization_name;
+    }
+  }
+
   const mappedData = mapCamelToSnake(profileData);
 console.log("PROFILE DATA:", profileData);
 console.log(
@@ -196,14 +210,32 @@ console.log("MAPPED DATA:", mappedData);
     values
   );
 
-  await db.execute(
-    `
-    UPDATE users
-    SET registration_status = 'PROFILE_COMPLETED'
-    WHERE id = ?
-    `,
-    [userId]
-  );
+  let branch = null;
+  if (role === "organization") {
+    branch = profileData.institutionName || null;
+  } else if (role === "staff") {
+    branch = profileData.organizationName || null;
+  }
+
+  if (branch) {
+    await db.execute(
+      `
+      UPDATE users
+      SET registration_status = 'PROFILE_COMPLETED', branch = ?
+      WHERE id = ?
+      `,
+      [branch, userId]
+    );
+  } else {
+    await db.execute(
+      `
+      UPDATE users
+      SET registration_status = 'PROFILE_COMPLETED'
+      WHERE id = ?
+      `,
+      [userId]
+    );
+  }
 
   return {
     userId,

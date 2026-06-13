@@ -24,5 +24,11 @@
   "023_add_staff_to_users_role.sql",
   "024_modify_staff_upload_columns.sql",
   "025_changing_status.sql",
-  "026_home_service_status.sql"
+  "026_home_service_status.sql",
+  "027_add_scan_lab_report_flow.sql",
+  "028_supervisor_dashboard_changes.sql",
+  "030_create_mous.sql",
+  "031_create-mous_acceptance.sql",
+  "032_add_statuses_home_service_bookings.sql",
+  "033_fix_supervisor_organization_profile.sql"
 ]

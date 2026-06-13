@@ -13,7 +13,12 @@ const {
   getTodayPhleboBookings,
   getHomeServiceBooking,
   updateHomeServiceBookingStatus,
+  getActiveBookingsForPhlebos,
 } = require("./supervisor.model");
+
+const {
+  getPhleboWalletSummary,
+} = require("../homeService/models/homeServiceBooking.model");
 
 /**
  * Resolve and validate the supervisor's branch from DB.
@@ -78,80 +83,109 @@ const fetchPatientsAndAppointments = async (userId, search = "") => {
   return getPatientsAndAppointments(branch, search);
 };
 
+const parseTimeToDecimal = (timeStr) => {
+  if (!timeStr) return null;
+  const match = timeStr.match(/^(\d+):(\d+)\s*(AM|PM)?/i);
+  if (!match) {
+    const hrMatch = timeStr.match(/^(\d+)\s*(AM|PM)?/i);
+    if (!hrMatch) return null;
+    let hour = parseInt(hrMatch[1], 10);
+    let meridiem = hrMatch[2];
+    if (meridiem) {
+      const med = meridiem.toUpperCase();
+      if (med === "PM" && hour !== 12) hour += 12;
+      else if (med === "AM" && hour === 12) hour = 0;
+    }
+    return hour;
+  }
+  let hour = parseInt(match[1], 10);
+  const minute = parseInt(match[2], 10);
+  let meridiem = match[3];
+
+  if (meridiem) {
+    const med = meridiem.toUpperCase();
+    if (med === "PM" && hour !== 12) {
+      hour += 12;
+    } else if (med === "AM" && hour === 12) {
+      hour = 0;
+    }
+  }
+  return hour + minute / 60;
+};
+
+const isCurrentTimeInShift = (p, currentDayStr, currentDecimalTime) => {
+  if (p.phlebo_type === "partTime") {
+    let days = p.available_days;
+    if (typeof days === "string") {
+      try {
+        days = JSON.parse(days);
+      } catch {
+        days = [];
+      }
+    }
+    if (!Array.isArray(days) || !days.includes(currentDayStr)) {
+      return false;
+    }
+  }
+
+  const mStart = parseTimeToDecimal(p.morning_start);
+  const mEnd = parseTimeToDecimal(p.morning_end);
+  const eStart = parseTimeToDecimal(p.evening_start);
+  const eEnd = parseTimeToDecimal(p.evening_end);
+
+  if (mStart !== null && mEnd !== null) {
+    if (currentDecimalTime >= mStart && currentDecimalTime <= mEnd) {
+      return true;
+    }
+  }
+
+  if (eStart !== null && eEnd !== null) {
+    if (currentDecimalTime >= eStart && currentDecimalTime <= eEnd) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 const fetchPhleboList = async (userId, statusFilter = "", search = "") => {
   const branch = await resolveBranch(userId);
   const phlebos = await getPhleboList(branch, search);
-  const todayBookings = await getTodayPhleboBookings(branch);
+  const activeBookings = await getActiveBookingsForPhlebos();
 
-  // Compute current slot window based on current local time
+  // Map active bookings by phlebo ID for easy lookup
+  const phleboActiveBookingsMap = new Map();
+  activeBookings.forEach((b) => {
+    phleboActiveBookingsMap.set(b.phleboId, b);
+  });
+
   const now = new Date();
+  const dayOfWeek = now.toLocaleDateString("en-US", { weekday: "long" });
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
   const currentTimeDecimal = currentHour + currentMinute / 60;
 
-  let currentSlot = null; // 'morning', 'evening' or null
-  if (currentTimeDecimal >= 6 && currentTimeDecimal <= 12) {
-    currentSlot = "morning";
-  } else if (currentTimeDecimal > 12 && currentTimeDecimal <= 20) {
-    currentSlot = "evening";
-  }
-
-  const parseSlotToHour = (slotStr) => {
-    if (!slotStr) return null;
-    const match = slotStr.match(/^(\d+)\s*(AM|PM)?/i);
-    if (!match) return null;
-    let hour = parseInt(match[1], 10);
-    let meridiem = match[2];
-    
-    if (!meridiem) {
-      const endMatch = slotStr.match(/(AM|PM)/i);
-      if (endMatch) {
-        meridiem = endMatch[1];
-      }
-    }
-    
-    if (meridiem) {
-      const med = meridiem.toUpperCase();
-      if (med === "PM" && hour !== 12) {
-        hour += 12;
-      } else if (med === "AM" && hour === 12) {
-        hour = 0;
-      }
-    }
-    return hour;
-  };
-
-  const matchesCurrentSlot = (slotStr) => {
-    if (!currentSlot) return false;
-    const hour = parseSlotToHour(slotStr);
-    if (hour === null) return false;
-    if (currentSlot === "morning") {
-      return hour >= 6 && hour < 12;
-    }
-    if (currentSlot === "evening") {
-      return hour >= 12 && hour < 20;
-    }
-    return false;
-  };
-
-  const activePhleboIds = new Set();
-  todayBookings.forEach((booking) => {
-    if (booking.phleboId && matchesCurrentSlot(booking.timeSlot)) {
-      activePhleboIds.add(booking.phleboId);
-    }
-  });
-
   const results = phlebos.map((p) => {
-    const isActive = activePhleboIds.has(p.userId);
+    const isActive = isCurrentTimeInShift(p, dayOfWeek, currentTimeDecimal);
+    const activeBooking = phleboActiveBookingsMap.get(p.userId) || null;
+
     return {
       profileId: p.profileId,
       userId: p.userId,
       name: p.name,
       email: p.email,
+      phone: p.phone,
+      phleboType: p.phlebo_type || "fullTime",
+      shiftTiming: `${p.morning_start || "—"} - ${p.morning_end || "—"} / ${p.evening_start || "—"} - ${p.evening_end || "—"}`,
       isActive: isActive ? "Active" : "Inactive",
+      isEngaged: !!activeBooking,
+      activeBooking: activeBooking,
       lastUpdated: p.lastUpdated,
       assignedCount: p.assignedCount,
       completedCount: p.completedCount,
+      qualification: p.qualification || "—",
+      certificationNumber: p.certification_number || "—",
+      createdAt: p.created_at,
     };
   });
 
@@ -164,13 +198,18 @@ const fetchPhleboList = async (userId, statusFilter = "", search = "") => {
   return results;
 };
 
+const fetchPhleboWallet = async (userId, phleboUserId) => {
+  await resolveBranch(userId); // Check permission
+  return getPhleboWalletSummary(phleboUserId);
+};
+
 const fetchHomeServiceBooking = async (userId, bookingId) => {
-  const branch = await resolveBranch(userId);
+  await resolveBranch(userId);
   return getHomeServiceBooking(bookingId);
 };
 
 const patchHomeServiceBookingStatus = async (userId, id, status) => {
-  const branch = await resolveBranch(userId);
+  await resolveBranch(userId);
   const updated = await updateHomeServiceBookingStatus(id, status);
   if (!updated) {
     throw new AppError("Failed to update status, booking not found", 404);
@@ -189,7 +228,8 @@ const fetchOrganizationProfile = async (userId) => {
 };
 
 const patchOrganizationProfile = async (userId, fields) => {
-  const affected = await updateOrganizationProfile(branch, fields);
+  await resolveBranch(userId);
+  const affected = await updateOrganizationProfile(userId, fields);
   if (!affected) {
     throw new AppError("Organization profile not found or nothing changed", 404);
   }
@@ -211,6 +251,7 @@ module.exports = {
   patchOrganizationProfile,
   fetchReports,
   fetchPhleboList,
+  fetchPhleboWallet,
   fetchHomeServiceBooking,
   patchHomeServiceBookingStatus,
 };

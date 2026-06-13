@@ -11,6 +11,7 @@ const {
   updateOrgProfile,
   getReports,
   getPhlebos,
+  getPhlebosWallet,
   updatePhleboBookingStatus,
 } = require("./supervisor.controller");
 
@@ -28,6 +29,7 @@ router.put("/staff/:id/reject", rejectStaffHandler);
 router.get("/patients", getPatients);
 
 router.get("/phlebos", getPhlebos);
+router.get("/phlebos/:phleboUserId/wallet", getPhlebosWallet);
 router.patch("/phlebo-bookings/:bookingId/status", updatePhleboBookingStatus);
 
 router.get("/profile", getOrgProfile);
