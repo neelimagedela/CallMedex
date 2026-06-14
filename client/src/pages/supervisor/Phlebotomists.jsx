@@ -267,13 +267,16 @@ export default function Phlebotomists({ initialSearch }) {
 
                       {isShiftOn && p.isEngaged && (
                         <button
-                          className="sv-btn sv-btn-approve"
-                          style={{ background: "#0f766e" }}
-                          onClick={() => handleOpenStatus(p)}
-                        >
-                          <Eye size={14} style={{ marginRight: "4px" }} />
-                          Track Status
-                        </button>
+  className="sv-btn sv-btn-approve"
+  style={{
+    background: "#0f766e",
+    color: "#ffffff"   // text color
+  }}
+  onClick={() => handleOpenStatus(p)}
+>
+  <Eye size={14} style={{ marginRight: "4px" }} />
+  Track Status
+</button>
                       )}
                     </td>
                   </tr>

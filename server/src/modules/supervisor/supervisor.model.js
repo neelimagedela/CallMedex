@@ -6,10 +6,16 @@ const db = require("../../config/db");
  */
 const getSupervisorBranch = async (userId) => {
   const [rows] = await db.execute(
-    `SELECT branch FROM users WHERE id = ? LIMIT 1`,
+    `
+    SELECT institution_name
+    FROM organization_profiles
+    WHERE user_id = ?
+    LIMIT 1
+    `,
     [userId]
   );
-  return rows[0]?.branch || null;
+
+  return rows[0]?.institution_name || null;
 };
 
 /**

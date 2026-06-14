@@ -50,15 +50,23 @@ const Register = ({ setPage }) => {
     return "/organization_mou.pdf";
   }
 
-   if (selectedRole === "phlebotomist") {
-  if (roleData.phleboType === "fullTime") {
-    return "/phlebo-fulltime.pdf";
+  if (selectedRole === "phlebotomist") {
+    if (roleData.phleboType === "fullTime") {
+      return "/phlebo-fulltime.pdf";
+    }
+
+    if (roleData.phleboType === "partTime") {
+      return "/phlebo-parttime.pdf";
+    }
   }
 
-  if (roleData.phleboType === "partTime") {
-    return "/phlebo-parttime.pdf";
+  if (selectedRole === "staff") {
+    return "/staff-mou.pdf";
   }
-}
+
+  if (selectedRole === "pharmacy") {
+    return "/pharmacy-mou.pdf";
+  }
 
   return null;
 };
@@ -303,6 +311,7 @@ const Register = ({ setPage }) => {
       }
 
       const cleanedRoleData = await processRoleData(roleData);
+      console.log("ROLE DATA BEFORE SAVE:", roleData);
 
       await api.post("/profile/onboard", {
         userId,

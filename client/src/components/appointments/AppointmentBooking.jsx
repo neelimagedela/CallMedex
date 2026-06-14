@@ -551,7 +551,7 @@ export default function AppointmentBooking({
 }) {
   const toast = useToast();
 
-  const branches = ["Akkayapalem", "Madhurwada", "KGH Branch"];
+  const branches = ["Akkayapalem", "Madhurawada", "KGH"];
   const today = new Date().toISOString().split("T")[0];
 
   const isHomeServiceBooking =
@@ -868,11 +868,11 @@ export default function AppointmentBooking({
               addr: "Main Road, Akkayapalem, Visakhapatnam",
             },
             {
-              name: "Madhurwada",
-              addr: "Madhurwada Junction, Visakhapatnam",
+              name: "Madhurawada",
+              addr: "Madhurawada Junction, Visakhapatnam",
             },
             {
-              name: "KGH Branch",
+              name: "KGH",
               addr: "Near KGH Hospital, Maharani Peta",
             },
           ].map((b, i) => (

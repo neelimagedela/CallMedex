@@ -4,7 +4,7 @@ import { api } from "../../shared/api";
 import { useToast } from "../../shared/toast.js";
 import { downloadWalkInReceipt } from "./walkInReceipt";
 
-const BRANCHES = ["Akkayapalem", "Madhurwada", "KGH Branch"];
+const BRANCHES = ["Akkayapalem", "Madhurawada", "KGH"];
 
 const SLOTS = [
   { label: "9 AM - 10 AM", endHour: 10 },

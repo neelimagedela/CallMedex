@@ -25,14 +25,13 @@ const {
  * Throws 403 if the account has no branch assigned yet.
  */
 const resolveBranch = async (userId) => {
-  const branch = await getSupervisorBranch(userId);
-  if (!branch) {
-    throw new AppError(
-      "Supervisor branch is not configured. Contact admin.",
-      403
-    );
+  const organization = await getOrganizationProfile(userId);
+
+  if (!organization) {
+    throw new AppError("Organization profile not found", 403);
   }
-  return branch;
+
+  return organization.institution_name;
 };
 
 const fetchDashboardSummary = async (userId) => {
@@ -140,10 +139,22 @@ const isCurrentTimeInShift = (p, currentDayStr, currentDecimalTime) => {
   }
 
   if (eStart !== null && eEnd !== null) {
-    if (currentDecimalTime >= eStart && currentDecimalTime <= eEnd) {
+  if (eStart <= eEnd) {
+    if (
+      currentDecimalTime >= eStart &&
+      currentDecimalTime <= eEnd
+    ) {
+      return true;
+    }
+  } else {
+    if (
+      currentDecimalTime >= eStart ||
+      currentDecimalTime <= eEnd
+    ) {
       return true;
     }
   }
+}
 
   return false;
 };
@@ -167,8 +178,20 @@ const fetchPhleboList = async (userId, statusFilter = "", search = "") => {
 
   const results = phlebos.map((p) => {
     const isActive = isCurrentTimeInShift(p, dayOfWeek, currentTimeDecimal);
+    
     const activeBooking = phleboActiveBookingsMap.get(p.userId) || null;
-
+    console.log({
+  name: p.name,
+  phlebo_type: p.phlebo_type,
+  available_days: p.available_days,
+  morning_start: p.morning_start,
+  morning_end: p.morning_end,
+  evening_start: p.evening_start,
+  evening_end: p.evening_end,
+  dayOfWeek,
+  currentTimeDecimal,
+  isActive
+});
     return {
       profileId: p.profileId,
       userId: p.userId,

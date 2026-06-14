@@ -132,6 +132,8 @@ const updateWalkinStatusController = asyncHandler(async (req, res) => {
   }
 
   const nextStatus = WALKIN_NEXT[String(currentStatus).toLowerCase()];
+  console.log("Current Status:", currentStatus);
+console.log("Next Status:", nextStatus);
 
   if (!nextStatus) {
     return res.status(400).json({
@@ -170,7 +172,6 @@ const updateScanStatusController = asyncHandler(async (req, res) => {
   }
 
   const nextStatus = SCAN_NEXT[String(currentStatus).toLowerCase()];
-
   if (!nextStatus) {
     return res.status(400).json({
       success: false,
