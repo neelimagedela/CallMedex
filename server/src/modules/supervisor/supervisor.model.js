@@ -107,40 +107,80 @@ const getDashboardSummary = async (branch, branchVariants = []) => {
 
   let activePhlebos = 0;
 
-  for (const p of phleboRows) {
-    if (p.phlebo_type === "fullTime") {
-      activePhlebos++;
-      continue;
-    }
+const now = new Date();
+const currentMinutes =
+  now.getHours() * 60 + now.getMinutes();
 
-    let days = [];
+for (const p of phleboRows) {
 
-    try {
-      days =
-        typeof p.available_days === "string"
-          ? JSON.parse(p.available_days)
-          : p.available_days;
-    } catch {
-      days = [];
-    }
-
-    if (Array.isArray(days) && days.includes(today)) {
-      activePhlebos++;
-    }
+  // Full-time = always active
+  if (p.phlebo_type === "fullTime") {
+    activePhlebos++;
+    continue;
   }
 
-  return {
-    totalStaff: Number(staffRow.totalStaff) || 0,
-    pendingStaff: Number(staffRow.pendingStaff) || 0,
-    approvedStaff: Number(staffRow.approvedStaff) || 0,
-    totalPatients: Number(patientRow.totalPatients) || 0,
-    totalAppointments:
-      Number(homeRow.cnt || 0) +
-      Number(scanRow.cnt || 0) +
-      Number(walkinRow.cnt || 0),
-    totalPhlebos: phleboRows.length,
-    activePhlebos,
+  let days = [];
+
+  try {
+    days =
+      typeof p.available_days === "string"
+        ? JSON.parse(p.available_days)
+        : p.available_days;
+  } catch {
+    days = [];
+  }
+
+  if (!Array.isArray(days) || !days.includes(today)) {
+    continue;
+  }
+
+  const toMinutes = (time) => {
+    if (!time) return null;
+
+    const [h, m] = time.split(":").map(Number);
+    return h * 60 + m;
   };
+
+  const morningStart = toMinutes(p.morning_start);
+  const morningEnd = toMinutes(p.morning_end);
+
+  const eveningStart = toMinutes(p.evening_start);
+  const eveningEnd = toMinutes(p.evening_end);
+
+  const inMorning =
+    morningStart !== null &&
+    morningEnd !== null &&
+    currentMinutes >= morningStart &&
+    currentMinutes <= morningEnd;
+
+  const inEvening =
+    eveningStart !== null &&
+    eveningEnd !== null &&
+    currentMinutes >= eveningStart &&
+    currentMinutes <= eveningEnd;
+
+  if (inMorning || inEvening) {
+    activePhlebos++;
+  }
+}
+
+const totalAppointments =
+  Number(homeRow.cnt || 0) +
+  Number(scanRow.cnt || 0) +
+  Number(walkinRow.cnt || 0);
+
+const totalPhlebos = phleboRows.length;
+
+return {
+  totalStaff: Number(staffRow.totalStaff) || 0,
+  pendingStaff: Number(staffRow.pendingStaff) || 0,
+  approvedStaff: Number(staffRow.approvedStaff) || 0,
+  totalPatients: Number(patientRow.totalPatients) || 0,
+  totalAppointments,
+  totalPhlebos,
+  activePhlebos,
+};
+
 };
 
 const getStaffList = async (branch, branchVariants = [], search = "") => {
