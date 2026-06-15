@@ -7,17 +7,29 @@ const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const getAuthHeaders = () => {
   const token = localStorage.getItem("accessToken");
   if (!token) throw new Error("Not authenticated");
+
   return {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
   };
 };
 
+const getFileAuthHeaders = () => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) throw new Error("Not authenticated");
+
+  return {
+    Authorization: `Bearer ${token}`,
+  };
+};
+
 const handleResponse = async (res) => {
   const data = await res.json();
+
   if (!res.ok) {
     throw new Error(data.message || `HTTP error ${res.status}`);
   }
+
   return data.data ?? data;
 };
 
@@ -28,9 +40,12 @@ export const supervisorApi = {
     }).then(handleResponse),
 
   getStaff: (search = "") =>
-    fetch(`${BASE_URL}/api/supervisor/staff?search=${encodeURIComponent(search)}`, {
-      headers: getAuthHeaders(),
-    }).then(handleResponse),
+    fetch(
+      `${BASE_URL}/api/supervisor/staff?search=${encodeURIComponent(search)}`,
+      {
+        headers: getAuthHeaders(),
+      }
+    ).then(handleResponse),
 
   approveStaff: (id) =>
     fetch(`${BASE_URL}/api/supervisor/staff/${id}/approve`, {
@@ -45,13 +60,20 @@ export const supervisorApi = {
     }).then(handleResponse),
 
   getPatients: (search = "") =>
-    fetch(`${BASE_URL}/api/supervisor/patients?search=${encodeURIComponent(search)}`, {
-      headers: getAuthHeaders(),
-    }).then(handleResponse),
+    fetch(
+      `${BASE_URL}/api/supervisor/patients?search=${encodeURIComponent(
+        search
+      )}`,
+      {
+        headers: getAuthHeaders(),
+      }
+    ).then(handleResponse),
 
   getPhlebos: (status = "", search = "") =>
     fetch(
-      `${BASE_URL}/api/supervisor/phlebos?status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}`,
+      `${BASE_URL}/api/supervisor/phlebos?status=${encodeURIComponent(
+        status
+      )}&search=${encodeURIComponent(search)}`,
       {
         headers: getAuthHeaders(),
       }
@@ -80,6 +102,43 @@ export const supervisorApi = {
     fetch(`${BASE_URL}/api/supervisor/reports`, {
       headers: getAuthHeaders(),
     }).then(handleResponse),
+
+  getPatientReports: (type = "all") =>
+    fetch(
+      `${BASE_URL}/api/supervisor/patient-reports?type=${encodeURIComponent(
+        type
+      )}`,
+      {
+        headers: getAuthHeaders(),
+      }
+    ).then(handleResponse),
+
+  openReportPdf: async (reportPath) => {
+    if (!reportPath) {
+      throw new Error("Report PDF path is missing");
+    }
+
+    const fullUrl = reportPath.startsWith("http")
+      ? reportPath
+      : `${BASE_URL}${reportPath}`;
+
+    const res = await fetch(fullUrl, {
+      headers: getFileAuthHeaders(),
+    });
+
+    if (!res.ok) {
+      throw new Error("Unable to open report PDF");
+    }
+
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    window.open(blobUrl, "_blank", "noopener,noreferrer");
+
+    setTimeout(() => {
+      window.URL.revokeObjectURL(blobUrl);
+    }, 60 * 1000);
+  },
 
   getPhleboWallet: (phleboUserId) =>
     fetch(`${BASE_URL}/api/supervisor/phlebos/${phleboUserId}/wallet`, {

@@ -11,6 +11,7 @@ const {
   fetchOrganizationProfile,
   patchOrganizationProfile,
   fetchReports,
+  fetchPatientReportsList,
   fetchPhleboList,
   fetchPhleboWallet,
   fetchHomeServiceBooking,
@@ -167,6 +168,17 @@ const getReports = asyncHandler(async (req, res) => {
   });
 });
 
+const getPatientReports = asyncHandler(async (req, res) => {
+  const type = req.query.type || "all";
+  const data = await fetchPatientReportsList(req.user.id, type);
+
+  return successResponse({
+    res,
+    message: "Patient reports fetched",
+    data,
+  });
+});
+
 module.exports = {
   getDashboard,
   getStaff,
@@ -176,6 +188,7 @@ module.exports = {
   getOrgProfile,
   updateOrgProfile,
   getReports,
+  getPatientReports,
   getPhlebos,
   getPhlebosWallet,
   updatePhleboBookingStatus,

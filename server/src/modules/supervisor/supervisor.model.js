@@ -11,6 +11,48 @@ const getSafeVariants = (branch, branchVariants = []) => {
   return list.filter(Boolean);
 };
 
+const parseServiceText = (value) => {
+  if (!value) return "—";
+
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+
+    if (Array.isArray(parsed)) {
+      const names = parsed
+        .map((item) => {
+          if (!item) return null;
+          if (typeof item === "string") return item;
+          return (
+            item.name ||
+            item.test_name ||
+            item.testName ||
+            item.title ||
+            item.service ||
+            item.id
+          );
+        })
+        .filter(Boolean);
+
+      return names.length ? names.join(", ") : "—";
+    }
+
+    if (parsed && typeof parsed === "object") {
+      return (
+        parsed.name ||
+        parsed.test_name ||
+        parsed.testName ||
+        parsed.title ||
+        parsed.service ||
+        JSON.stringify(parsed)
+      );
+    }
+
+    return String(parsed);
+  } catch {
+    return String(value);
+  }
+};
+
 const getSupervisorBranch = async (userId) => {
   const [rows] = await db.execute(
     `
@@ -104,83 +146,75 @@ const getDashboardSummary = async (branch, branchVariants = []) => {
   );
 
   const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   let activePhlebos = 0;
 
-const now = new Date();
-const currentMinutes =
-  now.getHours() * 60 + now.getMinutes();
+  for (const p of phleboRows) {
+    if (p.phlebo_type === "fullTime") {
+      activePhlebos++;
+      continue;
+    }
 
-for (const p of phleboRows) {
+    let days = [];
 
-  // Full-time = always active
-  if (p.phlebo_type === "fullTime") {
-    activePhlebos++;
-    continue;
+    try {
+      days =
+        typeof p.available_days === "string"
+          ? JSON.parse(p.available_days)
+          : p.available_days;
+    } catch {
+      days = [];
+    }
+
+    if (!Array.isArray(days) || !days.includes(today)) {
+      continue;
+    }
+
+    const toMinutes = (time) => {
+      if (!time) return null;
+      const [h, m] = String(time).split(":").map(Number);
+      if (Number.isNaN(h) || Number.isNaN(m)) return null;
+      return h * 60 + m;
+    };
+
+    const morningStart = toMinutes(p.morning_start);
+    const morningEnd = toMinutes(p.morning_end);
+    const eveningStart = toMinutes(p.evening_start);
+    const eveningEnd = toMinutes(p.evening_end);
+
+    const inMorning =
+      morningStart !== null &&
+      morningEnd !== null &&
+      currentMinutes >= morningStart &&
+      currentMinutes <= morningEnd;
+
+    const inEvening =
+      eveningStart !== null &&
+      eveningEnd !== null &&
+      currentMinutes >= eveningStart &&
+      currentMinutes <= eveningEnd;
+
+    if (inMorning || inEvening) {
+      activePhlebos++;
+    }
   }
 
-  let days = [];
+  const totalAppointments =
+    Number(homeRow.cnt || 0) +
+    Number(scanRow.cnt || 0) +
+    Number(walkinRow.cnt || 0);
 
-  try {
-    days =
-      typeof p.available_days === "string"
-        ? JSON.parse(p.available_days)
-        : p.available_days;
-  } catch {
-    days = [];
-  }
-
-  if (!Array.isArray(days) || !days.includes(today)) {
-    continue;
-  }
-
-  const toMinutes = (time) => {
-    if (!time) return null;
-
-    const [h, m] = time.split(":").map(Number);
-    return h * 60 + m;
+  return {
+    totalStaff: Number(staffRow.totalStaff) || 0,
+    pendingStaff: Number(staffRow.pendingStaff) || 0,
+    approvedStaff: Number(staffRow.approvedStaff) || 0,
+    totalPatients: Number(patientRow.totalPatients) || 0,
+    totalAppointments,
+    totalPhlebos: phleboRows.length,
+    activePhlebos,
   };
-
-  const morningStart = toMinutes(p.morning_start);
-  const morningEnd = toMinutes(p.morning_end);
-
-  const eveningStart = toMinutes(p.evening_start);
-  const eveningEnd = toMinutes(p.evening_end);
-
-  const inMorning =
-    morningStart !== null &&
-    morningEnd !== null &&
-    currentMinutes >= morningStart &&
-    currentMinutes <= morningEnd;
-
-  const inEvening =
-    eveningStart !== null &&
-    eveningEnd !== null &&
-    currentMinutes >= eveningStart &&
-    currentMinutes <= eveningEnd;
-
-  if (inMorning || inEvening) {
-    activePhlebos++;
-  }
-}
-
-const totalAppointments =
-  Number(homeRow.cnt || 0) +
-  Number(scanRow.cnt || 0) +
-  Number(walkinRow.cnt || 0);
-
-const totalPhlebos = phleboRows.length;
-
-return {
-  totalStaff: Number(staffRow.totalStaff) || 0,
-  pendingStaff: Number(staffRow.pendingStaff) || 0,
-  approvedStaff: Number(staffRow.approvedStaff) || 0,
-  totalPatients: Number(patientRow.totalPatients) || 0,
-  totalAppointments,
-  totalPhlebos,
-  activePhlebos,
-};
-
 };
 
 const getStaffList = async (branch, branchVariants = [], search = "") => {
@@ -505,6 +539,106 @@ const getReportCounts = async (branch, branchVariants = []) => {
   };
 };
 
+const getPatientReportsList = async (
+  branch,
+  branchVariants = [],
+  type = "all"
+) => {
+  const variants = getSafeVariants(branch, branchVariants);
+  const placeholders = makePlaceholders(variants);
+
+  const allowedTypes = ["all", "home_service", "walkin", "scan"];
+  const safeType = allowedTypes.includes(type) ? type : "all";
+  const typeFilter = safeType === "all" ? null : safeType;
+
+  const [rows] = await db.execute(
+    `
+    SELECT
+      br.id AS reportId,
+      br.booking_type AS bookingType,
+      br.booking_id AS bookingDbId,
+      br.report_pdf AS reportPdf,
+      br.uploaded_at AS uploadedAt,
+
+      CASE
+        WHEN br.booking_type = 'home_service' THEN h.patient_name
+        WHEN br.booking_type = 'walkin' THEN w.patient_name
+        WHEN br.booking_type = 'scan' THEN a.patient_name
+        ELSE NULL
+      END AS patientName,
+
+      CASE
+        WHEN br.booking_type = 'home_service' THEN h.patient_email
+        WHEN br.booking_type = 'walkin' THEN w.patient_email
+        WHEN br.booking_type = 'scan' THEN a.patient_email
+        ELSE NULL
+      END AS patientEmail,
+
+      CASE
+        WHEN br.booking_type = 'home_service' THEN h.public_booking_id
+        WHEN br.booking_type = 'walkin' THEN w.receipt_id
+        WHEN br.booking_type = 'scan' THEN a.receipt_id
+        ELSE NULL
+      END AS receiptId,
+
+      CASE
+        WHEN br.booking_type = 'home_service' THEN h.tests
+        WHEN br.booking_type = 'walkin' THEN w.tests
+        WHEN br.booking_type = 'scan' THEN a.scans
+        ELSE NULL
+      END AS serviceRaw,
+
+      CASE
+        WHEN br.booking_type = 'home_service' THEN h.branch
+        WHEN br.booking_type = 'walkin' THEN w.branch
+        WHEN br.booking_type = 'scan' THEN a.branch
+        ELSE NULL
+      END AS bookingBranch
+
+    FROM booking_reports br
+
+    LEFT JOIN home_service_bookings h
+      ON br.booking_type = 'home_service'
+     AND br.booking_id = h.id
+
+    LEFT JOIN diagnostic_walkin_bookings w
+      ON br.booking_type = 'walkin'
+     AND br.booking_id = w.id
+
+    LEFT JOIN appointments a
+      ON br.booking_type = 'scan'
+     AND br.booking_id = a.id
+
+    WHERE
+      (
+        CASE
+          WHEN br.booking_type = 'home_service' THEN LOWER(TRIM(h.branch))
+          WHEN br.booking_type = 'walkin' THEN LOWER(TRIM(w.branch))
+          WHEN br.booking_type = 'scan' THEN LOWER(TRIM(a.branch))
+          ELSE NULL
+        END
+      ) IN (${placeholders})
+      AND (? IS NULL OR br.booking_type = ?)
+
+    ORDER BY br.uploaded_at DESC
+    `,
+    [...variants, typeFilter, typeFilter]
+  );
+
+  return rows.map((row) => ({
+    reportId: row.reportId,
+    bookingType: row.bookingType,
+    bookingDbId: row.bookingDbId,
+    patientName: row.patientName || "—",
+    patientEmail: row.patientEmail || "—",
+    receiptId: row.receiptId || "—",
+    service: parseServiceText(row.serviceRaw),
+    reportPdf: row.reportPdf,
+    uploadedAt: row.uploadedAt,
+    bookingBranch: row.bookingBranch,
+  }));
+};
+
 const getPhleboList = async (branch, branchVariants = [], search = "") => {
   const term = `%${search}%`;
 
@@ -646,6 +780,7 @@ module.exports = {
   getOrganizationProfile,
   updateOrganizationProfile,
   getReportCounts,
+  getPatientReportsList,
   getPhleboList,
   getHomeServiceBooking,
   updateHomeServiceBookingStatus,

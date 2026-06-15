@@ -12,6 +12,7 @@ const {
   getOrgProfile,
   updateOrgProfile,
   getReports,
+  getPatientReports,
   getPhlebos,
   getPhlebosWallet,
   updatePhleboBookingStatus,
@@ -38,5 +39,6 @@ router.get("/profile", getOrgProfile);
 router.put("/profile", updateOrgProfile);
 
 router.get("/reports", getReports);
+router.get("/patient-reports", getPatientReports);
 
 module.exports = router;

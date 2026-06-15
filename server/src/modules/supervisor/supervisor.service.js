@@ -10,6 +10,7 @@ const {
   getOrganizationProfile,
   updateOrganizationProfile,
   getReportCounts,
+  getPatientReportsList,
   getPhleboList,
   getHomeServiceBooking,
   updateHomeServiceBookingStatus,
@@ -134,9 +135,16 @@ const fetchPatientsAndAppointments = async (userId, search = "") => {
   console.log("SUPERVISOR USER ID:", userId);
   console.log("SUPERVISOR BRANCH:", branch);
   console.log("BRANCH VARIANTS:", variants);
-  console.log("HOME SERVICE PATIENT COUNT:", data.length);
+  console.log("PATIENT APPOINTMENTS COUNT:", data.length);
 
   return data;
+};
+
+const fetchPatientReportsList = async (userId, type = "all") => {
+  const branch = await resolveBranch(userId);
+  const variants = getBranchVariants(branch);
+
+  return getPatientReportsList(branch, variants, type);
 };
 
 const parseTimeToDecimal = (timeStr) => {
@@ -350,6 +358,7 @@ module.exports = {
   fetchOrganizationProfile,
   patchOrganizationProfile,
   fetchReports,
+  fetchPatientReportsList,
   fetchPhleboList,
   fetchPhleboWallet,
   fetchHomeServiceBooking,
