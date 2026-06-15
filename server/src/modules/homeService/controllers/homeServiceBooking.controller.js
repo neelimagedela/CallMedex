@@ -262,6 +262,18 @@ const acceptHomeServiceBookingController = asyncHandler(async (req, res) => {
   const result = await acceptHomeServiceBooking(bookingId, req.user.id);
 
   if (!result.accepted) {
+    if (result.reason === "off_shift") {
+    throw new AppError(
+      "You are currently off shift and cannot accept collections.",
+      403
+    );
+    }
+    if (result.reason === "active_booking_exists") {
+  throw new AppError(
+    "You already have an active collection. Complete the current collection before accepting another booking.",
+    409
+  );
+}
     if (result.reason === "not_found") {
       throw new AppError("Booking not found", 404);
     }

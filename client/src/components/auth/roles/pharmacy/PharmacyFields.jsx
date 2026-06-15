@@ -43,10 +43,11 @@ const PharmacyFields = ({ onChange }) => {
         pharmacyForm={pharmacyForm}
         dispatch={dispatch}
       />
-
-      <button className="auth-btn">
-        Register Pharmacy
-      </button>
+      {/*
+<button className="...">
+  Register Pharmacy
+</button>
+*/}
     </>
   );
 };

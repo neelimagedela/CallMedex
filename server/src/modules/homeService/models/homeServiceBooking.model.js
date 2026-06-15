@@ -305,10 +305,130 @@ const resubmitRejectedBooking = async (bookingId, phleboUserId) => {
 
   return result.affectedRows > 0;
 };
+const parseTimeToDecimal = (timeStr) => {
+  if (!timeStr) return null;
 
+  const match = String(timeStr).match(/^(\d+):(\d+)\s*(AM|PM)?/i);
+
+  if (!match) {
+    const hourMatch = String(timeStr).match(/^(\d+)\s*(AM|PM)?/i);
+
+    if (!hourMatch) return null;
+
+    let hour = Number(hourMatch[1]);
+    const meridiem = hourMatch[2];
+
+    if (meridiem) {
+      const med = meridiem.toUpperCase();
+
+      if (med === "PM" && hour !== 12) hour += 12;
+      if (med === "AM" && hour === 12) hour = 0;
+    }
+
+    return hour;
+  }
+
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const meridiem = match[3];
+
+  if (meridiem) {
+    const med = meridiem.toUpperCase();
+
+    if (med === "PM" && hour !== 12) hour += 12;
+    if (med === "AM" && hour === 12) hour = 0;
+  }
+
+  return hour + minute / 60;
+};
+
+const parseAvailableDays = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const isCurrentTimeInShift = (phlebo, currentDay, currentDecimalTime) => {
+  if (phlebo.phlebo_type === "partTime") {
+    const days = parseAvailableDays(phlebo.available_days);
+
+    if (!days.includes(currentDay)) {
+      return false;
+    }
+  }
+
+  const morningStart = parseTimeToDecimal(phlebo.morning_start);
+  const morningEnd = parseTimeToDecimal(phlebo.morning_end);
+  const eveningStart = parseTimeToDecimal(phlebo.evening_start);
+  const eveningEnd = parseTimeToDecimal(phlebo.evening_end);
+
+  if (morningStart !== null && morningEnd !== null) {
+    if (
+      currentDecimalTime >= morningStart &&
+      currentDecimalTime <= morningEnd
+    ) {
+      return true;
+    }
+  }
+
+  if (eveningStart !== null && eveningEnd !== null) {
+    if (
+      currentDecimalTime >= eveningStart &&
+      currentDecimalTime <= eveningEnd
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
 const acceptHomeServiceBooking = async (bookingId, phleboUserId) => {
   const bId = Number(bookingId);
   const pId = Number(phleboUserId);
+  const phleboProfile = await getPhleboProfileByUserId(pId);
+
+if (!phleboProfile) {
+  return {
+    accepted: false,
+    reason: "phlebo_not_found",
+  };
+}
+
+const now = new Date();
+
+const currentDay = now.toLocaleDateString("en-US", {
+  weekday: "long",
+});
+
+const currentDecimalTime =
+  now.getHours() + now.getMinutes() / 60;
+
+const isActive = isCurrentTimeInShift(
+  phleboProfile,
+  currentDay,
+  currentDecimalTime
+);
+
+if (!isActive) {
+  return {
+    accepted: false,
+    reason: "off_shift",
+  };
+}
+const activeBooking = await getPhleboActiveBooking(pId);
+
+if (activeBooking) {
+  return {
+    accepted: false,
+    reason: "active_booking_exists",
+  };
+}
 
   const [rows] = await db.execute(
     `
