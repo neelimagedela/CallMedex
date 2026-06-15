@@ -1,6 +1,8 @@
 const express = require("express");
+
 const { authenticate } = require("../auth/middleware/auth.middleware");
 const { authorize } = require("../auth/middleware/role.middleware");
+
 const {
   getDashboard,
   getStaff,
@@ -17,8 +19,8 @@ const {
 
 const router = express.Router();
 
-// All supervisor routes require a valid JWT AND the "organization" role
-router.use(authenticate, authorize(["organization"]));
+router.use(authenticate);
+router.use(authorize(["organization", "supervisor"]));
 
 router.get("/dashboard", getDashboard);
 

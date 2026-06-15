@@ -1,4 +1,5 @@
 const AppError = require("../../shared/utils/AppError");
+
 const {
   getSupervisorBranch,
   getDashboardSummary,
@@ -10,7 +11,6 @@ const {
   updateOrganizationProfile,
   getReportCounts,
   getPhleboList,
-  getTodayPhleboBookings,
   getHomeServiceBooking,
   updateHomeServiceBookingStatus,
   getActiveBookingsForPhlebos,
@@ -20,40 +20,84 @@ const {
   getPhleboWalletSummary,
 } = require("../homeService/models/homeServiceBooking.model");
 
-/**
- * Resolve and validate the supervisor's branch from DB.
- * Throws 403 if the account has no branch assigned yet.
- */
-const resolveBranch = async (userId) => {
-  const organization = await getOrganizationProfile(userId);
+const BRANCH_ALIASES = {
+  madhurawada: "Madhurawada",
+  madhurwada: "Madhurawada",
 
-  if (!organization) {
-    throw new AppError("Organization profile not found", 403);
+  akkayapalem: "Akkayapalem",
+  akkayyapalem: "Akkayapalem",
+  akkeyapalem: "Akkayapalem",
+  akkeyyapalem: "Akkayapalem",
+  akkyapalem: "Akkayapalem",
+  akkasayapalem: "Akkayapalem",
+
+  kgh: "KGH",
+  "kgh branch": "KGH",
+};
+
+const normalizeBranch = (branch) => {
+  if (!branch) return null;
+
+  const key = String(branch).toLowerCase().trim();
+  return BRANCH_ALIASES[key] || String(branch).trim();
+};
+
+const getBranchVariants = (branch) => {
+  const canonical = normalizeBranch(branch);
+  const variants = new Set();
+
+  if (canonical) {
+    variants.add(canonical.toLowerCase().trim());
   }
 
-  return organization.institution_name;
+  Object.entries(BRANCH_ALIASES).forEach(([alias, value]) => {
+    if (value === canonical) {
+      variants.add(alias.toLowerCase().trim());
+    }
+  });
+
+  return [...variants];
+};
+
+const resolveBranch = async (userId) => {
+  const branch = await getSupervisorBranch(userId);
+
+  if (!branch) {
+    throw new AppError(
+      "Supervisor branch is not configured. Contact admin.",
+      403
+    );
+  }
+
+  return normalizeBranch(branch);
 };
 
 const fetchDashboardSummary = async (userId) => {
   const branch = await resolveBranch(userId);
-  return getDashboardSummary(branch);
+  const variants = getBranchVariants(branch);
+
+  return getDashboardSummary(branch, variants);
 };
 
 const fetchStaffList = async (userId, search = "") => {
   const branch = await resolveBranch(userId);
-  return getStaffList(branch, search);
+  const variants = getBranchVariants(branch);
+
+  return getStaffList(branch, variants, search);
 };
 
 const approveStaff = async (userId, staffProfileId) => {
   const branch = await resolveBranch(userId);
+  const variants = getBranchVariants(branch);
 
-  // Security: confirm the staff row belongs to this supervisor's branch
-  const belongs = await verifyStaffBelongsToBranch(staffProfileId, branch);
+  const belongs = await verifyStaffBelongsToBranch(staffProfileId, variants);
+
   if (!belongs) {
     throw new AppError("Staff member not found in your organization", 404);
   }
 
   const affected = await updateStaffApprovalStatus(staffProfileId, "approved");
+
   if (!affected) {
     throw new AppError("Failed to update staff status", 500);
   }
@@ -63,13 +107,16 @@ const approveStaff = async (userId, staffProfileId) => {
 
 const rejectStaff = async (userId, staffProfileId) => {
   const branch = await resolveBranch(userId);
+  const variants = getBranchVariants(branch);
 
-  const belongs = await verifyStaffBelongsToBranch(staffProfileId, branch);
+  const belongs = await verifyStaffBelongsToBranch(staffProfileId, variants);
+
   if (!belongs) {
     throw new AppError("Staff member not found in your organization", 404);
   }
 
   const affected = await updateStaffApprovalStatus(staffProfileId, "rejected");
+
   if (!affected) {
     throw new AppError("Failed to update staff status", 500);
   }
@@ -79,119 +126,128 @@ const rejectStaff = async (userId, staffProfileId) => {
 
 const fetchPatientsAndAppointments = async (userId, search = "") => {
   const branch = await resolveBranch(userId);
-  return getPatientsAndAppointments(branch, search);
+  const variants = getBranchVariants(branch);
+
+  const data = await getPatientsAndAppointments(branch, variants, search);
+
+  console.log("SUPERVISOR USER ID:", userId);
+  console.log("SUPERVISOR BRANCH:", branch);
+  console.log("BRANCH VARIANTS:", variants);
+  console.log("HOME SERVICE PATIENT COUNT:", data.length);
+
+  return data;
 };
 
 const parseTimeToDecimal = (timeStr) => {
   if (!timeStr) return null;
-  const match = timeStr.match(/^(\d+):(\d+)\s*(AM|PM)?/i);
+
+  const match = String(timeStr).match(/^(\d+):(\d+)\s*(AM|PM)?/i);
+
   if (!match) {
-    const hrMatch = timeStr.match(/^(\d+)\s*(AM|PM)?/i);
-    if (!hrMatch) return null;
-    let hour = parseInt(hrMatch[1], 10);
-    let meridiem = hrMatch[2];
+    const hourMatch = String(timeStr).match(/^(\d+)\s*(AM|PM)?/i);
+
+    if (!hourMatch) return null;
+
+    let hour = Number(hourMatch[1]);
+    const meridiem = hourMatch[2];
+
     if (meridiem) {
       const med = meridiem.toUpperCase();
+
       if (med === "PM" && hour !== 12) hour += 12;
-      else if (med === "AM" && hour === 12) hour = 0;
+      if (med === "AM" && hour === 12) hour = 0;
     }
+
     return hour;
   }
-  let hour = parseInt(match[1], 10);
-  const minute = parseInt(match[2], 10);
-  let meridiem = match[3];
+
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const meridiem = match[3];
 
   if (meridiem) {
     const med = meridiem.toUpperCase();
-    if (med === "PM" && hour !== 12) {
-      hour += 12;
-    } else if (med === "AM" && hour === 12) {
-      hour = 0;
-    }
+
+    if (med === "PM" && hour !== 12) hour += 12;
+    if (med === "AM" && hour === 12) hour = 0;
   }
+
   return hour + minute / 60;
 };
 
-const isCurrentTimeInShift = (p, currentDayStr, currentDecimalTime) => {
-  if (p.phlebo_type === "partTime") {
-    let days = p.available_days;
-    if (typeof days === "string") {
-      try {
-        days = JSON.parse(days);
-      } catch {
-        days = [];
-      }
-    }
-    if (!Array.isArray(days) || !days.includes(currentDayStr)) {
+const parseAvailableDays = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const isCurrentTimeInShift = (phlebo, currentDay, currentDecimalTime) => {
+  if (phlebo.phlebo_type === "partTime") {
+    const days = parseAvailableDays(phlebo.available_days);
+
+    if (!days.includes(currentDay)) {
       return false;
     }
   }
 
-  const mStart = parseTimeToDecimal(p.morning_start);
-  const mEnd = parseTimeToDecimal(p.morning_end);
-  const eStart = parseTimeToDecimal(p.evening_start);
-  const eEnd = parseTimeToDecimal(p.evening_end);
+  const morningStart = parseTimeToDecimal(phlebo.morning_start);
+  const morningEnd = parseTimeToDecimal(phlebo.morning_end);
+  const eveningStart = parseTimeToDecimal(phlebo.evening_start);
+  const eveningEnd = parseTimeToDecimal(phlebo.evening_end);
 
-  if (mStart !== null && mEnd !== null) {
-    if (currentDecimalTime >= mStart && currentDecimalTime <= mEnd) {
-      return true;
-    }
-  }
-
-  if (eStart !== null && eEnd !== null) {
-  if (eStart <= eEnd) {
+  if (morningStart !== null && morningEnd !== null) {
     if (
-      currentDecimalTime >= eStart &&
-      currentDecimalTime <= eEnd
-    ) {
-      return true;
-    }
-  } else {
-    if (
-      currentDecimalTime >= eStart ||
-      currentDecimalTime <= eEnd
+      currentDecimalTime >= morningStart &&
+      currentDecimalTime <= morningEnd
     ) {
       return true;
     }
   }
-}
+
+  if (eveningStart !== null && eveningEnd !== null) {
+    if (
+      currentDecimalTime >= eveningStart &&
+      currentDecimalTime <= eveningEnd
+    ) {
+      return true;
+    }
+  }
 
   return false;
 };
 
 const fetchPhleboList = async (userId, statusFilter = "", search = "") => {
   const branch = await resolveBranch(userId);
-  const phlebos = await getPhleboList(branch, search);
-  const activeBookings = await getActiveBookingsForPhlebos();
+  const variants = getBranchVariants(branch);
 
-  // Map active bookings by phlebo ID for easy lookup
-  const phleboActiveBookingsMap = new Map();
-  activeBookings.forEach((b) => {
-    phleboActiveBookingsMap.set(b.phleboId, b);
+  const phlebos = await getPhleboList(branch, variants, search);
+  const activeBookings = await getActiveBookingsForPhlebos(variants);
+
+  const activeBookingMap = new Map();
+
+  activeBookings.forEach((booking) => {
+    activeBookingMap.set(booking.phleboId, booking);
   });
 
   const now = new Date();
-  const dayOfWeek = now.toLocaleDateString("en-US", { weekday: "long" });
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-  const currentTimeDecimal = currentHour + currentMinute / 60;
+  const currentDay = now.toLocaleDateString("en-US", { weekday: "long" });
+  const currentDecimalTime = now.getHours() + now.getMinutes() / 60;
 
   const results = phlebos.map((p) => {
-    const isActive = isCurrentTimeInShift(p, dayOfWeek, currentTimeDecimal);
-    
-    const activeBooking = phleboActiveBookingsMap.get(p.userId) || null;
-    console.log({
-  name: p.name,
-  phlebo_type: p.phlebo_type,
-  available_days: p.available_days,
-  morning_start: p.morning_start,
-  morning_end: p.morning_end,
-  evening_start: p.evening_start,
-  evening_end: p.evening_end,
-  dayOfWeek,
-  currentTimeDecimal,
-  isActive
-});
+    const isActive = isCurrentTimeInShift(
+      p,
+      currentDay,
+      currentDecimalTime
+    );
+
+    const activeBooking = activeBookingMap.get(p.userId) || null;
+
     return {
       profileId: p.profileId,
       userId: p.userId,
@@ -199,10 +255,12 @@ const fetchPhleboList = async (userId, statusFilter = "", search = "") => {
       email: p.email,
       phone: p.phone,
       phleboType: p.phlebo_type || "fullTime",
-      shiftTiming: `${p.morning_start || "—"} - ${p.morning_end || "—"} / ${p.evening_start || "—"} - ${p.evening_end || "—"}`,
+      shiftTiming: `${p.morning_start || "—"} - ${
+        p.morning_end || "—"
+      } / ${p.evening_start || "—"} - ${p.evening_end || "—"}`,
       isActive: isActive ? "Active" : "Inactive",
-      isEngaged: !!activeBooking,
-      activeBooking: activeBooking,
+      isEngaged: Boolean(activeBooking),
+      activeBooking,
       lastUpdated: p.lastUpdated,
       assignedCount: p.assignedCount,
       completedCount: p.completedCount,
@@ -213,30 +271,38 @@ const fetchPhleboList = async (userId, statusFilter = "", search = "") => {
   });
 
   if (statusFilter === "active") {
-    return results.filter((r) => r.isActive === "Active");
+    return results.filter((item) => item.isActive === "Active");
   }
+
   if (statusFilter === "inactive") {
-    return results.filter((r) => r.isActive === "Inactive");
+    return results.filter((item) => item.isActive === "Inactive");
   }
+
   return results;
 };
 
 const fetchPhleboWallet = async (userId, phleboUserId) => {
-  await resolveBranch(userId); // Check permission
+  await resolveBranch(userId);
   return getPhleboWalletSummary(phleboUserId);
 };
 
 const fetchHomeServiceBooking = async (userId, bookingId) => {
-  await resolveBranch(userId);
-  return getHomeServiceBooking(bookingId);
+  const branch = await resolveBranch(userId);
+  const variants = getBranchVariants(branch);
+
+  return getHomeServiceBooking(bookingId, variants);
 };
 
 const patchHomeServiceBookingStatus = async (userId, id, status) => {
-  await resolveBranch(userId);
-  const updated = await updateHomeServiceBookingStatus(id, status);
+  const branch = await resolveBranch(userId);
+  const variants = getBranchVariants(branch);
+
+  const updated = await updateHomeServiceBookingStatus(id, status, variants);
+
   if (!updated) {
     throw new AppError("Failed to update status, booking not found", 404);
   }
+
   return { message: "Status updated successfully" };
 };
 
@@ -252,16 +318,21 @@ const fetchOrganizationProfile = async (userId) => {
 
 const patchOrganizationProfile = async (userId, fields) => {
   await resolveBranch(userId);
+
   const affected = await updateOrganizationProfile(userId, fields);
+
   if (!affected) {
     throw new AppError("Organization profile not found or nothing changed", 404);
   }
+
   return { message: "Organization profile updated successfully" };
 };
 
 const fetchReports = async (userId) => {
   const branch = await resolveBranch(userId);
-  return getReportCounts(branch);
+  const variants = getBranchVariants(branch);
+
+  return getReportCounts(branch, variants);
 };
 
 module.exports = {
