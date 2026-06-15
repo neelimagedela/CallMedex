@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./Auth.css";
+import PasswordInput from "../common/PasswordInput";
 
 import DoctorFields from "./roles/doctor/DoctorFields";
 import PatientFields from "./roles/patient/PatientFields";
@@ -569,28 +570,24 @@ const Register = ({ setPage }) => {
             </div>
 
             <div className="form-group">
-              <label>Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="Create password (min 8 characters)"
-                required
-              />
-            </div>
+  <label>Password</label>
+  <PasswordInput
+    name="password"
+    value={formData.password}
+    onChange={handleInputChange}
+    placeholder="Create password (min 8 characters)"
+  />
+</div>
 
             <div className="form-group">
-              <label>Confirm Password</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                placeholder="Confirm password"
-                required
-              />
-            </div>
+  <label>Confirm Password</label>
+  <PasswordInput
+    name="confirmPassword"
+    value={formData.confirmPassword}
+    onChange={handleInputChange}
+    placeholder="Confirm password"
+  />
+</div>
           </div>
 
           <div className="section-card">

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import "./Auth.css";
 import { api } from "../../shared/api";
+import PasswordInput from "../common/PasswordInput";
 import { useToast } from "../../shared/toast.js";
 
 const Login = ({ setPage, setIsLoggedIn, setUser }) => {
@@ -238,13 +239,32 @@ const Login = ({ setPage, setIsLoggedIn, setUser }) => {
           <div className="form-group">
             <label>Password</label>
 
-            <input
-              type="password"
+            <PasswordInput
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
-              required
             />
+          </div>
+
+          <div
+            style={{
+              textAlign: "right",
+              marginTop: "-8px",
+              marginBottom: "12px",
+            }}
+          >
+            <span
+              onClick={() => setPage("forgot-password")}
+              style={{
+                color: "#1B6CA8",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontSize: "15px",
+              }}
+            >
+              Forgot Password?
+            </span>
           </div>
 
           <button type="submit" className="auth-btn" disabled={loading}>

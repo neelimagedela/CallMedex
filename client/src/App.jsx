@@ -17,6 +17,7 @@ import LabTechnicianDashboard from "./components/Staff/LabTechnicianDashboard";
 
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
+import ForgotPassword from "./components/auth/ForgotPassword";
 
 import HomeServices from "./components/homeServices/HomeServices";
 import Cardiology from "./components/cardiology/Cardiology";
@@ -185,10 +186,14 @@ if (
       {!isInternalPortal && page === "pharmacy-dashboard"       && <PharmacyDashboard setPage={setPage} />}
 
       {!isInternalPortal && page === "login" && (
-        <Login setPage={setPage} setIsLoggedIn={setIsLoggedIn} setUser={setUser} />
-      )}
+  <Login setPage={setPage} setIsLoggedIn={setIsLoggedIn} setUser={setUser} />
+)}
 
-      {!isInternalPortal && page === "register" && <Register setPage={setPage} />}
+{!isInternalPortal && page === "forgot-password" && (
+  <ForgotPassword setPage={setPage} />
+)}
+
+{!isInternalPortal && page === "register" && <Register setPage={setPage} />}
 
       {!isInternalPortal && page === "profile" && user?.role === "patient" && (
         <PatientProfile setPage={setPage} setUser={setUser} />

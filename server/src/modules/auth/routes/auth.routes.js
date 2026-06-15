@@ -1,5 +1,8 @@
 const express = require("express");
-
+const {
+  requestPasswordResetOtp,
+  resetPasswordWithOtp,
+} = require("../controllers/forgotPassword.controller");
 const {
     registerController,
     sendOtpController,
@@ -43,5 +46,8 @@ router.post(
     authenticate,
     logoutController
 );
+
+router.post("/forgot-password/request-otp", requestPasswordResetOtp);
+router.post("/forgot-password/reset", resetPasswordWithOtp);
 
 module.exports = router;
