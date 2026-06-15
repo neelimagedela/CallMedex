@@ -603,10 +603,9 @@ const updateHomeServiceBookingStatus = async (
   return result.affectedRows > 0;
 };
 
-const getActiveBookingsForPhlebos = async (branchVariants = []) => {
-  const variants = getSafeVariants("", branchVariants);
-
-  let sql = `
+const getActiveBookingsForPhlebos = async () => {
+  const [rows] = await db.execute(
+    `
     SELECT
       id,
       public_booking_id AS publicBookingId,
@@ -617,7 +616,8 @@ const getActiveBookingsForPhlebos = async (branchVariants = []) => {
       status,
       collection_date AS collectionDate,
       time_slot AS timeSlot,
-      updated_at AS updatedAt
+      updated_at AS updatedAt,
+      branch
     FROM home_service_bookings
     WHERE assigned_phlebo_id IS NOT NULL
       AND status IN (
@@ -629,19 +629,9 @@ const getActiveBookingsForPhlebos = async (branchVariants = []) => {
         'processing',
         'report_ready'
       )
-  `;
-
-  const params = [];
-
-  if (variants.length > 0) {
-    const placeholders = makePlaceholders(variants);
-    sql += ` AND LOWER(TRIM(branch)) IN (${placeholders})`;
-    params.push(...variants);
-  }
-
-  sql += ` ORDER BY updated_at DESC`;
-
-  const [rows] = await db.execute(sql, params);
+    ORDER BY updated_at DESC
+    `
+  );
 
   return rows;
 };

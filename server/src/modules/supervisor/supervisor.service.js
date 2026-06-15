@@ -18,6 +18,7 @@ const {
 
 const {
   getPhleboWalletSummary,
+  getSupervisorPhleboWalletSummary,
 } = require("../homeService/models/homeServiceBooking.model");
 
 const BRANCH_ALIASES = {
@@ -227,7 +228,7 @@ const fetchPhleboList = async (userId, statusFilter = "", search = "") => {
   const variants = getBranchVariants(branch);
 
   const phlebos = await getPhleboList(branch, variants, search);
-  const activeBookings = await getActiveBookingsForPhlebos(variants);
+  const activeBookings = await getActiveBookingsForPhlebos();
 
   const activeBookingMap = new Map();
 
@@ -282,8 +283,13 @@ const fetchPhleboList = async (userId, statusFilter = "", search = "") => {
 };
 
 const fetchPhleboWallet = async (userId, phleboUserId) => {
-  await resolveBranch(userId);
-  return getPhleboWalletSummary(phleboUserId);
+  const branch = await resolveBranch(userId);
+  const variants = getBranchVariants(branch);
+
+  return getSupervisorPhleboWalletSummary(
+    phleboUserId,
+    variants
+  );
 };
 
 const fetchHomeServiceBooking = async (userId, bookingId) => {

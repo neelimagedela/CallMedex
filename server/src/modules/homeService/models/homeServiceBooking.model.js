@@ -478,6 +478,65 @@ const getPhleboWalletSummary = async (phleboUserId) => {
   };
 };
 
+const getSupervisorPhleboWalletSummary = async (
+  phleboUserId,
+  branchNames
+) => {
+  const TASK_AMOUNT = 150;
+
+  const placeholders = branchNames.map(() => "?").join(",");
+
+  const [summaryRows] = await db.execute(
+    `
+    SELECT
+      COUNT(*) AS completed_tasks,
+      COALESCE(COUNT(*) * ?, 0) AS wallet_balance
+    FROM home_service_bookings
+    WHERE assigned_phlebo_id = ?
+      AND status = 'completed'
+      AND LOWER(TRIM(branch)) IN (${placeholders})
+    `,
+    [
+      TASK_AMOUNT,
+      phleboUserId,
+      ...branchNames.map((b) => b.toLowerCase().trim()),
+    ]
+  );
+
+  const [transactions] = await db.execute(
+    `
+    SELECT
+      id,
+      public_booking_id,
+      patient_name,
+      patient_mobile,
+      branch,
+      collection_date,
+      time_slot,
+      status,
+      updated_at,
+      ? AS amount
+    FROM home_service_bookings
+    WHERE assigned_phlebo_id = ?
+      AND status = 'completed'
+      AND LOWER(TRIM(branch)) IN (${placeholders})
+    ORDER BY updated_at DESC
+    `,
+    [
+      TASK_AMOUNT,
+      phleboUserId,
+      ...branchNames.map((b) => b.toLowerCase().trim()),
+    ]
+  );
+
+  return {
+    amountPerTask: TASK_AMOUNT,
+    completedTasks: Number(summaryRows[0]?.completed_tasks || 0),
+    walletBalance: Number(summaryRows[0]?.wallet_balance || 0),
+    transactions,
+  };
+};
+
 module.exports = {
   createHomeServiceBooking,
   getPhleboProfileByUserId,
@@ -490,4 +549,5 @@ module.exports = {
   getPhleboActiveBooking,
   updateHomeServiceBookingStatus,
   getPhleboWalletSummary,
+  getSupervisorPhleboWalletSummary,
 };
