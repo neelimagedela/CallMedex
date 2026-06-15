@@ -51,19 +51,14 @@ function isSlotPast(slot, selectedDate) {
 function validate(patient, branch, selectedScans, date, slot, prescription) {
   const e = {};
 
-  if (!patient.name.trim()) {
-    e.name = "Full name is required";
-  }
+  if (!patient.name.trim()) e.name = "Full name is required";
 
   const age = Number(patient.age);
-
   if (!patient.age || age < 1 || age > 120) {
     e.age = "Enter a valid age (1–120)";
   }
 
-  if (!patient.sex) {
-    e.sex = "Please select gender";
-  }
+  if (!patient.sex) e.sex = "Please select gender";
 
   if (!/^[6-9]\d{9}$/.test(patient.mobile)) {
     e.mobile = "Enter valid 10-digit mobile number";
@@ -73,29 +68,12 @@ function validate(patient, branch, selectedScans, date, slot, prescription) {
     e.email = "Enter a valid email address";
   }
 
-  if (!branch) {
-    e.branch = "Select a branch";
-  }
-
-  if (!patient.address.trim()) {
-    e.address = "Address is required";
-  }
-
-  if (selectedScans.length === 0) {
-    e.scans = "Select at least one scan/test";
-  }
-
-  if (!date) {
-    e.date = "Select appointment date";
-  }
-
-  if (!slot) {
-    e.slot = "Select a time slot";
-  }
-
-  if (!prescription) {
-    e.prescription = "Prescription upload is mandatory";
-  }
+  if (!branch) e.branch = "Select a branch";
+  if (!patient.address.trim()) e.address = "Address is required";
+  if (selectedScans.length === 0) e.scans = "Select at least one scan/test";
+  if (!date) e.date = "Select appointment date";
+  if (!slot) e.slot = "Select a time slot";
+  if (!prescription) e.prescription = "Prescription upload is mandatory";
 
   return e;
 }
@@ -158,7 +136,9 @@ function downloadReceipt(patient, branch, selectedScans, date, slot, total) {
   <div class="row"><span>Mobile</span><strong>${patient.mobile}</strong></div>
   <div class="row"><span>Email</span><strong>${patient.email}</strong></div>
   <div class="row"><span>Branch</span><strong>${branch}</strong></div>
-  <div class="row"><span>Appointment Date</span><strong>${new Date(date).toLocaleDateString("en-IN", {
+  <div class="row"><span>Appointment Date</span><strong>${new Date(
+    date
+  ).toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -199,10 +179,7 @@ const S = {
     minHeight: "100vh",
     fontFamily: "'Segoe UI',sans-serif",
   },
-  sidebar: {
-    width: 260,
-    flexShrink: 0,
-  },
+  sidebar: { width: 260, flexShrink: 0 },
   card: {
     background: "white",
     borderRadius: 20,
@@ -210,24 +187,15 @@ const S = {
     boxShadow: "0 4px 18px rgba(0,0,0,.07)",
     marginBottom: 16,
   },
-  main: {
-    flex: 1,
-    minWidth: 0,
-  },
-  header: {
-    marginBottom: 18,
-  },
+  main: { flex: 1, minWidth: 0 },
+  header: { marginBottom: 18 },
   h1: {
     fontSize: "1.7rem",
     color: "#0A2540",
     margin: 0,
     fontWeight: 700,
   },
-  sub: {
-    color: "#64748b",
-    fontSize: ".88rem",
-    marginTop: 4,
-  },
+  sub: { color: "#64748b", fontSize: ".88rem", marginTop: 4 },
   section: {
     background: "white",
     borderRadius: 20,
@@ -286,14 +254,8 @@ const S = {
     boxSizing: "border-box",
     transition: "border-color .2s",
   },
-  inpErr: {
-    borderColor: "#e63946",
-  },
-  errTxt: {
-    color: "#e63946",
-    fontSize: ".75rem",
-    marginTop: 3,
-  },
+  inpErr: { borderColor: "#e63946" },
+  errTxt: { color: "#e63946", fontSize: ".75rem", marginTop: 3 },
   scanGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill,minmax(170px,1fr))",
@@ -307,10 +269,7 @@ const S = {
     transition: ".25s",
     background: "#f8fafc",
   },
-  scanSel: {
-    borderColor: "#22c1c3",
-    background: "#ecfcfc",
-  },
+  scanSel: { borderColor: "#22c1c3", background: "#ecfcfc" },
   scanDis: {
     opacity: 0.45,
     cursor: "not-allowed",
@@ -400,6 +359,52 @@ const S = {
     marginBottom: 5,
     textTransform: "uppercase",
     letterSpacing: ".5px",
+  },
+  descriptionBox: {
+    background: "#f8fbff",
+    border: "1px solid #e5eaf3",
+    borderRadius: 14,
+    padding: "14px 16px",
+    marginBottom: 16,
+    color: "#334155",
+    fontSize: ".86rem",
+    lineHeight: 1.6,
+  },
+  dropdownShell: {
+    background: "#f8fafc",
+    border: "1.5px solid #e8edf2",
+    borderRadius: 16,
+    padding: 16,
+  },
+  dropdownList: {
+    maxHeight: 360,
+    overflowY: "auto",
+    background: "#fff",
+    border: "1px solid #e5eaf3",
+    borderRadius: 14,
+    boxShadow: "0 12px 30px rgba(15,23,42,.12)",
+  },
+  dropdownOption: {
+    width: "100%",
+    border: "none",
+    padding: "13px 15px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    cursor: "pointer",
+    borderBottom: "1px solid #edf2f7",
+    textAlign: "left",
+  },
+  selectedRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    padding: "12px 14px",
+    border: "1px solid #edf2f7",
+    borderRadius: 12,
+    background: "#fff",
+    marginBottom: 8,
   },
 };
 
@@ -548,6 +553,7 @@ export default function AppointmentBooking({
   setSelectedCategory,
   search = "",
   setSearch,
+  useDropdownTestSelector = false,
 }) {
   const toast = useToast();
 
@@ -558,6 +564,18 @@ export default function AppointmentBooking({
     mode === "home-service" ||
     bookingType === "home-service" ||
     bookingEndpoint.includes("home-service");
+
+  const isLargeTestListBooking =
+    useDropdownTestSelector ||
+    isHomeServiceBooking ||
+    mode === "diagnostic-walkin" ||
+    mode === "walkin-center" ||
+    mode === "walkin-clinic" ||
+    bookingType === "diagnostic-walkin" ||
+    bookingType === "walkin-center" ||
+    bookingType === "walkin-clinic" ||
+    bookingEndpoint.includes("diagnostic-walkin") ||
+    bookingEndpoint.includes("walkin");
 
   const [selectedScans, setSelectedScans] = useState([]);
   const [patientLocation, setPatientLocation] = useState({
@@ -612,7 +630,7 @@ export default function AppointmentBooking({
       return;
     }
 
-    if (selectedScans.length >= 2) {
+    if (!isLargeTestListBooking && selectedScans.length >= 2) {
       toast.warning("You can select a maximum of 2 scans/tests per appointment.");
       return;
     }
@@ -913,7 +931,6 @@ export default function AppointmentBooking({
       <div style={S.main}>
         <div style={S.header}>
           <h1 style={S.h1}>{title}</h1>
-
           <p style={S.sub}>
             Complete all sections to confirm your diagnostic appointment
           </p>
@@ -935,12 +952,7 @@ export default function AppointmentBooking({
               placeholder="Full Name"
               value={patient.name}
               errors={errors}
-              onChange={(e) =>
-                setPatient({
-                  ...patient,
-                  name: e.target.value,
-                })
-              }
+              onChange={(e) => setPatient({ ...patient, name: e.target.value })}
               colSpan={2}
             />
 
@@ -950,12 +962,7 @@ export default function AppointmentBooking({
               placeholder="Age"
               value={patient.age}
               errors={errors}
-              onChange={(e) =>
-                setPatient({
-                  ...patient,
-                  age: e.target.value,
-                })
-              }
+              onChange={(e) => setPatient({ ...patient, age: e.target.value })}
             />
           </div>
 
@@ -964,10 +971,7 @@ export default function AppointmentBooking({
               <select
                 value={patient.sex}
                 onChange={(e) =>
-                  setPatient({
-                    ...patient,
-                    sex: e.target.value,
-                  })
+                  setPatient({ ...patient, sex: e.target.value })
                 }
                 style={{
                   ...S.inp,
@@ -1002,10 +1006,7 @@ export default function AppointmentBooking({
               value={patient.email}
               errors={errors}
               onChange={(e) =>
-                setPatient({
-                  ...patient,
-                  email: e.target.value,
-                })
+                setPatient({ ...patient, email: e.target.value })
               }
             />
           </div>
@@ -1038,10 +1039,7 @@ export default function AppointmentBooking({
               placeholder="Address"
               value={patient.address}
               onChange={(e) =>
-                setPatient({
-                  ...patient,
-                  address: e.target.value,
-                })
+                setPatient({ ...patient, address: e.target.value })
               }
               style={{
                 ...S.inp,
@@ -1098,8 +1096,8 @@ export default function AppointmentBooking({
               </p>
 
               <p style={S.secSub}>
-                {isHomeServiceBooking
-                  ? "Choose up to 2 home service tests"
+                {isLargeTestListBooking
+                  ? "Search by test name or code and add tests"
                   : "Choose up to 2 diagnostic tests"}
               </p>
             </div>
@@ -1111,136 +1109,261 @@ export default function AppointmentBooking({
             )}
           </div>
 
-          {isHomeServiceBooking && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 260px",
-                gap: 12,
-                marginBottom: 16,
-              }}
-            >
-              <input
-                type="text"
-                placeholder="Search tests or features"
-                value={search}
-                onChange={(e) => setSearch?.(e.target.value)}
-                style={S.inp}
-              />
+          {isLargeTestListBooking ? (
+            <>
+              <div style={S.descriptionBox}>
+                <strong style={{ color: "#0A2540" }}>
+                  Available test types:
+                </strong>{" "}
+                Blood tests, urine tests, diabetes tests, thyroid tests, liver
+                function tests, kidney function tests, lipid profile, vitamin
+                tests, hormone tests, infection markers and other ACCUMAX
+                diagnostic tests. Search by test name or code to add the
+                required test.
+              </div>
 
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory?.(e.target.value)}
-                style={S.inp}
-              >
-                <option value="all">All Categories</option>
+              <div style={S.dropdownShell}>
+                <label style={S.label}>Search Test</label>
 
-                {categories.map((c) => (
-                  <option key={c.category_id} value={c.category_name}>
-                    {c.category_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div style={S.scanGrid}>
-            {scans.map((scan) => {
-              const isSel = !!selectedScans.find((s) => s.id === scan.id);
-              const isDisabled = !isSel && selectedScans.length >= 2;
-
-              return (
-                <div
-                  key={scan.id}
+                <input
+                  type="text"
+                  placeholder="Search test name or code..."
+                  value={search}
+                  onChange={(e) => setSearch?.(e.target.value)}
                   style={{
-                    ...S.scanCard,
-                    ...(isSel ? S.scanSel : {}),
-                    ...(isDisabled ? S.scanDis : {}),
+                    ...S.inp,
+                    background: "#fff",
+                    marginBottom: search.trim() ? 12 : 0,
                   }}
-                  onClick={() => !isDisabled && toggleScan(scan)}
-                >
-                  <div style={S.scanIcon}>{scan.icon}</div>
+                />
 
-                  <p
-                    style={{
-                      margin: "0 0 2px",
-                      fontWeight: 700,
-                      fontSize: ".9rem",
-                      color: "#0A2540",
-                    }}
-                  >
-                    {scan.name}
-                  </p>
+                {search.trim() && (
+                  <div style={S.dropdownList}>
+                    {scans.slice(0, 50).map((scan) => {
+                      const isSel = selectedScans.some(
+                        (s) => s.id === scan.id
+                      );
 
-                  <p
-                    style={{
-                      margin: "0 0 8px",
-                      fontSize: ".75rem",
-                      color: "#94a3b8",
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {scan.subtitle}
-                  </p>
+                      return (
+                        <button
+                          type="button"
+                          key={scan.id}
+                          onClick={() => toggleScan(scan)}
+                          style={{
+                            ...S.dropdownOption,
+                            background: isSel ? "#ecfcfc" : "#fff",
+                          }}
+                        >
+                          <div>
+                            <strong
+                              style={{
+                                display: "block",
+                                color: "#0A2540",
+                                fontSize: ".88rem",
+                                marginBottom: 4,
+                              }}
+                            >
+                              {scan.name}
+                            </strong>
 
-                  {isHomeServiceBooking && scan.features?.length > 0 && (
+                            <span
+                              style={{
+                                color: "#64748b",
+                                fontSize: ".75rem",
+                              }}
+                            >
+                              {scan.code || "ACCUMAX"}
+                            </span>
+                          </div>
+
+                          <b style={{ color: "#047857" }}>
+                            ₹{Number(scan.price || 0).toFixed(0)}
+                          </b>
+                        </button>
+                      );
+                    })}
+
+                    {scans.length === 0 && (
+                      <div
+                        style={{
+                          padding: 18,
+                          textAlign: "center",
+                          color: "#64748b",
+                          fontSize: ".85rem",
+                        }}
+                      >
+                        No tests found
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {selectedScans.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
                     <div
                       style={{
                         display: "flex",
-                        flexWrap: "wrap",
-                        gap: 6,
-                        marginBottom: 8,
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 10,
                       }}
                     >
-                      {scan.features.slice(0, 4).map((feature, index) => (
-                        <span
-                          key={`${scan.id}-feature-${index}`}
+                      <h4 style={{ margin: 0, color: "#0A2540" }}>
+                        Selected Tests
+                      </h4>
+
+                      <strong style={{ color: "#047857" }}>₹{total}</strong>
+                    </div>
+
+                    {selectedScans.map((scan) => (
+                      <div key={scan.id} style={S.selectedRow}>
+                        <div>
+                          <strong style={{ color: "#0A2540", fontSize: ".86rem" }}>
+                            {scan.name}
+                          </strong>
+
+                          <div style={{ color: "#64748b", fontSize: ".74rem" }}>
+                            {scan.code || "ACCUMAX"}
+                          </div>
+                        </div>
+
+                        <div
                           style={{
-                            fontSize: ".68rem",
-                            color: "#0A9C87",
-                            background: "#ecfcfc",
-                            padding: "3px 7px",
-                            borderRadius: 999,
-                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
                           }}
                         >
-                          {feature}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                          <b style={{ color: "#047857" }}>₹{scan.price}</b>
 
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      alignItems: "center",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        fontSize: ".95rem",
-                        color: "#0A2540",
-                      }}
-                    >
-                      ₹{scan.price}
-                    </span>
-
-                    <span
-                      style={{
-                        fontSize: ".78rem",
-                        color: "#b0bec5",
-                        textDecoration: "line-through",
-                      }}
-                    >
-                      ₹{scan.oldPrice}
-                    </span>
+                          <button
+                            type="button"
+                            onClick={() => toggleScan(scan)}
+                            style={{
+                              border: "none",
+                              background: "#fee2e2",
+                              color: "#b91c1c",
+                              padding: "7px 10px",
+                              borderRadius: 8,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              fontSize: ".75rem",
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 260px",
+                  gap: 12,
+                  marginBottom: 16,
+                }}
+              >
+                <input
+                  type="text"
+                  placeholder="Search tests or features"
+                  value={search}
+                  onChange={(e) => setSearch?.(e.target.value)}
+                  style={S.inp}
+                />
+
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory?.(e.target.value)}
+                  style={S.inp}
+                >
+                  <option value="all">All Categories</option>
+
+                  {categories.map((c) => (
+                    <option key={c.category_id} value={c.category_name}>
+                      {c.category_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={S.scanGrid}>
+                {scans.map((scan) => {
+                  const isSel = !!selectedScans.find((s) => s.id === scan.id);
+                  const isDisabled = !isSel && selectedScans.length >= 2;
+
+                  return (
+                    <div
+                      key={scan.id}
+                      style={{
+                        ...S.scanCard,
+                        ...(isSel ? S.scanSel : {}),
+                        ...(isDisabled ? S.scanDis : {}),
+                      }}
+                      onClick={() => !isDisabled && toggleScan(scan)}
+                    >
+                      <div style={S.scanIcon}>{scan.icon}</div>
+
+                      <p
+                        style={{
+                          margin: "0 0 2px",
+                          fontWeight: 700,
+                          fontSize: ".9rem",
+                          color: "#0A2540",
+                        }}
+                      >
+                        {scan.name}
+                      </p>
+
+                      <p
+                        style={{
+                          margin: "0 0 8px",
+                          fontSize: ".75rem",
+                          color: "#94a3b8",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {scan.subtitle}
+                      </p>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 8,
+                          alignItems: "center",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: 700,
+                            fontSize: ".95rem",
+                            color: "#0A2540",
+                          }}
+                        >
+                          ₹{scan.price}
+                        </span>
+
+                        <span
+                          style={{
+                            fontSize: ".78rem",
+                            color: "#b0bec5",
+                            textDecoration: "line-through",
+                          }}
+                        >
+                          ₹{scan.oldPrice}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
 
         <div ref={secRefs[2]} style={S.section}>

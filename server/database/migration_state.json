@@ -31,5 +31,6 @@
   "031_create-mous_acceptance.sql",
   "032_add_statuses_home_service_bookings.sql",
   "033_fix_supervisor_organization_profile.sql",
-  "034_add_updated_at_to_diagnostic_walkin_bookings.sql"
+  "034_add_updated_at_to_diagnostic_walkin_bookings.sql",
+  "035_seed_home_service_accumax.sql"
 ]

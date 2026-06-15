@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchHomeServiceTests } from "../homeServices/homeService.api";
 import { api } from "../../shared/api";
 import { useToast } from "../../shared/toast.js";
@@ -13,6 +13,13 @@ const SLOTS = [
   { label: "12 PM - 1 PM", endHour: 13 },
   { label: "2 PM - 3 PM", endHour: 15 },
   { label: "3 PM - 4 PM", endHour: 16 },
+];
+
+const STEPS = [
+  { title: "Patient Info", sub: "Personal details" },
+  { title: "Select Tests", sub: "Search tests" },
+  { title: "Date & Slot", sub: "Pick time" },
+  { title: "Summary", sub: "Confirm booking" },
 ];
 
 const S = {
@@ -34,7 +41,12 @@ const S = {
   },
   main: { flex: 1, minWidth: 0 },
   header: { marginBottom: 18 },
-  h1: { fontSize: "1.7rem", color: "#0A2540", margin: 0, fontWeight: 700 },
+  h1: {
+    fontSize: "1.7rem",
+    color: "#0A2540",
+    margin: 0,
+    fontWeight: 700,
+  },
   sub: { color: "#64748b", fontSize: ".88rem", marginTop: 4 },
   section: {
     background: "white",
@@ -62,8 +74,17 @@ const S = {
     fontSize: ".9rem",
     flexShrink: 0,
   },
-  secTitle: { color: "#0A2540", fontSize: "1rem", fontWeight: 700, margin: 0 },
-  secSub: { color: "#94a3b8", fontSize: ".8rem", margin: "2px 0 0" },
+  secTitle: {
+    color: "#0A2540",
+    fontSize: "1rem",
+    fontWeight: 700,
+    margin: 0,
+  },
+  secSub: {
+    color: "#94a3b8",
+    fontSize: ".8rem",
+    margin: "2px 0 0",
+  },
   grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 },
   grid3: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 },
   inp: {
@@ -86,36 +107,6 @@ const S = {
     marginBottom: 5,
     textTransform: "uppercase",
     letterSpacing: ".5px",
-  },
-  scanGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill,minmax(170px,1fr))",
-    gap: 12,
-  },
-  scanCard: {
-    border: "2px solid #edf2f7",
-    borderRadius: 16,
-    padding: "14px 16px",
-    cursor: "pointer",
-    transition: ".25s",
-    background: "#f8fafc",
-  },
-  scanSel: { borderColor: "#22c1c3", background: "#ecfcfc" },
-  scanDis: {
-    opacity: 0.45,
-    cursor: "not-allowed",
-    background: "#f1f5f9",
-  },
-  scanIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    background: "white",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "1.4rem",
-    marginBottom: 8,
   },
   slotGrid: {
     display: "grid",
@@ -174,7 +165,150 @@ const S = {
     cursor: "pointer",
     marginTop: 4,
   },
+  descriptionBox: {
+    background: "#f8fbff",
+    border: "1px solid #e5eaf3",
+    borderRadius: 14,
+    padding: "12px 14px",
+    marginBottom: 14,
+    color: "#334155",
+    fontSize: ".84rem",
+    lineHeight: 1.55,
+  },
+  testSelectorBox: {
+    background: "#f8fafc",
+    border: "1.5px solid #e8edf2",
+    borderRadius: 16,
+    padding: 14,
+  },
+  dropdownList: {
+    maxHeight: 320,
+    overflowY: "auto",
+    background: "#fff",
+    border: "1px solid #e5eaf3",
+    borderRadius: 14,
+    boxShadow: "0 12px 30px rgba(15,23,42,.12)",
+    marginTop: 10,
+  },
+  dropdownOption: {
+    width: "100%",
+    border: "none",
+    padding: "12px 14px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    cursor: "pointer",
+    borderBottom: "1px solid #edf2f7",
+    textAlign: "left",
+  },
+  selectedRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    padding: "11px 13px",
+    border: "1px solid #edf2f7",
+    borderRadius: 12,
+    background: "#fff",
+    marginBottom: 8,
+  },
 };
+
+function ProgressSidebar({ activeStep }) {
+  return (
+    <div style={S.card}>
+      <p
+        style={{
+          fontSize: ".7rem",
+          fontWeight: 700,
+          letterSpacing: 1,
+          color: "#94a3b8",
+          margin: "0 0 16px",
+          textTransform: "uppercase",
+        }}
+      >
+        Your Progress
+      </p>
+
+      <div style={{ position: "relative" }}>
+        <div
+          style={{
+            position: "absolute",
+            left: 16,
+            top: 8,
+            width: 2,
+            height: "84%",
+            background: "#e8edf2",
+          }}
+        />
+
+        {STEPS.map((step, i) => {
+          const done = i < activeStep;
+          const active = i === activeStep;
+
+          return (
+            <div
+              key={step.title}
+              style={{
+                display: "flex",
+                gap: 14,
+                marginBottom: 20,
+                alignItems: "flex-start",
+                position: "relative",
+              }}
+            >
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  flexShrink: 0,
+                  zIndex: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: ".8rem",
+                  fontWeight: 700,
+                  background: done ? "#21c087" : active ? "#22c1c3" : "#edf2f7",
+                  color: done || active ? "white" : "#94a3b8",
+                  boxShadow: active
+                    ? "0 4px 12px rgba(34,193,195,.35)"
+                    : "none",
+                  transition: ".3s",
+                }}
+              >
+                {done ? "✓" : i + 1}
+              </div>
+
+              <div style={{ paddingTop: 6 }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: ".85rem",
+                    fontWeight: active ? 700 : 500,
+                    color: active ? "#0A2540" : done ? "#21c087" : "#94a3b8",
+                  }}
+                >
+                  {step.title}
+                </p>
+
+                <p
+                  style={{
+                    margin: "1px 0 0",
+                    fontSize: ".75rem",
+                    color: "#b0bec5",
+                  }}
+                >
+                  {step.sub}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function getTodayLocal() {
   const d = new Date();
@@ -197,12 +331,12 @@ function isSlotPast(slotObj, selectedDate) {
 function normalizeTest(test, category) {
   return {
     id: test.id,
-    code: test.code || "",
-    name: test.name || "Unnamed Test",
-    subtitle: test.subtitle || "",
+    code: test.code || test.test_code || "",
+    name: test.name || test.test_name || "Unnamed Test",
+    subtitle: test.subtitle || "ACCUMAX diagnostic test",
     price: Number(test.price || 0),
-    oldPrice: Number(test.old_price || 0),
-    icon: test.icon || "🧪",
+    oldPrice: Number(test.old_price || test.oldPrice || 0),
+    icon: test.icon || "diagnostic",
     category: category.category_name,
     features: Array.isArray(test.features) ? test.features : [],
     instructions: Array.isArray(test.instructions) ? test.instructions : [],
@@ -243,7 +377,6 @@ export default function DiagnosticWalkInCenters() {
   const today = getTodayLocal();
 
   const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState("all");
   const [search, setSearch] = useState("");
 
   const [patient, setPatient] = useState({
@@ -262,8 +395,17 @@ export default function DiagnosticWalkInCenters() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(null);
+  const [activeStep, setActiveStep] = useState(0);
 
+  const patientRef = useRef(null);
+  const testsRef = useRef(null);
+  const slotRef = useRef(null);
+  const summaryRef = useRef(null);
+
+  // ── FIX: removed `toast` from deps so this never re-runs after mount ──
   useEffect(() => {
+    let mounted = true;
+
     async function loadTests() {
       try {
         setLoading(true);
@@ -274,7 +416,9 @@ export default function DiagnosticWalkInCenters() {
           throw new Error(result.message || "Unable to load tests");
         }
 
-        setCategories(Array.isArray(result.data) ? result.data : []);
+        if (mounted) {
+          setCategories(Array.isArray(result.data) ? result.data : []);
+        }
       } catch (err) {
         toast.error(
           err.response?.data?.message ||
@@ -282,38 +426,66 @@ export default function DiagnosticWalkInCenters() {
             "Unable to load walk-in center tests"
         );
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
     loadTests();
+
+    return () => {
+      mounted = false;
+    };
+  }, []); // ← empty array: run once on mount only
+
+  // ── FIX: scroll-based active step — reads offsetTop directly, no closure issues ──
+  useEffect(() => {
+    const refs = [patientRef, testsRef, slotRef, summaryRef];
+
+    const handleScroll = () => {
+      const scrollY = window.scrollY + window.innerHeight * 0.35;
+
+      let current = 0;
+      refs.forEach((ref, i) => {
+        if (ref.current && ref.current.offsetTop <= scrollY) {
+          current = i;
+        }
+      });
+
+      setActiveStep(current);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll(); // set correct step on mount
+
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const allTests = useMemo(() => {
     return categories.flatMap((category) =>
-      category.tests.map((test) => normalizeTest(test, category))
+      Array.isArray(category.tests)
+        ? category.tests.map((test) => normalizeTest(test, category))
+        : []
     );
   }, [categories]);
 
   const filteredTests = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return allTests.filter((test) => {
-      const categoryMatch =
-        selectedCategory === "all" || test.category === selectedCategory;
+    if (!q) return [];
 
-      const searchMatch =
-        !q ||
+    return allTests.filter((test) => {
+      return (
         test.name.toLowerCase().includes(q) ||
         test.subtitle.toLowerCase().includes(q) ||
         test.code.toLowerCase().includes(q) ||
         test.features.some((feature) =>
           String(feature).toLowerCase().includes(q)
-        );
-
-      return categoryMatch && searchMatch;
+        )
+      );
     });
-  }, [allTests, selectedCategory, search]);
+  }, [allTests, search]);
 
   const total = selectedTests.reduce(
     (sum, test) => sum + Number(test.price),
@@ -334,6 +506,7 @@ export default function DiagnosticWalkInCenters() {
     }
 
     setSelectedTests([...selectedTests, test]);
+    setSearch("");
   };
 
   const handleSubmit = async () => {
@@ -392,6 +565,10 @@ export default function DiagnosticWalkInCenters() {
   if (loading) {
     return (
       <div style={S.page}>
+        <div style={S.sidebar}>
+          <ProgressSidebar activeStep={0} />
+        </div>
+
         <div style={S.main}>
           <div style={S.section}>
             <h1 style={S.h1}>Walk-in Center Tests</h1>
@@ -405,6 +582,8 @@ export default function DiagnosticWalkInCenters() {
   return (
     <div style={S.page}>
       <div style={S.sidebar}>
+        <ProgressSidebar activeStep={activeStep} />
+
         <div style={S.card}>
           <p
             style={{
@@ -427,8 +606,8 @@ export default function DiagnosticWalkInCenters() {
               margin: 0,
             }}
           >
-            Visit your selected branch directly for blood sample tests like CBC,
-            Thyroid, Sugar, Lipid Profile and more.
+            Visit your selected branch directly for lab tests like CBC,
+            Diabetes, Thyroid, Urine, Lipid Profile and more.
           </p>
         </div>
 
@@ -475,14 +654,15 @@ export default function DiagnosticWalkInCenters() {
         <div style={S.header}>
           <h1 style={S.h1}>Book Walk-in Center Test</h1>
           <p style={S.sub}>
-            Fill patient details, select tests, choose branch and visit the
+            Fill patient details, search tests, choose branch and visit the
             center during your selected slot.
           </p>
         </div>
 
-        <div style={S.section}>
+        <div ref={patientRef} style={S.section}>
           <div style={S.secHead}>
             <div style={S.badge}>1</div>
+
             <div>
               <p style={S.secTitle}>Patient Information</p>
               <p style={S.secSub}>Personal and contact details</p>
@@ -499,6 +679,7 @@ export default function DiagnosticWalkInCenters() {
                   setPatient({ ...patient, name: e.target.value })
                 }
               />
+
               {errors.name && <p style={S.errTxt}>⚠ {errors.name}</p>}
             </div>
 
@@ -512,6 +693,7 @@ export default function DiagnosticWalkInCenters() {
                   setPatient({ ...patient, age: e.target.value })
                 }
               />
+
               {errors.age && <p style={S.errTxt}>⚠ {errors.age}</p>}
             </div>
           </div>
@@ -530,6 +712,7 @@ export default function DiagnosticWalkInCenters() {
                 <option>Female</option>
                 <option>Other</option>
               </select>
+
               {errors.sex && <p style={S.errTxt}>⚠ {errors.sex}</p>}
             </div>
 
@@ -545,6 +728,7 @@ export default function DiagnosticWalkInCenters() {
                   })
                 }
               />
+
               {errors.mobile && <p style={S.errTxt}>⚠ {errors.mobile}</p>}
             </div>
 
@@ -557,6 +741,7 @@ export default function DiagnosticWalkInCenters() {
                   setPatient({ ...patient, email: e.target.value })
                 }
               />
+
               {errors.email && <p style={S.errTxt}>⚠ {errors.email}</p>}
             </div>
           </div>
@@ -569,10 +754,12 @@ export default function DiagnosticWalkInCenters() {
                 onChange={(e) => setBranch(e.target.value)}
               >
                 <option value="">Select Branch</option>
+
                 {BRANCHES.map((b) => (
                   <option key={b}>{b}</option>
                 ))}
               </select>
+
               {errors.branch && <p style={S.errTxt}>⚠ {errors.branch}</p>}
             </div>
           </div>
@@ -594,12 +781,13 @@ export default function DiagnosticWalkInCenters() {
           {errors.address && <p style={S.errTxt}>⚠ {errors.address}</p>}
         </div>
 
-        <div style={S.section}>
+        <div ref={testsRef} style={S.section}>
           <div style={S.secHead}>
             <div style={{ ...S.badge, background: "#7c3aed" }}>2</div>
+
             <div>
               <p style={S.secTitle}>Select Tests</p>
-              <p style={S.secSub}>Choose up to 2 walk-in center tests</p>
+              <p style={S.secSub}>Search by test name or code and add tests</p>
             </div>
 
             {errors.tests && (
@@ -609,107 +797,183 @@ export default function DiagnosticWalkInCenters() {
             )}
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 260px",
-              gap: 12,
-              marginBottom: 16,
-            }}
-          >
-            <input
-              type="text"
-              placeholder="Search tests"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={S.inp}
-            />
-
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              style={S.inp}
-            >
-              <option value="all">All Categories</option>
-              {categories.map((c) => (
-                <option key={c.category_id} value={c.category_name}>
-                  {c.category_name}
-                </option>
-              ))}
-            </select>
+          <div style={S.descriptionBox}>
+            <strong style={{ color: "#0A2540" }}>Available test types:</strong>{" "}
+            Blood tests, urine tests, diabetes tests, thyroid tests, liver
+            function tests, kidney function tests, lipid profile, vitamin tests,
+            hormone tests, infection markers and other ACCUMAX diagnostic tests.
           </div>
 
-          <div style={S.scanGrid}>
-            {filteredTests.map((test) => {
-              const isSel = selectedTests.some((item) => item.id === test.id);
-              const disabled = !isSel && selectedTests.length >= 2;
+          <div style={S.testSelectorBox}>
+            <label style={S.label}>Search Test</label>
 
-              return (
-                <div
-                  key={test.id}
-                  style={{
-                    ...S.scanCard,
-                    ...(isSel ? S.scanSel : {}),
-                    ...(disabled ? S.scanDis : {}),
-                  }}
-                  onClick={() => !disabled && toggleTest(test)}
-                >
-                  <div style={S.scanIcon}>{test.icon}</div>
+            <input
+              type="text"
+              placeholder="Search test name or code..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                ...S.inp,
+                background: "#fff",
+              }}
+            />
 
-                  <p
-                    style={{
-                      margin: "0 0 2px",
-                      fontWeight: 700,
-                      fontSize: ".9rem",
-                      color: "#0A2540",
-                    }}
-                  >
-                    {test.name}
-                  </p>
+            {!search.trim() && (
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  color: "#94a3b8",
+                  fontSize: ".75rem",
+                  lineHeight: 1.4,
+                }}
+              >
+                Type a test name like CBC, thyroid, sugar, urine, liver, kidney,
+                lipid, vitamin.
+              </p>
+            )}
 
-                  <p
-                    style={{
-                      margin: "0 0 8px",
-                      fontSize: ".75rem",
-                      color: "#94a3b8",
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {test.subtitle}
-                  </p>
+            {search.trim() && (
+              <div style={S.dropdownList}>
+                {filteredTests.slice(0, 50).map((test) => {
+                  const isSel = selectedTests.some(
+                    (item) => item.id === test.id
+                  );
+                  const disabled = !isSel && selectedTests.length >= 2;
 
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span
+                  return (
+                    <button
+                      type="button"
+                      key={test.id}
+                      disabled={disabled}
+                      onClick={() => !disabled && toggleTest(test)}
                       style={{
-                        fontWeight: 700,
-                        fontSize: ".95rem",
-                        color: "#0A2540",
+                        ...S.dropdownOption,
+                        background: isSel
+                          ? "#ecfcfc"
+                          : disabled
+                          ? "#f1f5f9"
+                          : "#fff",
+                        opacity: disabled ? 0.45 : 1,
+                        cursor: disabled ? "not-allowed" : "pointer",
                       }}
                     >
-                      ₹{test.price}
-                    </span>
+                      <div>
+                        <strong
+                          style={{
+                            display: "block",
+                            color: "#0A2540",
+                            fontSize: ".88rem",
+                            marginBottom: 4,
+                          }}
+                        >
+                          {test.name}
+                        </strong>
 
-                    {test.oldPrice > 0 && (
-                      <span
+                        <span
+                          style={{
+                            color: "#64748b",
+                            fontSize: ".75rem",
+                          }}
+                        >
+                          {test.code || "ACCUMAX"}
+                        </span>
+                      </div>
+
+                      <b style={{ color: "#047857", whiteSpace: "nowrap" }}>
+                        ₹{Number(test.price || 0).toFixed(0)}
+                      </b>
+                    </button>
+                  );
+                })}
+
+                {filteredTests.length === 0 && (
+                  <div
+                    style={{
+                      padding: 18,
+                      textAlign: "center",
+                      color: "#64748b",
+                      fontSize: ".85rem",
+                    }}
+                  >
+                    No tests found
+                  </div>
+                )}
+              </div>
+            )}
+
+            {selectedTests.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 10,
+                  }}
+                >
+                  <h4 style={{ margin: 0, color: "#0A2540" }}>
+                    Selected Tests
+                  </h4>
+
+                  <strong style={{ color: "#047857" }}>₹{total}</strong>
+                </div>
+
+                {selectedTests.map((test) => (
+                  <div key={test.id} style={S.selectedRow}>
+                    <div>
+                      <strong
                         style={{
-                          fontSize: ".78rem",
-                          color: "#b0bec5",
-                          textDecoration: "line-through",
+                          display: "block",
+                          color: "#0A2540",
+                          fontSize: ".86rem",
+                          marginBottom: 3,
                         }}
                       >
-                        ₹{test.oldPrice}
+                        {test.name}
+                      </strong>
+
+                      <span style={{ color: "#64748b", fontSize: ".74rem" }}>
+                        {test.code || "ACCUMAX"}
                       </span>
-                    )}
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <b style={{ color: "#047857" }}>₹{test.price}</b>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleTest(test)}
+                        style={{
+                          border: "none",
+                          background: "#fee2e2",
+                          color: "#b91c1c",
+                          padding: "7px 10px",
+                          borderRadius: 8,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          fontSize: ".75rem",
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        <div style={S.section}>
+        <div ref={slotRef} style={S.section}>
           <div style={S.secHead}>
             <div style={{ ...S.badge, background: "#0ea5e9" }}>3</div>
+
             <div>
               <p style={S.secTitle}>Date and Time Slot</p>
               <p style={S.secSub}>Choose when you will visit the center</p>
@@ -718,6 +982,7 @@ export default function DiagnosticWalkInCenters() {
 
           <div style={{ marginBottom: 16 }}>
             <label style={S.label}>Walk-in Date</label>
+
             <input
               type="date"
               min={today}
@@ -732,6 +997,7 @@ export default function DiagnosticWalkInCenters() {
                 ...(errors.date ? S.inpErr : {}),
               }}
             />
+
             {errors.date && <p style={S.errTxt}>⚠ {errors.date}</p>}
           </div>
 
@@ -777,9 +1043,10 @@ export default function DiagnosticWalkInCenters() {
           </div>
         </div>
 
-        <div style={S.section}>
+        <div ref={summaryRef} style={S.section}>
           <div style={S.secHead}>
             <div style={{ ...S.badge, background: "#10b981" }}>₹</div>
+
             <div>
               <p style={S.secTitle}>Price Summary</p>
               <p style={S.secSub}>Updates as you select tests</p>
