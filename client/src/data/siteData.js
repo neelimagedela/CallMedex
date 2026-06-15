@@ -28,7 +28,6 @@ export const NAV = [
     label: "About",
     items: [
       { ico: "ℹ️", text: "About Us",  page: "about" },
-      { ico: "🖼️", text: "Gallery", href: "https://callmedex.com/gallery.php" },
     ],
   },
   { label: "Health Packages", scroll: "health-packages", solo: true },
@@ -50,7 +49,11 @@ export const NAV = [
     items: [
       { ico: "🖥️", text: "Tele Consultation", page: "tele-consultation"},
       {ico: "🚶‍♂️🏥", text: "Walk-in Clinics", page: "walkin-clinic"},
-      { ico: "🌏", text: "NRI Tele Consultation", href: "https://callmedex.com/consultation.php?service=nri-teleconsultation" },
+      {
+  ico: "🌏",
+  text: "NRI Tele Consultation",
+  comingSoon: true
+    },
       { ico: "🏡", text: "Consultation at Home", page: "consultancy-home" },
     ],
   },

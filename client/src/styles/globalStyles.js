@@ -351,6 +351,36 @@ body{font-family:var(--font);background:var(--c5);color:var(--c1);-webkit-font-s
   .footer-grid{grid-template-columns:1fr;}
   .field-row{grid-template-columns:1fr;}
 }
-`;
+  .appt-grid {
+  display: flex;
+  justify-content: center;
+}
+
+.appt-left {
+  max-width: 800px;
+  width: 100%;
+  text-align: center;
+}
+
+.appt-steps {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+  .astep {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  width: 500px;
+  max-width: 100%;
+
+  background: white;
+  border-radius: 16px;
+  padding: 14px 18px;
+}
+`
+;
+
 
 export default GLOBAL_CSS;

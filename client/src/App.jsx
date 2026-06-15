@@ -157,13 +157,13 @@ if (
         <>
           <HeroSection setPage={setPage} />
           <SearchSection />
-          <AboutSection />
+          <AboutSection setPage={setPage} />
           <SpecialistsSection />
           <PackagesSection setPage={setPage} setSelectedPackageData={setSelectedPackageData} />
           <FeaturesSection />
           <ServicesSection setPage={setPage} />
           <MetricsSection />
-          <AppointmentSection />
+          <AppointmentSection setPage={setPage} />
           <BranchesSection />
           <TestimonialsSection />
           <CTASection setPage={setPage} />

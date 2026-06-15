@@ -18,17 +18,27 @@ export default function HeroSection({ setPage }) {
           </p>
           <div className="hero-btns">
             <button className="btn btn-primary btn-xl" onClick={() => setPage("register")}>🚀 Get Started Free</button>
-            <a
-              className="btn btn-xl"
-              style={{ background: "rgba(0,180,216,.12)", color: "#0369a1", border: "1.5px solid rgba(0,180,216,.3)" }}
-              href="https://callmedex.com/consultation.php?service=tele-consultation"
-              target="_blank" rel="noreferrer"
-            >
-              📹 Book Consultation
-            </a>
-            <a className="btn btn-ghost btn-xl" href="https://callmedex.com/health_packages.php" target="_blank" rel="noreferrer">
-              📦 Health Packages
-            </a>
+            <button
+  className="btn btn-xl"
+  style={{
+    background: "rgba(0,180,216,.12)",
+    color: "#0369a1",
+    border: "1.5px solid rgba(0,180,216,.3)"
+  }}
+  onClick={() => setPage("consultation-choice")}
+>
+  📹 Book Consultation
+</button>
+           <button
+  className="btn btn-ghost btn-xl"
+  onClick={() => {
+    document
+      .getElementById("health-packages")
+      ?.scrollIntoView({ behavior: "smooth" });
+  }}
+>
+  📦 Health Packages
+</button>
           </div>
           <div className="hero-stats">
             {HERO_STATS.map(({ num, label }) => (

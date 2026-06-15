@@ -11,7 +11,7 @@ const parseCurrency = (s) => parseInt(s.replace(/[₹,]/g, ""), 10);
 const discount = (curr, orig) => Math.round((orig - curr) / orig * 100);
 
 /* ─── About ─────────────────────────────────────────────── */
-export function AboutSection() {
+export function AboutSection({ setPage }) {
   return (
     <section className="sec sec-alt">
       <div className="wrap">
@@ -24,9 +24,12 @@ export function AboutSection() {
               to transforming healthcare access for underserved communities in India. Our mission is to establish a
               comprehensive healthcare system that caters to both outpatient (OP) and inpatient (IP) needs.
             </p>
-            <a className="btn btn-primary btn-lg" href={`${SITE.baseUrl}/about.php`} target="_blank" rel="noreferrer">
-              Learn About Us →
-            </a>
+            <button
+  className="btn btn-primary btn-lg"
+  onClick={() => setPage("about")}
+>
+  Learn About Us →
+</button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             {ABOUT_CARDS.map(({ ico, num, lbl }) => (
@@ -132,11 +135,6 @@ export function PackagesSection({ setPage }) {
             );
           })}
         </div>
-        <div style={{ textAlign: "center", marginTop: "2rem" }}>
-          <a className="btn btn-outline btn-lg" href={`${SITE.baseUrl}/health_packages.php`} target="_blank" rel="noreferrer">
-            View All Packages →
-          </a>
-        </div>
       </div>
     </section>
   );
@@ -211,11 +209,24 @@ export function MetricsSection() {
 }
 
 /* ─── Appointment ───────────────────────────────────────── */
-export function AppointmentSection() {
+export function AppointmentSection({ setPage }) {
   return (
     <section className="appt-sec">
-      <div className="appt-grid">
-        <div className="appt-left">
+      <div
+  className="appt-grid"
+  style={{
+    justifyContent: "center",
+    display: "flex",
+  }}
+>
+      <div
+  className="appt-left"
+  style={{
+    maxWidth: "700px",
+    width: "100%",
+    textAlign: "center",
+  }}
+>
           <div className="sec-eyebrow" style={{ textAlign: "left", display: "inline-flex", marginBottom: ".75rem" }}>
             📅 Book Appointment
           </div>
@@ -232,27 +243,12 @@ export function AppointmentSection() {
               </div>
             ))}
           </div>
-          <a className="btn btn-primary btn-lg" href={SITE.patientPortal} target="_blank" rel="noreferrer">
-            Patient Login / Signup →
-          </a>
-        </div>
-        <div className="appt-right">
-          <h3>Quick Appointment Request</h3>
-          <FieldRow>
-            <Field label="First Name"><input placeholder="Raju" /></Field>
-            <Field label="Last Name"><input placeholder="Kumar" /></Field>
-          </FieldRow>
-          <Field label="Phone Number"><input placeholder="+91 98765 43210" /></Field>
-          <Field label="Service">
-            <select>
-              {APPOINTMENT_SERVICES.map((s) => <option key={s}>{s}</option>)}
-            </select>
-          </Field>
-          <Field label="Preferred Date"><input type="date" /></Field>
-          <Field label="Message (optional)"><input placeholder="Any specific requirement..." /></Field>
-          <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", borderRadius: 12, padding: "13px", marginTop: 4 }}>
-            📅 Request Appointment
-          </button>
+         <button
+  className="btn btn-primary btn-lg"
+  onClick={() => setPage("login")}
+>
+  Patient Login / Signup →
+</button>
         </div>
       </div>
     </section>
@@ -337,9 +333,12 @@ export function CTASection({ setPage }) {
         <button className="btn btn-xl" style={{ background: "rgba(255,255,255,.12)", color: "#fff", border: "1.5px solid rgba(255,255,255,.3)" }}>
           📱 Download App
         </button>
-        <a className="btn btn-xl btn-red" href={SITE.patientPortal} target="_blank" rel="noreferrer">
-          📅 Book Appointment
-        </a>
+        <button
+  className="btn btn-xl btn-red"
+  onClick={() => setPage("consultation-choice")}
+>
+  📅 Book Appointment
+</button>
       </div>
     </section>
   );

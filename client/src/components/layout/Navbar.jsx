@@ -114,16 +114,37 @@ export default function Navbar({
 
               <div className="nav-drop">
                 {item.items?.map((d, j) => (
-                  <button
-                    className="drop-item"
-                    key={j}
-                    type="button"
-                    onClick={() => handleMenuClick(d)}
-                  >
-                    {d.ico && <span className="drop-icon">{d.ico}</span>}
-                    <span>{d.label || d.text}</span>
-                  </button>
-                ))}
+  <button
+    className="drop-item"
+    key={j}
+    type="button"
+    onClick={() => {
+      if (d.comingSoon) {
+        alert("NRI Tele Consultation - Coming Soon!");
+        return;
+      }
+
+      handleMenuClick(d);
+    }}
+  >
+    {d.ico && <span className="drop-icon">{d.ico}</span>}
+
+    <span>
+      {d.label || d.text}
+      {d.comingSoon && (
+        <span
+          style={{
+            color: "#f59e0b",
+            marginLeft: "6px",
+            fontSize: "12px",
+            fontWeight: "600",
+          }}
+        >
+        </span>
+      )}
+    </span>
+  </button>
+))}
               </div>
             </div>
           )
