@@ -10,7 +10,7 @@ const fs = require("fs");
 
 const db = require("./config/db");
 
-const staffRoutes = require("./modules/staff/staff.routes");
+const staffRoutes = require("./modules/Staff/staff.routes")
 const authRoutes = require("./modules/auth/routes/auth.routes");
 const profileRoutes = require("./modules/profile/routes/profile.routes");
 const appointmentRoutes = require("./modules/appointment/routes/appointment.routes");
