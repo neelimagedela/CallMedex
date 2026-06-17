@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../../shared/api";
-
+  const BASE_URL = import.meta.env.VITE_API_URL;
 export default function TestReports({ setPage }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,10 +23,9 @@ export default function TestReports({ setPage }) {
   }, []);
 
   const getReportUrl = (path) => {
-    if (!path) return "#";
-    if (path.startsWith("http")) return path;
-    return `http://localhost:5000${path}`;
-  };
+  if (!path) return "#";
+  return path.startsWith("http") ? path : `${BASE_URL}${path}`;
+};
 
   return (
     <div style={S.page}>

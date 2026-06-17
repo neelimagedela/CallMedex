@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import jsPDF from "jspdf";
 import axios from "axios";
 import "./DiagnosticPackage.css";
+import { api } from "../../shared/api";
+const BASE_URL = import.meta.env.VITE_API_URL;
 
 const packages = [
   {
@@ -303,15 +305,11 @@ const isSlotExpired = (slot) => {
     try {
       const token = localStorage.getItem("accessToken");
 
-      const response = await axios.post(
-        "http://localhost:5000/api/diagnostic-package/book",
-        bookingData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await axios.post(`/api/diagnostic-package/book`, bookingData, {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
 
       const generatedId =
         response?.data?.data?.receiptId ||
