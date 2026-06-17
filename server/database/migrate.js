@@ -16,11 +16,6 @@ const runMigrations = async () => {
   process.env.MYSQL_PUBLIC_URL
 );
 
-    await connection.query(
-      `CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`
-    );
-
-    await connection.query(`USE ${process.env.DB_NAME}`);
 
     const migrationFiles = fs
       .readdirSync(migrationsPath)
