@@ -12,14 +12,9 @@ const stateFilePath = path.join(
 
 const runMigrations = async () => {
   try {
-    const connection = await mysql.createConnection({
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),  
-      user: process.env.DB_USER,  
-      password: String(process.env.DB_PASSWORD),
-      multipleStatements: true,
-      connectTimeout: 10000,
-    });
+    const connection = await mysql.createConnection(
+  process.env.MYSQL_PUBLIC_URL
+);
 
     await connection.query(
       `CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`
