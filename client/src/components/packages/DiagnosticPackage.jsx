@@ -289,6 +289,7 @@ const isSlotExpired = (slot) => {
     const bookingData = {
       packageName: selectedPackage.name,
       packagePrice: selectedPackage.price,
+      tests: selectedPackage.tests,
       patientName: formData.patientName,
       patientAge: formData.patientAge,
       patientGender: formData.patientGender,
