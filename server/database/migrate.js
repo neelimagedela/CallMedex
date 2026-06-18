@@ -13,17 +13,9 @@ const stateFilePath = path.join(
 const runMigrations = async () => {
   try {
     const connection = await mysql.createConnection({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: String(process.env.DB_PASSWORD),
-      multipleStatements: true,
-    });
-
-    await connection.query(
-      `CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`
-    );
-
-    await connection.query(`USE ${process.env.DB_NAME}`);
+  uri: process.env.MYSQL_PUBLIC_URL,
+  multipleStatements: true,
+});
 
     const migrationFiles = fs
       .readdirSync(migrationsPath)

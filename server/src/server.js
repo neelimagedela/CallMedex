@@ -10,7 +10,7 @@ const fs = require("fs");
 
 const db = require("./config/db");
 
-const staffRoutes = require("./modules/staff/staff.routes");
+const staffRoutes = require("./modules/Staff/staff.routes")
 const authRoutes = require("./modules/auth/routes/auth.routes");
 const profileRoutes = require("./modules/profile/routes/profile.routes");
 const appointmentRoutes = require("./modules/appointment/routes/appointment.routes");
@@ -28,7 +28,7 @@ const errorMiddleware = require("./shared/middleware/error.middleware");
 
 const app = express();
 const mouRoutes = require("./modules/mou/mou.routes");
-
+app.set("trust proxy", 1);
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
@@ -38,7 +38,11 @@ app.use(
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",
+      "https://callmedex-v1.vercel.app",
+      "https://callmedex-v1-3gyrs96aa-neelimagedelas-projects.vercel.app"
+    ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,

@@ -2,12 +2,11 @@ const asyncHandler = require("../../../shared/utils/asyncHandler");
 const db = require("../../../config/db");
 
 const bookDiagnosticPackage = asyncHandler(async (req, res) => {
-   console.log("BODY:", req.body);
-  console.log("USER:", req.user);
 
   const {
     packageName,
     packagePrice,
+    tests,
 
     patientName,
     patientAge,
@@ -27,6 +26,7 @@ const bookDiagnosticPackage = asyncHandler(async (req, res) => {
       receipt_id,
       user_id,
       package_name,
+      tests,
       patient_name,
       patient_age,
       patient_gender,
@@ -37,13 +37,14 @@ const bookDiagnosticPackage = asyncHandler(async (req, res) => {
       time_slot,
       total_amount
     )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
     `,
     [
       receiptId,
       req.user.id,
 
       packageName,
+      JSON.stringify(tests),
 
       patientName,
       patientAge,
@@ -109,7 +110,6 @@ asyncHandler(async (req, res) => {
     ],
   }));
    
-console.log(formattedBookings);
   res.status(200).json({
     success: true,
     data: formattedBookings,

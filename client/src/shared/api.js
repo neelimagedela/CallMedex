@@ -1,10 +1,10 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true
+  baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: true,
 });
-
+console.log("VITE_API_URL =", import.meta.env.VITE_API_URL);
 // Interceptor to attach access token if stored in localStorage
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("accessToken");
