@@ -28,7 +28,7 @@ const errorMiddleware = require("./shared/middleware/error.middleware");
 
 const app = express();
 const mouRoutes = require("./modules/mou/mou.routes");
-
+app.set("trust proxy", 1);
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
