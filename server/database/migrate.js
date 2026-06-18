@@ -12,10 +12,10 @@ const stateFilePath = path.join(
 
 const runMigrations = async () => {
   try {
-    const connection = await mysql.createConnection(
-  process.env.MYSQL_PUBLIC_URL
-);
-
+    const connection = await mysql.createConnection({
+  uri: process.env.MYSQL_PUBLIC_URL,
+  multipleStatements: true,
+});
 
     const migrationFiles = fs
       .readdirSync(migrationsPath)
