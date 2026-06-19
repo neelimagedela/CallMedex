@@ -218,18 +218,14 @@ if (
           <button className="btn btn-login" onClick={() => setPage("home")} style={{ marginTop: 20 }}>Go Home</button>
         </div>
       )}
-
       {!isInternalPortal && page === "reports" && <TestReports setPage={setPage} />}
-
       {!isInternalPortal && page === "help" && (
         <div style={{ padding: "40px", maxWidth: "1000px", margin: "auto" }}>
           <h1>Help & Support</h1>
           <p>Support information and contact details.</p>
         </div>
       )}
-
       {!isInternalPortal && <Footer />}
-
       {!isInternalPortal && (
         <div className="fab-wrap">
           <button className="fab fab-chat" title="AI Chat" onClick={() => alert("AI Assistant Coming Soon")}>💬</button>
