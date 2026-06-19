@@ -877,7 +877,7 @@ export default function AppointmentBooking({
               textTransform: "uppercase",
             }}
           >
-            📍 Our Branches
+            📍 Our Partners
           </p>
 
           {[

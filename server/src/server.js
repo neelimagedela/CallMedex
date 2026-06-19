@@ -10,7 +10,7 @@ const fs = require("fs");
 
 const db = require("./config/db");
 
-const staffRoutes = require("./modules/staff/staff.routes");
+const staffRoutes = require("./modules/Staff/staff.routes");
 const authRoutes = require("./modules/auth/routes/auth.routes");
 const profileRoutes = require("./modules/profile/routes/profile.routes");
 const appointmentRoutes = require("./modules/appointment/routes/appointment.routes");
@@ -24,10 +24,17 @@ const diagnosticPackageRoutes = require(
   "./modules/diagnosticPackage/routes/diagnosticPackage.routes"
 );
 const supervisorRoutes = require("./modules/supervisor/supervisor.routes");
+const mouRoutes = require("./modules/mou/mou.routes");
+
 const errorMiddleware = require("./shared/middleware/error.middleware");
 
 const app = express();
-const mouRoutes = require("./modules/mou/mou.routes");
+
+app.set("trust proxy", 1);
+
+/* =========================
+   SECURITY
+   ========================= */
 
 app.use(
   helmet({
@@ -36,30 +43,53 @@ app.use(
   })
 );
 
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  })
-);
+/* =========================
+   CORS FIX FOR PRODUCTION
+   ========================= */
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://callmedex-v1.vercel.app",
+  "https://callmedex-v1-3gyrs96aa-neelimagedelas-projects.vercel.app",
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    console.log("CORS Origin:", origin);
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.log("Blocked by CORS:", origin);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
+
+/* =========================
+   BODY PARSERS
+   ========================= */
 
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 app.use(cookieParser());
 
-
 /* =========================
    UPLOADS / REPORT PDF FIX
    ========================= */
 
-// This includes the folder where your PDF actually exists:
-// D:\callmedex\CallMedex\uploads\reports
 const uploadRoots = [
-  path.join(__dirname, "../../uploads"), // project-root uploads
+  path.join(__dirname, "../../uploads"), // project-root/uploads
   path.join(__dirname, "../uploads"), // server/uploads
-  path.join(process.cwd(), "uploads"), // current working directory/uploads
+  path.join(process.cwd(), "uploads"), // current-working-directory/uploads
   path.join(__dirname, "uploads"), // server/src/uploads fallback
 ];
 
@@ -95,34 +125,49 @@ app.get("/uploads/reports/:filename", async (req, res, next) => {
   }
 
   try {
-    // Check patient report access rule: must exist in booking_reports and status must be completed
     const [reports] = await db.query(
-      `SELECT id, booking_id, booking_type FROM booking_reports WHERE report_pdf LIKE ? LIMIT 1`,
+      `SELECT id, booking_id, booking_type 
+       FROM booking_reports 
+       WHERE report_pdf LIKE ? 
+       LIMIT 1`,
       [`%${filename}`]
     );
 
     let isCompleted = false;
+
     if (reports.length > 0) {
       const report = reports[0];
       let bookingStatus = "";
 
       if (report.booking_type === "home_service") {
         const [rows] = await db.query(
-          `SELECT status FROM home_service_bookings WHERE id = ? LIMIT 1`,
+          `SELECT status 
+           FROM home_service_bookings 
+           WHERE id = ? 
+           LIMIT 1`,
           [report.booking_id]
         );
+
         bookingStatus = rows[0]?.status || "";
       } else if (report.booking_type === "walkin") {
         const [rows] = await db.query(
-          `SELECT status FROM diagnostic_walkin_bookings WHERE id = ? LIMIT 1`,
+          `SELECT status 
+           FROM diagnostic_walkin_bookings 
+           WHERE id = ? 
+           LIMIT 1`,
           [report.booking_id]
         );
+
         bookingStatus = rows[0]?.status || "";
       } else if (report.booking_type === "scan") {
         const [rows] = await db.query(
-          `SELECT status FROM appointments WHERE id = ? LIMIT 1`,
+          `SELECT status 
+           FROM appointments 
+           WHERE id = ? 
+           LIMIT 1`,
           [report.booking_id]
         );
+
         bookingStatus = rows[0]?.status || "";
       }
 
@@ -132,31 +177,44 @@ app.get("/uploads/reports/:filename", async (req, res, next) => {
     }
 
     if (!isCompleted) {
-      // Enforce auth check on backend
       let token = null;
-      if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+
+      if (
+        req.headers.authorization &&
+        req.headers.authorization.startsWith("Bearer ")
+      ) {
         token = req.headers.authorization.split(" ")[1];
       } else if (req.cookies && req.cookies.accessToken) {
         token = req.cookies.accessToken;
       }
 
       let allowed = false;
+
       if (token) {
         try {
-          const { verifyAccessToken } = require("./modules/auth/services/token.service");
+          const {
+            verifyAccessToken,
+          } = require("./modules/auth/services/token.service");
+
           const decoded = verifyAccessToken(token);
-          if (["staff", "organization", "admin", "supervisor"].includes(decoded.role)) {
+
+          if (
+            ["staff", "organization", "admin", "supervisor"].includes(
+              decoded.role
+            )
+          ) {
             allowed = true;
           }
         } catch (err) {
-          // invalid token
+          // Invalid token. Keep allowed as false.
         }
       }
 
       if (!allowed) {
         return res.status(403).json({
           success: false,
-          message: "Access denied. Report is not completed yet or you do not have permission to view it.",
+          message:
+            "Access denied. Report is not completed yet or you do not have permission to view it.",
         });
       }
     }
@@ -174,7 +232,9 @@ app.get("/uploads/reports/:filename", async (req, res, next) => {
     return res.status(404).json({
       success: false,
       message: "Report PDF file not found on server.",
-      searchedIn: uploadRoots.map((root) => path.join(root, "reports", filename)),
+      searchedIn: uploadRoots.map((root) =>
+        path.join(root, "reports", filename)
+      ),
     });
   } catch (error) {
     next(error);
@@ -201,7 +261,6 @@ app.get("/debug/uploads", (req, res) => {
    RATE LIMIT
    ========================= */
 
-app.use("/mou", mouRoutes);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 25,
@@ -219,6 +278,13 @@ app.use("/auth", authLimiter);
    HEALTH CHECK
    ========================= */
 
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "CallMedex API is running",
+  });
+});
+
 app.get("/health", async (req, res) => {
   try {
     await db.query("SELECT 1");
@@ -231,7 +297,7 @@ app.get("/health", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: "disconnected",
+      message: "Database disconnected",
     });
   }
 });
@@ -240,6 +306,7 @@ app.get("/health", async (req, res) => {
    ROUTES
    ========================= */
 
+app.use("/mou", mouRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/auth", authRoutes);
 app.use("/profile", profileRoutes);
@@ -259,9 +326,13 @@ app.use("/api/supervisor", supervisorRoutes);
 
 app.use(errorMiddleware);
 
+/* =========================
+   SERVER START
+   ========================= */
+
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
   console.log("Upload roots:");
   uploadRoots.forEach((root) => console.log(root));
