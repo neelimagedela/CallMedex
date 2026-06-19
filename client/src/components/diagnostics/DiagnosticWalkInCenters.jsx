@@ -1073,11 +1073,9 @@ export default function DiagnosticWalkInCenters() {
             </>
           )}
         </div>
-
         <button style={S.confirmBtn} onClick={handleSubmit}>
           Confirm Walk-in Booking →
         </button>
-
         {booking && (
           <div
             style={{
@@ -1089,7 +1087,6 @@ export default function DiagnosticWalkInCenters() {
           >
             <div style={S.secHead}>
               <div style={S.badge}>✓</div>
-
               <div>
                 <p style={S.secTitle}>Booking Confirmed</p>
                 <p style={S.secSub}>
@@ -1097,13 +1094,11 @@ export default function DiagnosticWalkInCenters() {
                 </p>
               </div>
             </div>
-
             <p style={{ color: "#334155", lineHeight: 1.7 }}>
               Please visit <strong>{branch}</strong> on <strong>{date}</strong>{" "}
               during <strong>{slot}</strong>. Carry your receipt ID for faster
               processing.
             </p>
-
             <button
               style={{
                 ...S.confirmBtn,
