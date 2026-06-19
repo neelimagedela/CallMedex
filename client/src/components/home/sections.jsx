@@ -262,7 +262,7 @@ export function BranchesSection() {
       <div className="wrap">
         <SectionHeader
           eyebrow="📍 Our Locations"
-          title="Visit Our Branches"
+          title="Visit Our Partners"
           sub="Three conveniently located centers in Visakhapatnam serving the community"
         />
         <div className="branch-grid">
