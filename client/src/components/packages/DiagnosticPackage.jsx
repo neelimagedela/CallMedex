@@ -305,7 +305,8 @@ const isSlotExpired = (slot) => {
     try {
       const token = localStorage.getItem("accessToken");
 
-      const response = await axios.post(`/api/diagnostic-package/book`, bookingData, {
+      const response = await axios.post(
+  `${import.meta.env.VITE_API_URL}/api/diagnostic-package/book`, bookingData, {
   headers: {
     Authorization: `Bearer ${token}`,
   },
